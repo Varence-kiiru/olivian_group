@@ -1,0 +1,738 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_settings.site_name }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{{ site_settings.favicon.url }}" type="image/x-icon">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome v4 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- Font Awesome v5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Font Awesome v6 (Latest) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Lightbox CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_css %}{% endblock %}
+    
+    <!-- WhatsApp Chat Widget CSS -->
+    <style>
+        .whatsapp-chat {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .whatsapp-button {
+            background-color: #25d366;
+            color: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .whatsapp-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .whatsapp-button i {
+            font-size: 30px;
+        }
+        
+        .whatsapp-popup {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: none;
+            overflow: hidden;
+        }
+        
+        .whatsapp-popup.show {
+            display: block;
+        }
+        
+        .whatsapp-header {
+            background-color: #25d366;
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        .whatsapp-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .whatsapp-close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .whatsapp-body {
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .chat-message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+        
+        .agent-message {
+            justify-content: flex-start;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+        
+        .message-bubble {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            position: relative;
+        }
+        
+        .agent-message .message-bubble {
+            background-color: #f0f0f0;
+            border-top-left-radius: 0;
+        }
+        
+        .user-message .message-bubble {
+            background-color: #dcf8c6;
+            border-top-right-radius: 0;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .whatsapp-footer {
+            padding: 15px;
+            border-top: 1px solid #e5e5e5;
+        }
+        
+        .whatsapp-input-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .whatsapp-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 15px;
+            outline: none;
+        }
+        
+        .whatsapp-send {
+            background-color: #25d366;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .continue-on-whatsapp {
+            display: block;
+            background-color: #25d366;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="top-header py-2">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex gap-4">
+                        <a href="mailto:{{ contact_info.email }}"><i class="fas fa-envelope me-2"></i>{{ contact_info.email }}</a>
+                        <a href="tel:{{ contact_info.phone }}"><i class="fas fa-phone me-2"></i>{{ contact_info.phone }}</a>
+                        <a href="https://wa.me/{{ contact_info.whatsapp }}"><i class="fab fa-whatsapp me-2"></i>{{ contact_info.whatsapp }}</a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'account:login' %}" class="me-3"><i class="fas fa-user me-2"></i>Account</a>
+                    
+                    <form method="post" action="{% url 'core:change_language' %}" class="d-inline">
+                        {% csrf_token %}
+                        <select name="language" class="language-selector form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                            {% for language in languages %}
+                                <option value="{{ language.code }}" {% if request.LANGUAGE_CODE == language.code %}selected{% endif %}>
+                                    {{ language.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Middle Header -->
+    <header class="middle-header py-3">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <a href="{% url 'core:home' %}" class="d-flex align-items-center text-decoration-none">
+                            <img src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'images/default-logo.png' %}{% endif %}"
+                                alt="{{ site_settings.site_name }}"
+                                class="logo-img me-3">
+                            <span class="site-name fs-4 fw-bold text-uppercase">{{ site_settings.site_name }}</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-primary quote-btn" data-bs-toggle="modal" data-bs-target="#quoteModal">
+                        Get a Quote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Bottom Header -->
+    <nav class="navbar navbar-expand-lg bottom-header">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav mx-auto">
+                    {% for menu_item in main_menu %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ menu_item.url }}">{{ menu_item.title }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- Main Content -->
+    <main class="py-4">
+        {% block content %}{% endblock %}
+    </main>
+    <!-- Top Footer -->
+    <footer class="top-footer py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 text-center">
+                    <h3>{{ newsletter.title }}</h3>
+                    <p>{{ newsletter.description }}</p>
+                    <form id="newsletter-form" class="newsletter-form">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
+                            <button type="submit" class="btn btn-primary">Subscribe</button>
+                        </div>
+                        <div id="newsletter-message" class="mt-2"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Middle Footer -->
+    <footer class="middle-footer py-5">
+        <div class="container">
+            <div class="row">
+                <!-- Quick Links -->
+                {% for footer_section in footer_sections %}
+                <div class="col-md-4 mb-4">
+                    <h4>{{ footer_section.title }}</h4>
+                    <ul class="list-unstyled">
+                        {% for link in footer_section.links.all %}
+                            <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+                <!-- Social Media -->
+                <div class="col-md-4 mb-4">
+                    <h4>Follow Us</h4>
+                    <div class="social-links">
+                        {% for social in social_links %}
+                            <a href="{{ social.url }}" target="_blank" class="me-3">
+                                <i class="{{ social.icon_class }}"></i>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Bottom Footer -->
+    <footer class="bottom-footer py-3">
+        <div class="container text-center">
+            <p>{{ site_settings.copyright_text }}</p>
+        </div>
+    </footer>
+    
+    <!-- WhatsApp Chat Widget -->
+    <div class="whatsapp-chat">
+        <div class="whatsapp-button" id="whatsappButton">
+            <i class="fab fa-whatsapp"></i>
+        </div>
+        <div class="whatsapp-popup" id="whatsappPopup">
+            <div class="whatsapp-header">
+                <img src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'images/default-logo.png' %}{% endif %}" alt="{{ site_settings.site_name }}">
+                <div>
+                    <h6 class="mb-0">{{ site_settings.site_name }}</h6>
+                    <small>Chat with Us</small>
+                </div>
+                <div class="whatsapp-close" id="whatsappClose">
+                    <i class="fas fa-times"></i>
+                </div>
+            </div>
+            <div class="whatsapp-body" id="chatMessages">
+                <div class="chat-message agent-message">
+                    <div class="message-bubble">
+                        <div class="message-text">Hello! 👋 How can we help you today?</div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+            <div class="whatsapp-footer">
+                <div class="whatsapp-input-container">
+                    <input type="text" class="whatsapp-input" id="messageInput" placeholder="Type a message...">
+                    <button class="whatsapp-send" id="sendMessage">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <a href="https://wa.me/{{ contact_info.whatsapp }}" class="continue-on-whatsapp" id="continueWhatsApp" target="_blank">
+                    Continue on WhatsApp <i class="fab fa-whatsapp ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="btn btn-primary back-to-top" title="Back to Top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    <!-- Quote Modal -->
+    <div class="modal fade" id="quoteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Get a Quote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="quoteFormMessage"></div>
+                    <div id="quoteFormContainer">
+                        <form id="quoteForm" method="post" action="{% url 'core:quote_request' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="id_name" class="form-label">Name*</label>
+                                {{ quote_form.name }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Email*</label>
+                                {{ quote_form.email }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_phone" class="form-label">Phone*</label>
+                                {{ quote_form.phone }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_company" class="form-label">Company</label>
+                                {{ quote_form.company }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_product_interest" class="form-label">Product/Service of Interest</label>
+                                {{ quote_form.product_interest }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_message" class="form-label">Message*</label>
+                                {{ quote_form.message }}
+                            </div>
+                            <button type="submit" id="quoteSubmitBtn" class="btn btn-primary w-100">Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Lightbox JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{% static 'js/base.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+    <script>
+        // Back to Top functionality
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 100) {
+                $('#backToTop').fadeIn();
+            } else {
+                $('#backToTop').fadeOut();
+            }
+        });
+        $('#backToTop').click(function() {
+            $('html, body').animate({scrollTop : 0}, 800);
+            return false;
+        });
+    </script>
+    <script>
+        // Initialize lightbox
+        lightbox.option({
+            'resizeDuration': 200,
+            'wrapAround': true,
+            'albumLabel': "Image %1 of %2",
+            'fadeDuration': 300
+        });
+    </script>
+    
+    <!-- WhatsApp Chat Widget JavaScript -->
+     <script>
+    // Chat widget functionality
+    $(document).ready(function() {
+        let visitorId = localStorage.getItem('chat_visitor_id');
+        let sessionId;
+        let chatSocket;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        // Initialize chat
+        function initChat() {
+            $.ajax({
+                url: '/chat/api/init-chat/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    visitor_id: visitorId
+                }),
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                success: function(response) {
+                    console.log('Chat initialized:', response);
+                    if (response.success) {
+                        // Store visitor ID
+                        visitorId = response.visitor_id;
+                        localStorage.setItem('chat_visitor_id', visitorId);
+                        
+                        // Store session ID
+                        sessionId = response.session_id;
+                        
+                        // Update chat header with user name if available
+                        if (response.user_name) {
+                            $('#chatHeader').text(`Chat with ${response.user_name}`);
+                        }
+                        
+                        // Load chat history
+                        $('#chatMessages').empty();
+                        response.messages.forEach(function(msg) {
+                            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            addMessageToUI(msg.message, msg.sender, time);
+                        });
+                        
+                        // Connect WebSocket
+                        connectWebSocket();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error initializing chat:', error);
+                    console.log('Response:', xhr.responseText);
+                }
+            });
+        }
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected');
+                return;
+            }
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${sessionId}/`;
+            
+            console.log('Connecting to WebSocket:', wsUrl);
+            
+            chatSocket = new WebSocket(wsUrl);
+            
+            chatSocket.onopen = function(e) {
+                console.log('WebSocket connection established');
+                reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+            };
+            
+            chatSocket.onmessage = function(e) {
+                console.log('Message received:', e.data);
+                const data = JSON.parse(e.data);
+                const time = new Date(data.timestamp || new Date()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                addMessageToUI(data.message, data.sender, time);
+                
+                // Play notification sound for incoming messages from agent
+                if (data.sender === 'agent') {
+                    playNotificationSound();
+                }
+            };
+            
+            chatSocket.onclose = function(e) {
+                console.log('Chat socket closed:', e);
+                
+                // Try to reconnect after a delay, with exponential backoff
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    console.log(`Attempting to reconnect in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                    
+                    setTimeout(function() {
+                        connectWebSocket();
+                    }, delay);
+                } else {
+                    console.log('Max reconnect attempts reached. Please refresh the page to reconnect.');
+                }
+            };
+            
+            chatSocket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+            };
+        }
+        
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                const audio = new Audio('/static/sounds/notification.mp3');
+                audio.play();
+            } catch (e) {
+                console.error('Error playing notification sound:', e);
+            }
+        }
+        
+        // Toggle chat popup
+        $('#whatsappButton').click(function() {
+            $('#whatsappPopup').addClass('show');
+            
+            // Initialize chat if not already done
+            if (!sessionId) {
+                initChat();
+            } else {
+                // Ensure WebSocket is connected
+                if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+                    connectWebSocket();
+                }
+            }
+        });
+        
+        // Close popup when clicking the close button
+        $('#whatsappClose').click(function() {
+            $('#whatsappPopup').removeClass('show');
+        });
+        
+        // Close popup when clicking outside
+        $(document).click(function(event) {
+            if (!$(event.target).closest('.whatsapp-chat').length && 
+                !$(event.target).closest('#whatsappButton').length) {
+                $('#whatsappPopup').removeClass('show');
+            }
+        });
+        
+        // Prevent popup from closing when clicking inside it
+        $('.whatsapp-popup').click(function(event) {
+            event.stopPropagation();
+        });
+        
+        // Send message functionality
+        $('#sendMessage').click(sendMessage);
+        
+        // Send message on Enter key
+        $('#messageInput').keypress(function(e) {
+            if (e.which === 13) {
+                sendMessage();
+                return false;
+            }
+        });
+        
+        // Function to send message
+        function sendMessage() {
+            const messageInput = $('#messageInput');
+            const message = messageInput.val().trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            // Clear input
+            messageInput.val('');
+            
+            // Update the WhatsApp link with the conversation
+            updateWhatsAppLink(message);
+            
+            // Add message to UI immediately (optimistic UI update)
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            addMessageToUI(message, 'visitor', time);
+            
+            // Check WebSocket connection
+            if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+                console.log('WebSocket not connected. Attempting to reconnect...');
+                connectWebSocket();
+                
+                // Store message to send after connection or via AJAX
+                setTimeout(function() {
+                    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        sendMessageViaWebSocket(message);
+                    } else {
+                        console.log('WebSocket still not connected. Sending via AJAX...');
+                        sendMessageViaAjax(message);
+                    }
+                }, 1000);
+            } else {
+                sendMessageViaWebSocket(message);
+            }
+        }
+        
+        function sendMessageViaWebSocket(message) {
+            try {
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'sender': 'visitor',
+                    'visitor_id': visitorId,
+                    'timestamp': new Date().toISOString()
+                }));
+                console.log('Message sent via WebSocket');
+            } catch (error) {
+                console.error('Error sending message via WebSocket:', error);
+                // Fallback: send via AJAX
+                sendMessageViaAjax(message);
+            }
+        }
+        
+        function sendMessageViaAjax(message) {
+            console.log('Sending message via AJAX fallback');
+            $.ajax({
+                url: '/chat/api/send-message/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    'session_id': sessionId,
+                    'message': message,
+                    'sender': 'visitor'
+                }),
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                success: function(response) {
+                    console.log('Message sent via AJAX:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error sending message via AJAX:', error);
+                }
+            });
+        }
+        
+        // Function to add message to chat UI
+        function addMessageToUI(message, sender, time) {
+            const messageHTML = `
+                <div class="chat-message ${sender === 'visitor' ? 'user' : 'agent'}-message">
+                    <div class="message-bubble">
+                        <div class="message-text">${message}</div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                </div>
+            `;
+            
+            $('#chatMessages').append(messageHTML);
+            
+            // Scroll to bottom
+            const chatBody = document.getElementById('chatMessages');
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+        
+        // Function to update WhatsApp link with conversation context
+        function updateWhatsAppLink(lastMessage) {
+            const baseUrl = "https://wa.me/{{ contact_info.whatsapp }}";
+            const encodedMessage = encodeURIComponent(`Hello {{ site_settings.site_name }}, I was chatting on your website and asked: "${lastMessage}". I'd like to continue our conversation.`);
+            $('#continueWhatsApp').attr('href', `${baseUrl}?text=${encodedMessage}`);
+        }
+        
+        // Function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Check if chat should be initialized on page load
+        if (visitorId) {
+            // Initialize chat when widget is shown
+            $('#whatsappButton').one('click', function() {
+                initChat();
+            });
+        }
+    });
+    </script>
+    <script>
+        $(document).ready(function() {
+            // Check if URL hash is #quoteModal and open the modal
+            if (window.location.hash === '#quoteModal') {
+                $('#quoteModal').modal('show');
+            }
+            
+            // For links with #quoteModal in href
+            $('a[href="#quoteModal"]').click(function(e) {
+                e.preventDefault();
+                $('#quoteModal').modal('show');
+            });
+        });
+    </script>    
+</body>
+</html>
+
