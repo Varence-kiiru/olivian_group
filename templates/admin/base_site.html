@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Jazminn Admin') }}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/jazminn.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/jazzmin.css' %}">
+  <style>
+    :root {
+      --primary-color: #38b6ff;
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    {{ site_header|default:_('Jazminn Administration') }}
+  </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

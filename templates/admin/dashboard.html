@@ -1,0 +1,199 @@
+{% extends "admin/base_site.html" %}
+{% load i18n jazzmin %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3>{{ total_quotes }}</h3>
+        <p>Total Quotes</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-file-invoice-dollar"></i>
+      </div>
+      <a href="{% url 'admin:core_quoterequest_changelist' %}" class="small-box-footer">
+        View all <i class="fas fa-arrow-circle-right"></i>
+      </a>
+    </div>
+  </div>
+  
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3>{{ new_quotes }}</h3>
+        <p>New Quotes</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-inbox"></i>
+      </div>
+      <a href="{% url 'admin:core_quoterequest_changelist' %}?status__exact=new" class="small-box-footer">
+        View all <i class="fas fa-arrow-circle-right"></i>
+      </a>
+    </div>
+  </div>
+  
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3>{{ recent_quotes }}</h3>
+        <p>Recent Quotes (30 days)</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-calendar-alt"></i>
+      </div>
+      <a href="{% url 'admin:core_quoterequest_changelist' %}" class="small-box-footer">
+        View all <i class="fas fa-arrow-circle-right"></i>
+      </a>
+    </div>
+  </div>
+  
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <h3>{{ unread_notifications_count }}</h3>
+        <p>Unread Notifications</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-bell"></i>
+      </div>
+      <a href="{% url 'admin:core_adminnotification_changelist' %}?is_read__exact=0" class="small-box-footer">
+        View all <i class="fas fa-arrow-circle-right"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-bell mr-1"></i>
+          Unread Notifications
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% if unread_notifications %}
+            {% for notification in unread_notifications %}
+              <li class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">{{ notification.title }}</h5>
+                  <small>{{ notification.created_at|date:"F j, Y" }}</small>
+                </div>
+                <p class="mb-1">{{ notification.message|truncatechars:100 }}</p>
+                <a href="{% url 'admin:core_adminnotification_change' notification.id %}" class="btn btn-sm btn-primary">View</a>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li class="list-group-item">No unread notifications.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-link mr-1"></i>
+          Quick Links
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Admin Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="{% url 'admin:core_quoterequest_changelist' %}"><i class="fas fa-file-invoice-dollar mr-2"></i>Quote Requests</a></li>
+              <li><a href="{% url 'admin:contact_contact_changelist' %}"><i class="fas fa-envelope-open-text mr-2"></i>Contact Messages</a></li>
+              <li><a href="{% url 'admin:blog_post_changelist' %}"><i class="fas fa-blog mr-2"></i>Blog Posts</a></li>
+              <li><a href="{% url 'admin:products_product_changelist' %}"><i class="fas fa-box mr-2"></i>Products</a></li>
+              <li><a href="{% url 'admin:projects_project_changelist' %}"><i class="fas fa-project-diagram mr-2"></i>Projects</a></li>
+              <li><a href="{% url 'admin:services_service_changelist' %}"><i class="fas fa-concierge-bell mr-2"></i>Services</a></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h5>Frontend Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="{% url 'core:home' %}" target="_blank"><i class="fas fa-home mr-2"></i>Home Page</a></li>
+              <li><a href="{% url 'blog:blog' %}" target="_blank"><i class="fas fa-rss mr-2"></i>Blog</a></li>
+              <li><a href="{% url 'products:product_list' %}" target="_blank"><i class="fas fa-shopping-cart mr-2"></i>Products</a></li>
+              <li><a href="{% url 'projects:project_list' %}" target="_blank"><i class="fas fa-tasks mr-2"></i>Projects</a></li>
+              <li><a href="{% url 'services:service_list' %}" target="_blank"><i class="fas fa-hands-helping mr-2"></i>Services</a></li>
+              <li><a href="{% url 'contact:contact' %}" target="_blank"><i class="fas fa-phone mr-2"></i>Contact Page</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if request.user.is_superuser %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-tools mr-1"></i>
+          Staff Tools
+        </h3>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li><a href="{% url 'chat:staff_dashboard' %}" target="_blank"><i class="fas fa-comments mr-2"></i>Chat Dashboard</a></li>
+          <li><a href="{% url 'admin:core_newsletter_changelist' %}"><i class="fas fa-envelope mr-2"></i>Newsletter Subscribers</a></li>
+          <li><a href="{% url 'admin:core_sitesettings_changelist' %}"><i class="fas fa-cogs mr-2"></i>Site Settings</a></li>
+          <li><a href="{% url 'admin:auth_user_changelist' %}"><i class="fas fa-users mr-2"></i>User Management</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-line mr-1"></i>
+          Recent Activity
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        {% load log %}
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+          <p class="p-3">No recent activity.</p>
+        {% else %}
+          <ul class="list-group list-group-flush">
+            {% for entry in admin_log %}
+              <li class="list-group-item">
+                <span class="badge {% if entry.is_addition %}badge-success{% elif entry.is_change %}badge-primary{% elif entry.is_deletion %}badge-danger{% endif %}">
+                  {% if entry.is_addition %}Added{% elif entry.is_change %}Changed{% elif entry.is_deletion %}Deleted{% endif %}
+                </span>
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                  {{ entry.object_repr }}
+                {% else %}
+                  <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                {% endif %}
+                <br>
+                <small class="text-muted">
+                  {% if entry.content_type %}
+                    {% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}
+                  {% else %}
+                    Unknown content
+                  {% endif %}
+                </small>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

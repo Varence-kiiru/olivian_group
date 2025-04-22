@@ -1,0 +1,112 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+<style>
+    .chart-container {
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .filters {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Quote Request Analytics</h1>
+    
+    <div class="filters">
+        <form method="get">
+            <label for="days">Time period:</label>
+            <select name="days" id="days" onchange="this.form.submit()">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+            </select>
+        </form>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="chart-container">
+                <h2>Daily Quote Requests</h2>
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h2>Status Distribution</h2>
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Parse JSON data from Django
+    const dailyData = {{ daily_data|safe }};
+    const statusData = {{ status_data|safe }};
+    
+    // Daily chart
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: dailyData.map(item => item.date),
+            datasets: [{
+                label: 'Quote Requests',
+                data: dailyData.map(item => item.count),
+                backgroundColor: 'rgba(0, 86, 179, 0.2)',
+                borderColor: 'rgba(0, 86, 179, 1)',
+                borderWidth: 2,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Status chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: statusData.map(item => item.status),
+            datasets: [{
+                data: statusData.map(item => item.count),
+                backgroundColor: [
+                    'rgba(0, 123, 255, 0.7)',    // blue - new
+                    'rgba(255, 193, 7, 0.7)',    // yellow - in_progress
+                    'rgba(40, 167, 69, 0.7)',    // green - completed
+                    'rgba(220, 53, 69, 0.7)'     // red - declined
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+</script>
+{% endblock %}
