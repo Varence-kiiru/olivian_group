@@ -1,0 +1,61 @@
+:root {
+  --primary: #38b6ff;
+  --primary-dark: #2a9ad8;
+  --primary-light: #5ac4ff;
+}
+
+/* Navbar */
+.navbar-primary {
+  background-color: var(--primary) !important;
+}
+
+/* Sidebar */
+.sidebar-dark-primary {
+  background-color: #343a40;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active {
+  background-color: var(--primary);
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* Links */
+a {
+  color: var(--primary);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Pagination */
+.page-item.active .page-link {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Form controls */
+.form-control:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+}
+
+/* Custom dashboard stats */
+.small-box.bg-info {
+  background-color: var(--primary) !important;
+}
+
+/* Tabs */
+.nav-tabs .nav-link.active {
+  border-top: 3px solid var(--primary);
+}
