@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #0056b3; color: white; padding: 10px 20px; }
+        .content { padding: 20px; border: 1px solid #ddd; }
+        .footer { margin-top: 20px; font-size: 12px; color: #777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>New Quote Request</h2>
+        </div>
+        <div class="content">
+            <p>A new quote request has been submitted on {{ site_name }}.</p>
+            
+            <h3>Request Details:</h3>
+            <p><strong>Name:</strong> {{ quote.name }}</p>
+            <p><strong>Email:</strong> {{ quote.email }}</p>
+            <p><strong>Phone:</strong> {{ quote.phone }}</p>
+            {% if quote.company %}
+            <p><strong>Company:</strong> {{ quote.company }}</p>
+            {% endif %}
+            {% if quote.product_interest %}
+            <p><strong>Product Interest:</strong> {{ quote.product_interest }}</p>
+            {% endif %}
+            <p><strong>Message:</strong><br>{{ quote.message }}</p>
+            <p><strong>Date Submitted:</strong> {{ quote.created_at|date:"F j, Y, g:i a" }}</p>
+            
+            <p>Please log in to the admin panel to respond to this request.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from your website. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

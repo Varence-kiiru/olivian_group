@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #0056b3; color: white; padding: 10px 20px; }
+        .content { padding: 20px; border: 1px solid #ddd; }
+        .footer { margin-top: 20px; font-size: 12px; color: #777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Thank You for Your Quote Request</h2>
+        </div>
+        <div class="content">
+            <p>Dear {{ name }},</p>
+            
+            <p>Thank you for submitting a quote request with {{ site_name }}. We have received your inquiry and our team is reviewing it.</p>
+            
+            <p>We aim to respond to all quote requests within 24-48 business hours. One of our representatives will contact you soon to discuss your requirements in detail.</p>
+            
+            <p>If you have any urgent questions, please don't hesitate to contact us:</p>
+            <ul>
+                <li>Phone: {{ contact_info.phone }}</li>
+                <li>Email: {{ contact_info.email }}</li>
+                <li>WhatsApp: {{ contact_info.whatsapp }}</li>
+            </ul>
+            
+            <p>We look forward to working with you!</p>
+            
+            <p>Best regards,<br>The {{ site_name }} Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
