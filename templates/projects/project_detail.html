@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{{ project.title }} - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<!-- Project Header -->
+<div class="project-header position-relative">
+    <img src="{{ project.main_image.url }}" alt="{{ project.title }}" class="w-100 header-img">
+    <div class="header-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <span class="project-category">{{ project.category.name }}</span>
+                    <h1 class="text-white display-4">{{ project.title }}</h1>
+                    <div class="project-meta">
+                        <span><i class="fas fa-map-marker-alt"></i> {{ project.location }}</span>
+                        <span><i class="fas fa-user"></i> Client: {{ project.client }}</span>
+                        <span class="status-badge status-{{ project.status }}">{{ project.get_status_display }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Details -->
+<section class="project-details py-5">
+    <div class="container">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Project Overview -->
+                <div class="project-section mb-5">
+                    <h2 class="section-title">Project Overview</h2>
+                    <div class="project-content">
+                        {{ project.description|safe }}
+                    </div>
+                </div>
+                
+                <!-- Project Challenge -->
+                <div class="project-section mb-5">
+                    <h2 class="section-title">The Challenge</h2>
+                    <div class="project-content">
+                        {{ project.challenge|safe }}
+                    </div>
+                </div>
+                
+                <!-- Project Solution -->
+                <div class="project-section mb-5">
+                    <h2 class="section-title">Our Solution</h2>
+                    <div class="project-content">
+                        {{ project.solution|safe }}
+                    </div>
+                </div>
+                
+                <!-- Project Results -->
+                <div class="project-section mb-5">
+                    <h2 class="section-title">Results & Impact</h2>
+                    <div class="project-content">
+                        {{ project.result|safe }}
+                    </div>
+                </div>
+                
+                <!-- Project Gallery -->
+                {% if project.images.exists %}
+                <div class="project-section mb-5">
+                    <h2 class="section-title">Project Gallery</h2>
+                    <div class="project-gallery">
+                        <div class="row g-4">
+                            {% for image in project.images.all %}
+                            <div class="col-md-4 col-sm-6 mb-4">
+                                <div class="gallery-item">
+                                    <a href="{{ image.image.url }}" data-lightbox="project-gallery" data-title="{{ image.caption|default:'' }}">
+                                        <div class="gallery-image-container">
+                                            <img src="{{ image.image.url }}" alt="{{ image.caption|default:project.title }}" class="img-fluid rounded shadow">
+                                            <div class="gallery-overlay">
+                                                <i class="fas fa-search-plus"></i>
+                                            </div>
+                                        </div>
+                                        {% if image.caption %}
+                                        <div class="gallery-caption mt-2">
+                                            <p>{{ image.caption }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Project Testimonials -->
+                {% if testimonials %}
+                <div class="project-section mb-5">
+                    <h2 class="section-title">Client Testimonials</h2>
+                    <div class="testimonials-slider">
+                        {% for testimonial in testimonials %}
+                        <div class="testimonial-item">
+                            <div class="testimonial-content">
+                                <div class="testimonial-rating">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= testimonial.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <blockquote>
+                                    <p>{{ testimonial.content }}</p>
+                                </blockquote>
+                                <div class="testimonial-author">
+                                    {% if testimonial.image %}
+                                    <div class="author-image">
+                                        <img src="{{ testimonial.image.url }}" alt="{{ testimonial.client_name }}">
+                                    </div>
+                                    {% endif %}
+                                    <div class="author-info">
+                                        <h5>{{ testimonial.client_name }}</h5>
+                                        <p>{{ testimonial.client_position }}, {{ testimonial.client_company }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="project-sidebar">
+                    <!-- Project Info -->
+                    <div class="sidebar-widget project-info">
+                        <h3>Project Information</h3>
+                        <ul class="list-unstyled">
+                            <li>
+                                <span class="info-label">Client:</span>
+                                <span class="info-value">{{ project.client }}</span>
+                            </li>
+                            <li>
+                                <span class="info-label">Location:</span>
+                                <span class="info-value">{{ project.location }}</span>
+                            </li>
+                            <li>
+                                <span class="info-label">Category:</span>
+                                <span class="info-value">{{ project.category.name }}</span>
+                            </li>
+                            <li>
+                                <span class="info-label">Status:</span>
+                                <span class="info-value status-text-{{ project.status }}">{{ project.get_status_display }}</span>
+                            </li>
+                            <li>
+                                <span class="info-label">Duration:</span>
+                                <span class="info-value">{{ project.duration }}</span>
+                            </li>
+                            <li>
+                                <span class="info-label">Start Date:</span>
+                                <span class="info-value">{{ project.start_date|date:"F j, Y" }}</span>
+                            </li>
+                            {% if project.completion_date %}
+                            <li>
+                                <span class="info-label">Completion Date:</span>
+                                <span class="info-value">{{ project.completion_date|date:"F j, Y" }}</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Related Projects -->
+                    {% if related_projects %}
+                    <div class="sidebar-widget related-projects">
+                        <h3>Related Projects</h3>
+                        <div class="related-projects-list">
+                            {% for related in related_projects %}
+                            <div class="related-project-item">
+                                <a href="{% url 'projects:project_detail' related.slug %}">
+                                    <div class="related-project-image">
+                                        <img src="{{ related.main_image.url }}" alt="{{ related.title }}" class="img-fluid">
+                                    </div>
+                                    <div class="related-project-content">
+                                        <h5>{{ related.title }}</h5>
+                                        <span class="related-project-category">{{ related.category.name }}</span>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- CTA Widget -->
+                    <div class="sidebar-widget cta-widget">
+                        <div class="cta-content">
+                            <h3>Have a similar project?</h3>
+                            <p>Contact us to discuss how we can help you achieve your goals.</p>
+                            <a href="{% url 'contact:contact' %}" class="btn btn-primary btn-lg w-100">Get in Touch</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
