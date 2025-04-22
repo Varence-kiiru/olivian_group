@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{{ service.title }} - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<!-- Service Banner -->
+<div class="service-detail-banner position-relative">
+    <img src="{{ service.image.url }}" alt="{{ service.title }}" class="w-100">
+    <div class="banner-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <h1 class="text-white display-4">{{ service.title }}</h1>
+                    <p class="text-white lead">{{ service.short_description }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service Content -->
+<section class="service-content py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="service-description mb-5">
+                    {{ service.description|safe }}
+                </div>
+                
+                {% if service.benefits.exists %}
+                <div class="service-benefits mt-5">
+                    <h2 class="mb-4">Key Benefits</h2>
+                    <div class="row">
+                        {% for benefit in service.benefits.all %}
+                        <div class="col-md-6 mb-4">
+                            <div class="benefit-card">
+                                <div class="benefit-icon">
+                                    <i class="{{ benefit.icon }}"></i>
+                                </div>
+                                <h4>{{ benefit.title }}</h4>
+                                <p>{{ benefit.description }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="service-sidebar">
+                    <div class="sidebar-widget contact-widget">
+                        <h3>Need Assistance?</h3>
+                        <p>Our team is ready to answer any questions you may have about this service.</p>
+                        <a href="{% url 'contact:contact' %}" class="btn btn-primary w-100">Contact Us</a>
+                    </div>
+                    
+                    <div class="sidebar-widget services-widget mt-4">
+                        <h3>Our Services</h3>
+                        <ul class="list-unstyled">
+                            {% for other_service in services %}
+                                <li {% if other_service.slug == service.slug %}class="active"{% endif %}>
+                                    <a href="{% url 'services:service_detail' other_service.slug %}">
+                                        <i class="{{ other_service.icon }}"></i> {{ other_service.title }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <div class="sidebar-widget cta-widget mt-4">
+                        <div class="cta-content">
+                            <h3>Get a Quote</h3>
+                            <p>Request a personalized quote for your specific needs.</p>
+                            <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#quoteModal">
+                                Request Quote
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

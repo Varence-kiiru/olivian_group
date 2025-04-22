@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Our Services - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<!-- Services Banner -->
+<div class="services-banner position-relative">
+    {% if banner and banner.image %}
+        <img src="{{ banner.image.url }}" alt="{{ banner.title }}" class="w-100 banner-img">
+    {% else %}
+        <img src="{% static 'images/services-banner.jpg' %}" alt="Our Services" class="w-100 banner-img">
+    {% endif %}
+    <div class="banner-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8 mx-auto text-center">
+                    <h1 class="display-4 text-white">{{ banner.title|default:"Our Services" }}</h1>
+                    <p class="lead text-white">{{ banner.subtitle|default:"Professional solutions tailored to your needs" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Services List -->
+<section class="services-list py-5">
+    <div class="container">
+        <div class="row">
+            {% for service in services %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="service-card h-100">
+                    <div class="service-icon">
+                        <i class="{{ service.icon }}"></i>
+                    </div>
+                    <div class="service-image">
+                        <img src="{{ service.image.url }}" alt="{{ service.title }}" class="img-fluid">
+                    </div>
+                    <div class="service-content">
+                        <h3>{{ service.title }}</h3>
+                        <p>{{ service.short_description }}</p>
+                        <a href="{% url 'services:service_detail' service.slug %}" class="btn btn-outline-primary">Learn More</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <p class="lead">No services available at the moment. Please check back later.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="services-cta py-5 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mb-4 mb-lg-0">
+                <h2>Need a customized solution?</h2>
+                <p class="lead mb-0">Contact our team to discuss your specific requirements and how we can help.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#quoteModal">
+                    Get a Quote
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
