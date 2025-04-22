@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Dashboard - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <img src="{{ profile.avatar.url }}" alt="{{ request.user.username }}" class="rounded-circle img-thumbnail mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    <h5 class="card-title">{{ request.user.get_full_name|default:request.user.username }}</h5>
+                    <p class="text-muted">{{ profile.position }} {% if profile.company %}at {{ profile.company }}{% endif %}</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'account:profile' %}" class="btn btn-outline-primary">Edit Profile</a>
+                        <a href="{% url 'account:settings' %}" class="btn btn-outline-secondary">Settings</a>
+                        <a href="{% url 'account:password_change' %}" class="btn btn-outline-secondary">Change Password</a>
+                        <a href="{% url 'account:logout' %}" class="btn btn-outline-danger">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Content -->
+        <div class="col-md-9">
+            <div class="row">
+                <!-- Welcome Card -->
+                <div class="col-12 mb-4">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h4 class="card-title">Welcome, {{ request.user.get_full_name|default:request.user.username }}!</h4>
+                            <p class="card-text">This is your personal dashboard where you can manage your account and view your activity.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow text-center h-100">
+                        <div class="card-body">
+                            <div class="display-4 mb-2">
+                                <i class="fas fa-calendar-alt text-primary"></i>
+                            </div>
+                            <h5 class="card-title">Member Since</h5>
+                            <p class="card-text">{{ request.user.date_joined|date:"F j, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow text-center h-100">
+                        <div class="card-body">
+                            <div class="display-4 mb-2">
+                                <i class="fas fa-envelope text-primary"></i>
+                            </div>
+                            <h5 class="card-title">Email</h5>
+                            <p class="card-text">{{ request.user.email }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow text-center h-100">
+                        <div class="card-body">
+                            <div class="display-4 mb-2">
+                                <i class="fas fa-bell text-primary"></i>
+                            </div>
+                            <h5 class="card-title">Notifications</h5>
+                            <p class="card-text">{{ request.user.userpreferences.email_notifications|yesno:"Enabled,Disabled" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Summary -->
+                <div class="col-12 mb-4">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Profile Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Username:</strong> {{ request.user.username }}</p>
+                                    <p><strong>Full Name:</strong> {{ request.user.get_full_name|default:"Not provided" }}</p>
+                                    <p><strong>Email:</strong> {{ request.user.email }}</p>
+                                    <p><strong>Phone:</strong> {{ profile.phone|default:"Not provided" }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Company:</strong> {{ profile.company|default:"Not provided" }}</p>
+                                    <p><strong>Position:</strong> {{ profile.position|default:"Not provided" }}</p>
+                                    <p><strong>Website:</strong> {% if profile.website %}<a href="{{ profile.website }}" target="_blank">{{ profile.website }}</a>{% else %}Not provided{% endif %}</p>
+                                    <p><strong>Newsletter:</strong> {{ request.user.userpreferences.newsletter_subscription|yesno:"Subscribed,Not subscribed" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bio Section -->
+                {% if profile.bio %}
+                <div class="col-12 mb-4">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">About Me</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>{{ profile.bio }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

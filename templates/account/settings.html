@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Account Settings - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}" class="rounded-circle img-thumbnail mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    <h5 class="card-title">{{ request.user.get_full_name|default:request.user.username }}</h5>
+                    <p class="text-muted">{{ request.user.profile.position }} {% if request.user.profile.company %}at {{ request.user.profile.company }}{% endif %}</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'account:dashboard' %}" class="btn btn-outline-primary">Dashboard</a>
+                        <a href="{% url 'account:profile' %}" class="btn btn-outline-secondary">Edit Profile</a>
+                        <a href="{% url 'account:password_change' %}" class="btn btn-outline-secondary">Change Password</a>
+                        <a href="{% url 'account:logout' %}" class="btn btn-outline-danger">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Content -->
+        <div class="col-md-9">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Account Settings</h4>
+                </div>
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
+                                <h5>Notification Preferences</h5>
+                                <hr>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ preferences_form.email_notifications }}
+                                    <label class="form-check-label" for="{{ preferences_form.email_notifications.id_for_label }}">
+                                        Email Notifications
+                                    </label>
+                                </div>
+                                {% if preferences_form.email_notifications.errors %}
+                                    <div class="text-danger">
+                                        {% for error in preferences_form.email_notifications.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Receive email notifications about account activity and updates.</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ preferences_form.newsletter_subscription }}
+                                    <label class="form-check-label" for="{{ preferences_form.newsletter_subscription.id_for_label }}">
+                                        Newsletter Subscription
+                                    </label>
+                                </div>
+                                {% if preferences_form.newsletter_subscription.errors %}
+                                    <div class="text-danger">
+                                        {% for error in preferences_form.newsletter_subscription.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Receive our newsletter with latest news and updates.</small>
+                            </div>
+                            
+                            <div class="col-md-12 mb-4">
+                                <h5>Display Preferences</h5>
+                                <hr>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ preferences_form.language.id_for_label }}" class="form-label">Language</label>
+                                {{ preferences_form.language }}
+                                {% if preferences_form.language.errors %}
+                                    <div class="text-danger">
+                                        {% for error in preferences_form.language.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ preferences_form.theme.id_for_label }}" class="form-label">Theme</label>
+                                {{ preferences_form.theme }}
+                                {% if preferences_form.theme.errors %}
+                                    <div class="text-danger">
+                                        {% for error in preferences_form.theme.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-12 mt-4">
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
