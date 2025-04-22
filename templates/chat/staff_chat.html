@@ -1,0 +1,597 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Chat Dashboard | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .chat-container {
+        display: flex;
+        height: calc(100vh - 150px);
+        border: 1px solid #ddd;
+        margin-top: 20px;
+    }
+    
+    .chat-sidebar {
+        width: 300px;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+    }
+    
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        background-color: #f8f9fa;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
+    }
+    
+    .chat-input {
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background-color: #f8f9fa;
+        display: flex;
+    }
+    
+    .chat-input input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    
+    .chat-input button {
+        padding: 10px 15px;
+        background-color: #79aec8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .chat-session {
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+    }
+    
+    .chat-session:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .chat-session.active {
+        background-color: #e9ecef;
+    }
+    
+    .unread-badge {
+        background-color: #d9534f;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        max-width: 80%;
+    }
+    
+    .message-visitor {
+        margin-right: auto;
+        background-color: #f1f0f0;
+        padding: 10px 15px;
+        border-radius: 15px;
+        border-top-left-radius: 0;
+    }
+    
+    .message-agent {
+        margin-left: auto;
+        background-color: #dcf8c6;
+        padding: 10px 15px;
+        border-radius: 15px;
+        border-top-right-radius: 0;
+    }
+    
+    .message-time {
+        font-size: 12px;
+        color: #777;
+        margin-top: 5px;
+        text-align: right;
+    }
+    
+    .no-chat-selected {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #777;
+    }
+    
+    .no-chat-selected i {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .connection-status {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+        margin-left: 10px;
+    }
+    
+    .connection-status.connected {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .connection-status.disconnected {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .connection-status.connecting {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 10px;
+        font-style: italic;
+        color: #777;
+    }
+    
+    @keyframes blink {
+        0% { opacity: .2; }
+        20% { opacity: 1; }
+        100% { opacity: .2; }
+    }
+    
+    .typing-dots span {
+        animation-name: blink;
+        animation-duration: 1.4s;
+        animation-iteration-count: infinite;
+        animation-fill-mode: both;
+    }
+    
+    .typing-dots span:nth-child(2) {
+        animation-delay: .2s;
+    }
+    
+    .typing-dots span:nth-child(3) {
+        animation-delay: .4s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <h3 style="padding: 15px; margin: 0; border-bottom: 1px solid #ddd;">Active Chats</h3>
+        <div id="chat-sessions-list">
+            {% for session in chat_sessions %}
+            <div class="chat-session" data-session-id="{{ session.id }}">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>{{ session.display_name }}</strong>
+                    {% if session.unread_count > 0 %}
+                    <span class="unread-badge">{{ session.unread_count }}</span>
+                    {% endif %}
+                </div>
+                <div>{{ session.created_at|date:"M d, H:i" }}</div>
+            </div>
+            {% empty %}
+            <div style="padding: 15px; color: #777;">No active chats</div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="chat-main">
+        <div id="no-chat-selected" class="no-chat-selected">
+            <i class="fas fa-comments"></i>
+            <h3>Select a chat to start messaging</h3>
+        </div>
+        
+        <div id="chat-content" style="display: none; height: 100%; flex-direction: column;">
+            <div class="chat-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 id="chat-title">Chat with Visitor</h3>
+                    <span id="connection-status" class="connection-status disconnected">Disconnected</span>
+                </div>
+                <div id="chat-info">Started: <span id="chat-time"></span></div>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages"></div>
+            
+            <div id="typing-indicator" class="typing-indicator">
+                Visitor is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="message-input" placeholder="Type a message...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let activeSessionId = null;
+        let chatSocket = null;
+        let reconnectAttempts = 0;
+        let reconnectTimer = null;
+        const maxReconnectAttempts = 5;
+        
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+        
+        // Function to format time
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        
+        // Update connection status UI
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.className = 'connection-status ' + status;
+            
+            if (status === 'connected') {
+                statusElement.textContent = 'Connected';
+            } else if (status === 'disconnected') {
+                statusElement.textContent = 'Disconnected';
+            } else if (status === 'connecting') {
+                statusElement.textContent = 'Connecting...';
+            }
+        }
+        
+        // Connect to WebSocket
+        function connectWebSocket(sessionId) {
+            // Clear any existing reconnect timer
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            
+            // Close existing socket if any
+            if (chatSocket) {
+                chatSocket.close();
+                chatSocket = null;
+            }
+            
+            updateConnectionStatus('connecting');
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${sessionId}`;
+
+            console.log('Connecting to WebSocket:', wsUrl);
+            
+            chatSocket = new WebSocket(wsUrl);
+            
+            chatSocket.onopen = function(e) {
+                console.log('WebSocket connected');
+                updateConnectionStatus('connected');
+                reconnectAttempts = 0;
+            };
+            
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                console.log('Message received:', data);
+                
+                addMessageToUI(data.message, data.sender, data.timestamp);
+                
+                // Mark message as read if it's from visitor
+                if (data.sender === 'visitor') {
+                    markMessagesAsRead(sessionId);
+                    
+                    // Play notification sound
+                    playNotificationSound();
+                }
+                
+                // Update sidebar to reflect any changes in unread counts
+                refreshSidebar();
+            };
+            
+            chatSocket.onclose = function(e) {
+                console.log('WebSocket disconnected', e);
+                updateConnectionStatus('disconnected');
+                
+                // Try to reconnect with exponential backoff
+                if (reconnectAttempts < maxReconnectAttempts && activeSessionId) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    console.log(`Attempting to reconnect in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                    
+                    reconnectTimer = setTimeout(function() {
+                        if (activeSessionId) {
+                            connectWebSocket(activeSessionId);
+                        }
+                    }, delay);
+                } else if (reconnectAttempts >= maxReconnectAttempts) {
+                    console.log('Max reconnect attempts reached');
+                }
+            };
+            
+            chatSocket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+                updateConnectionStatus('disconnected');
+            };
+        }
+
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                const audio = new Audio('/static/sounds/notification.mp3');
+                audio.play();
+            } catch (e) {
+                console.error('Error playing notification sound:', e);
+            }
+        }
+        
+        // Load chat session
+        function loadChatSession(sessionId) {
+            fetch(`/chat/api/sessions/${sessionId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update UI
+                        document.getElementById('no-chat-selected').style.display = 'none';
+                        document.getElementById('chat-content').style.display = 'flex';
+                        
+                        // Set active session
+                        activeSessionId = sessionId;
+                        
+                        // Update chat header
+                        document.getElementById('chat-title').textContent = data.session.name;
+                        
+                        // Add user email if available
+                        if (data.session.user_email) {
+                            document.getElementById('chat-info').innerHTML = 
+                                `Email: ${data.session.user_email}<br>Started: ${formatDate(data.session.created_at)}`;
+                        } else {
+                            document.getElementById('chat-info').innerHTML = 
+                                `Started: ${formatDate(data.session.created_at)}`;
+                        }
+                        
+                        // Clear previous messages
+                        document.getElementById('chat-messages').innerHTML = '';
+                        
+                        // Add messages
+                        data.messages.forEach(msg => {
+                            addMessageToUI(msg.message, msg.sender, msg.timestamp);
+                        });
+                        
+                        // Scroll to bottom
+                        scrollToBottom();
+                        
+                        // Connect to WebSocket
+                        connectWebSocket(sessionId);
+                        
+                        // Mark messages as read
+                        markMessagesAsRead(sessionId);
+                        
+                        // Update sidebar
+                        updateSidebar(sessionId);
+                        
+                        // Focus on input
+                        document.getElementById('message-input').focus();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chat session:', error);
+                });
+        }
+
+        // Add message to UI
+        function addMessageToUI(message, sender, timestamp) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', `message-${sender}`);
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = message;
+            messageElement.appendChild(messageText);
+            
+            const messageTime = document.createElement('div');
+            messageTime.classList.add('message-time');
+            messageTime.textContent = formatTime(timestamp);
+            messageElement.appendChild(messageTime);
+            
+            messagesContainer.appendChild(messageElement);
+            
+            // Scroll to bottom
+            scrollToBottom();
+        }
+        
+        // Scroll chat to bottom
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Mark messages as read
+        function markMessagesAsRead(sessionId) {
+            fetch(`/chat/api/sessions/${sessionId}/mark-read/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update sidebar
+                    updateSidebar(sessionId);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking messages as read:', error);
+            });
+        }
+        
+        // Update sidebar
+        function updateSidebar(activeId) {
+            const sessions = document.querySelectorAll('.chat-session');
+            sessions.forEach(session => {
+                if (session.dataset.sessionId === activeId) {
+                    session.classList.add('active');
+                    // Remove unread badge
+                    const badge = session.querySelector('.unread-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                } else {
+                    session.classList.remove('active');
+                }
+            });
+        }
+        
+        // Refresh sidebar to get latest sessions and unread counts
+        function refreshSidebar() {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newSessionsList = doc.getElementById('chat-sessions-list');
+                    if (newSessionsList) {
+                        document.getElementById('chat-sessions-list').innerHTML = newSessionsList.innerHTML;
+                        
+                        // Reattach event listeners
+                        attachSessionClickHandlers();
+                        
+                        // Highlight active session
+                        if (activeSessionId) {
+                            updateSidebar(activeSessionId);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing sidebar:', error);
+                });
+        }
+        
+        // Send message
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (!message || !activeSessionId) {
+                return;
+            }
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Add message to UI immediately (optimistic update)
+            const timestamp = new Date().toISOString();
+            addMessageToUI(message, 'agent', timestamp);
+            
+            // Send via WebSocket if connected
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'sender': 'agent',
+                    'timestamp': timestamp
+                }));
+            } else {
+                // Fallback to AJAX
+                sendMessageViaAjax(message);
+            }
+        }
+        
+        // Send message via AJAX
+        function sendMessageViaAjax(message) {
+            fetch('/chat/api/send-message/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    'session_id': activeSessionId,
+                    'message': message,
+                    'sender': 'agent'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Error sending message:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
+        }
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Attach click handlers to chat sessions
+        function attachSessionClickHandlers() {
+            const sessions = document.querySelectorAll('.chat-session');
+            sessions.forEach(session => {
+                session.addEventListener('click', function() {
+                    const sessionId = this.dataset.sessionId;
+                    loadChatSession(sessionId);
+                });
+            });
+        }
+        
+        // Send button click handler
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        
+        // Enter key handler for message input
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+                e.preventDefault();
+            }
+        });
+        
+        // Set up auto-refresh for sidebar (every 30 seconds)
+        setInterval(refreshSidebar, 30000);
+        
+        // Initial setup
+        attachSessionClickHandlers();
+        
+        // Auto-select first chat if available
+        const firstSession = document.querySelector('.chat-session');
+        if (firstSession) {
+            firstSession.click();
+        }
+    });
+</script>
+{% endblock %}
+
