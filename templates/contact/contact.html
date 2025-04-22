@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Contact Us - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<!-- Contact Banner -->
+<div class="contact-banner position-relative">
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto text-center">
+                <h1 class="display-4 text-primary">{{ page_content.title }}</h1>
+                <p class="lead">{{ page_content.description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Content -->
+<section class="contact-content py-5">
+    <div class="container">
+        <div class="row">
+            <!-- Contact Information -->
+            <div class="col-lg-4 mb-4 mb-lg-0">
+                <div class="contact-info-card p-4 h-100">
+                    <h3 class="mb-4">Contact Information</h3>
+                    
+                    <div class="contact-item mb-4">
+                        <div class="icon-box">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h5>Our Address</h5>
+                            <p>{{ page_content.address|linebreaks }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item mb-4">
+                        <div class="icon-box">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h5>Email Us</h5>
+                            <p><a href="mailto:{{ page_content.email }}">{{ page_content.email }}</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item mb-4">
+                        <div class="icon-box">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h5>Call Us</h5>
+                            <p><a href="tel:{{ page_content.phone }}">{{ page_content.phone }}</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="social-links mt-4">
+                        <h5>Follow Us</h5>
+                        <div class="d-flex gap-3 mt-2">
+                            {% for social in social_links %}
+                            <a href="{{ social.url }}" target="_blank" class="social-icon">
+                                <i class="{{ social.icon_class }}"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Form -->
+            <div class="col-lg-8">
+                <div class="contact-form-card p-4">
+                    <h3 class="mb-4">Send Us a Message</h3>
+                    
+                    {% if messages %}
+                    <div class="alert alert-success">
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'contact:contact' %}">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.subject }}
+                                {% if form.subject.errors %}
+                                <div class="text-danger">{{ form.subject.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.message }}
+                            {% if form.message.errors %}
+                            <div class="text-danger">{{ form.message.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-lg">Send Message</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Map Section -->
+<section class="map-section">
+    <div class="container-fluid p-0">
+        <div class="map-container">
+            {{ page_content.map_embed_code|safe }}
+        </div>
+    </div>
+</section>
+{% endblock %}
