@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{{ product.name }} - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Product Header -->
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <div class="product-main-image position-relative">
+                <img src="{{ product.main_image.url }}" class="img-fluid rounded" alt="{{ product.name }}">
+                {% if product.on_sale and product.sale_price %}
+                <div class="discount-tag">{{ product.discount_percentage }}% OFF</div>
+                {% endif %}
+            </div>
+            <!-- Product Gallery -->
+            <div class="product-gallery mt-3">
+                {% for image in product.images.all %}
+                <img src="{{ image.image.url }}" class="img-thumbnail" alt="{{ image.caption }}" data-bs-toggle="modal" data-bs-target="#imageModal{{ image.id }}">
+                {% endfor %}
+            </div>
+            
+            <!-- Image Modals -->
+            {% for image in product.images.all %}
+            <div class="modal fade" id="imageModal{{ image.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ image.caption|default:product.name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="{{ image.image.url }}" class="img-fluid" alt="{{ image.caption|default:product.name }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'products:product_list' %}">Products</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'products:category_products' product.category.slug %}">{{ product.category.name }}</a></li>
+                    <li class="breadcrumb-item active">{{ product.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="mb-4">{{ product.name }}</h1>
+            
+            <!-- Add pricing information -->
+            <div class="product-pricing mb-4">
+                {% if product.has_price_range %}
+                    {% if product.price_min and product.price_max %}
+                        <div class="price-range h3">Ksh {{ product.price_min }} - Ksh {{ product.price_max }}</div>
+                    {% else %}
+                        <div class="price-varies h3">Price varies</div>
+                    {% endif %}
+                {% elif product.on_sale and product.sale_price %}
+                    <div class="d-flex align-items-center">
+                        <div class="sale-price h3 mb-0">Ksh {{ product.sale_price }}</div>
+                        <div class="regular-price text-decoration-line-through text-muted ms-3">Ksh {{ product.regular_price }}</div>
+                        <div class="discount-badge ms-3 bg-danger text-white px-2 py-1 rounded">{{ product.discount_percentage }}% OFF</div>
+                    </div>
+                {% elif product.regular_price %}
+                    <div class="regular-price h3">Ksh {{ product.regular_price }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="product-meta mb-4">
+                <span class="badge bg-primary">{{ product.category.name }}</span>
+                {% if product.is_featured %}
+                <span class="badge bg-success ms-2">Featured</span>
+                {% endif %}
+            </div>
+
+            <!-- Quick action buttons -->
+            <div class="product-actions mb-4">
+                <a href="{% url 'contact:contact' %}?product={{ product.name }}" class="btn btn-primary me-2">
+                    <i class="fas fa-envelope me-1"></i> Inquire About This Product
+                </a>
+                <button class="btn btn-outline-secondary" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="description-tab" data-bs-toggle="tab" href="#description" role="tab" aria-controls="description" aria-selected="true">Description</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="features-tab" data-bs-toggle="tab" href="#features" role="tab" aria-controls="features" aria-selected="false">Features</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="applications-tab" data-bs-toggle="tab" href="#applications" role="tab" aria-controls="applications" aria-selected="false">Applications</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="specifications-tab" data-bs-toggle="tab" href="#specifications" role="tab" aria-controls="specifications" aria-selected="false">Specifications</a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="description" role="tabpanel" aria-labelledby="description-tab">
+            {{ product.description|safe }}
+        </div>
+        <div class="tab-pane fade" id="features" role="tabpanel" aria-labelledby="features-tab">
+            {{ product.features|safe }}
+        </div>
+        <div class="tab-pane fade" id="applications" role="tabpanel" aria-labelledby="applications-tab">
+            {{ product.applications|safe }}
+        </div>
+        <div class="tab-pane fade" id="specifications" role="tabpanel" aria-labelledby="specifications-tab">
+            {{ product.specifications|safe }}
+        </div>
+    </div>
+
+    <!-- Documents Section -->
+    {% if product.documents.exists %}
+    <div class="documents-section mt-5">
+        <h3>Documents</h3>
+        <div class="list-group">
+            {% for doc in product.documents.all %}
+            <a href="{{ doc.file.url }}" class="list-group-item list-group-item-action">
+                <i class="fas fa-file-pdf me-2"></i>
+                {{ doc.title }}
+                {% if doc.description %}
+                <small class="text-muted d-block">{{ doc.description }}</small>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Related Products -->
+    {% if related_products %}
+    <div class="related-products mt-5">
+        <h3>Related Products</h3>
+        <div class="row">
+            {% for related in related_products %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="position-relative">
+                        <img src="{{ related.main_image.url }}" class="card-img-top" alt="{{ related.name }}">
+                        {% if related.on_sale and related.sale_price %}
+                        <div class="discount-tag small">{{ related.discount_percentage }}% OFF</div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ related.name }}</h5>
+                        
+                        <!-- Add pricing information -->
+                        <div class="product-price mb-3">
+                            {% if related.has_price_range %}
+                                {% if related.price_min and related.price_max %}
+                                    <span class="price-range">Ksh {{ related.price_min }} - Ksh {{ related.price_max }}</span>
+                                {% else %}
+                                    <span class="price-varies">Price varies</span>
+                                {% endif %}
+                            {% elif related.on_sale and related.sale_price %}
+                                <span class="sale-price">Ksh {{ related.sale_price }}</span>
+                                <span class="regular-price text-decoration-line-through text-muted ms-2">Ksh {{ related.regular_price }}</span>
+                            {% elif related.regular_price %}
+                                <span class="regular-price">Ksh {{ related.regular_price }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <a href="{% url 'products:product_detail' related.slug %}" class="btn btn-outline-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

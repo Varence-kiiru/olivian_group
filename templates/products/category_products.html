@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{{ category.name }} - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Category Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'products:product_list' %}">Products</a></li>
+                    <li class="breadcrumb-item active">{{ category.name }}</li>
+                </ol>
+            </nav>
+            <h1>{{ category.name }}</h1>
+            {% if category.description %}
+                <p class="lead">{{ category.description }}</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-md-end">
+            <img src="{{ category.image.url }}" alt="{{ category.name }}" class="category-header-image img-fluid rounded">
+        </div>
+    </div>
+
+    <!-- Filter and Sort Options -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="d-flex">
+                <input type="text" name="q" class="form-control me-2" placeholder="Search in {{ category.name }}..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Sort By
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="?sort=name">Name (A-Z)</a></li>
+                    <li><a class="dropdown-item" href="?sort=-name">Name (Z-A)</a></li>
+                    <li><a class="dropdown-item" href="?sort=price">Price (Low to High)</a></li>
+                    <li><a class="dropdown-item" href="?sort=-price">Price (High to Low)</a></li>
+                    <li><a class="dropdown-item" href="?sort=-created_at">Newest First</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="product-image-container">
+                    <img src="{{ product.main_image.url }}"
+                         class="card-img-top"
+                         alt="{{ product.name }}"
+                         loading="lazy">
+                    {% if product.on_sale and product.sale_price %}
+                    <div class="discount-tag">{{ product.discount_percentage }}% OFF</div>
+                    {% endif %}
+                    <div class="product-image-overlay">
+                        <a href="{% url 'products:product_detail' product.slug %}"
+                           class="btn btn-light">View Details</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    
+                    <!-- Add pricing information -->
+                    <div class="product-price mb-3">
+                        {% if product.has_price_range %}
+                            {% if product.price_min and product.price_max %}
+                                <span class="price-range">Ksh {{ product.price_min }} - Ksh {{ product.price_max }}</span>
+                            {% else %}
+                                <span class="price-varies">Price varies</span>
+                            {% endif %}
+                        {% elif product.on_sale and product.sale_price %}
+                            <span class="sale-price">Ksh {{ product.sale_price }}</span>
+                            <span class="regular-price text-decoration-line-through text-muted ms-2">Ksh {{ product.regular_price }}</span>
+                        {% elif product.regular_price %}
+                            <span class="regular-price">Ksh {{ product.regular_price }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="card-text">{{ product.description|safe|truncatewords:30 }}</p>
+                </div>
+                <div class="card-footer bg-white border-top-0">
+                    <a href="{% url 'products:product_detail' product.slug %}" class="btn btn-outline-primary w-100">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <div class="empty-state">
+                <i class="fas fa-box-open fa-4x mb-3 text-muted"></i>
+                <h3>No products found in this category</h3>
+                <p class="text-muted">Try adjusting your search or browse other categories</p>
+                <a href="{% url 'products:product_list' %}" class="btn btn-primary mt-3">Browse All Products</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if products.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+            </li>
+            {% endif %}
+
+            {% for num in products.paginator.page_range %}
+            <li class="page-item {% if products.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if products.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

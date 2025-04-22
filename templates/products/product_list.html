@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Products - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" class="d-flex">
+                <input type="text" name="q" class="form-control me-2" placeholder="Search products..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" onchange="window.location.href=this.value">
+                <option value="{% url 'products:product_list' %}">All Categories</option>
+                {% for category in categories %}
+                <option value="{% url 'products:category_products' category.slug %}"
+                        {% if selected_category == category.slug %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="product-image-container">
+                    <img src="{{ product.main_image.url }}"
+                         class="card-img-top"
+                         alt="{{ product.name }}"
+                         loading="lazy">
+                    {% if product.on_sale and product.sale_price %}
+                    <div class="discount-tag">{{ product.discount_percentage }}% OFF</div>
+                    {% endif %}
+                    <div class="product-image-overlay">
+                        <a href="{% url 'products:product_detail' product.slug %}"
+                           class="btn btn-light">View Details</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text text-muted">{{ product.category.name }}</p>
+                    
+                    <!-- Add pricing information -->
+                    <div class="product-price mb-3">
+                        {% if product.has_price_range %}
+                            {% if product.price_min and product.price_max %}
+                                <span class="price-range">Ksh {{ product.price_min }} - Ksh {{ product.price_max }}</span>
+                            {% else %}
+                                <span class="price-varies">Price varies</span>
+                            {% endif %}
+                        {% elif product.on_sale and product.sale_price %}
+                            <span class="sale-price">Ksh {{ product.sale_price }}</span>
+                            <span class="regular-price text-decoration-line-through text-muted ms-2">Ksh {{ product.regular_price }}</span>
+                        {% elif product.regular_price %}
+                            <span class="regular-price">Ksh {{ product.regular_price }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="card-text">{{ product.description|safe|truncatewords:30 }}</p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p>No products found.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if products.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for num in products.paginator.page_range %}
+            <li class="page-item {% if products.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if products.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

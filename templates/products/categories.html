@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Product Categories - {{ site_settings.site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-2">Product Categories</h1>
+            <p class="lead text-muted">Browse our product categories to find what you need</p>
+        </div>
+    </div>
+   
+    <div class="row">
+        {% for category in categories %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 category-card">
+                <div class="category-image-container">
+                    <img src="{{ category.image.url }}" class="card-img-top" alt="{{ category.name }}">
+                    <div class="category-overlay">
+                        <a href="{% url 'products:category_products' category.slug %}" class="btn btn-light">Browse Products</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ category.name }}</h5>
+                    <p class="card-text">{{ category.description|truncatewords:30 }}</p>
+                   
+                    <!-- Product count and price range information -->
+                    <div class="category-meta mb-3">
+                        <span class="badge bg-secondary me-2">{{ category.product_count }} Products</span>
+                       
+                        {% if category.min_price and category.max_price %}
+                            <span class="price-range-badge">
+                                {% if category.min_price == category.max_price %}
+                                    Ksh {{ category.min_price }}
+                                {% else %}
+                                    Ksh {{ category.min_price }} - Ksh {{ category.max_price }}
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    </div>
+                   
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'products:category_products' category.slug %}" class="btn btn-primary">View Products</a>
+                        <span class="product-count">{{ category.product_count }} Products</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p>No categories found.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if categories.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if categories.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ categories.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+            </li>
+            {% endif %}
+
+            {% for num in categories.paginator.page_range %}
+            <li class="page-item {% if categories.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if categories.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ categories.next_page_number }}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
