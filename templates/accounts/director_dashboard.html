@@ -1,0 +1,1132 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Director Dashboard - {{ company.name|default:"Olivian Group" }}{% endblock %}
+{% block page_title %}Executive Dashboard{% endblock %}
+{% block page_subtitle %}Strategic oversight and executive decision-making support{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .executive-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem 1.5rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .metric-card.revenue { border-left-color: var(--success-color); }
+    .metric-card.profit { border-left-color: var(--primary-color); }
+    .metric-card.growth { border-left-color: var(--info-color); }
+    .metric-card.staff { border-left-color: var(--warning-color); }
+
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .metric-icon.revenue { background: linear-gradient(135deg, var(--success-color), #20c997); }
+    .metric-icon.profit { background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); }
+    .metric-icon.growth { background: linear-gradient(135deg, var(--info-color), #20c0f3); }
+    .metric-icon.staff { background: linear-gradient(135deg, var(--warning-color), #ffc720); }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+        color: var(--dark-color);
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .metric-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.positive { background: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+    .status-badge.negative { background: rgba(220, 53, 69, 0.1); color: var(--danger-color); }
+
+    .dashboard-sections {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .main-chart {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        height: 500px;
+    }
+
+    .kpi-overview {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .strategic-overview {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .kpi-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        transition: var(--transition);
+    }
+
+    .kpi-item:last-child {
+        border-bottom: none;
+    }
+
+    .kpi-item:hover {
+        background: var(--light-color);
+    }
+
+    .kpi-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+        margin-right: 1rem;
+    }
+
+    .kpi-icon.customer { background: linear-gradient(135deg, #e83e8c, #f56093); }
+    .kpi-icon.satisfaction { background: linear-gradient(135deg, #28a745, #50c878); }
+    .kpi-icon.engagement { background: linear-gradient(135deg, #17a2b8, #50c2d8); }
+    .kpi-icon.efficiency { background: linear-gradient(135deg, #ffc107, #fad04f); }
+
+    .kpi-content {
+        flex: 1;
+    }
+
+    .kpi-title {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .kpi-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .kpi-target {
+        font-size: 0.85rem;
+        color: #666;
+        margin-left: 0.5rem;
+    }
+
+    .department-performance {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .dept-card {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        transition: var(--transition);
+    }
+
+    .dept-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .dept-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .dept-name {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+
+    .dept-performance {
+        font-weight: 700;
+        color: #28a745;
+    }
+
+    .dept-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .strategic-initiatives {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .initiative-item {
+        margin-bottom: 1.25rem;
+        padding: 1rem;
+        border-left: 4px solid;
+        background: var(--light-color);
+        border-radius: 0 8px 8px 0;
+    }
+
+    .initiative-item.on-track { border-left-color: var(--success-color); }
+    .initiative-item.at-risk { border-left-color: var(--warning-color); }
+    .initiative-item.delayed { border-left-color: var(--danger-color); }
+
+    .initiative-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .initiative-name {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+
+    .initiative-status {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .initiative-status.on-track { background: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+    .initiative-status.at-risk { background: rgba(255, 193, 7, 0.1); color: var(--warning-color); }
+    .initiative-status.delayed { background: rgba(220, 53, 69, 0.1); color: var(--danger-color); }
+
+    .initiative-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-fill.on-track { background: linear-gradient(90deg, var(--success-color), #20c997); }
+    .progress-fill.at-risk { background: linear-gradient(90deg, var(--warning-color), #ffc720); }
+    .progress-fill.delayed { background: linear-gradient(90deg, var(--danger-color), #e74a5a); }
+
+    .executive-alerts {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-left: 4px solid;
+        background: var(--light-color);
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1rem;
+        transition: var(--transition);
+    }
+
+    .alert-item:hover {
+        background: #f8f9fc;
+    }
+
+    .alert-item.success { border-left-color: var(--success-color); }
+    .alert-item.warning { border-left-color: var(--warning-color); }
+    .alert-item.info { border-left-color: var(--info-color); }
+
+    .alert-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+    }
+
+    .alert-icon.success { background: var(--success-color); }
+    .alert-icon.warning { background: var(--warning-color); }
+    .alert-icon.info { background: var(--info-color); }
+
+    .alert-content {
+        flex: 1;
+    }
+
+    .alert-title {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .alert-timestamp {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .resource-allocations {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .allocation-item {
+        margin-bottom: 1.5rem;
+    }
+
+    .allocation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .allocation-name {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+
+    .allocation-percentage {
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .allocation-percentage.high { color: var(--danger-color); }
+    .allocation-percentage.medium { color: var(--warning-color); }
+    .allocation-percentage.low { color: var(--success-color); }
+
+    .allocation-bar {
+        height: 10px;
+        background: var(--light-color);
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    .allocation-fill {
+        height: 100%;
+        border-radius: 20px;
+        transition: width 0.3s ease;
+    }
+
+    .allocation-fill.high { background: linear-gradient(90deg, var(--danger-color), #e74a5a); }
+    .allocation-fill.medium { background: linear-gradient(90deg, var(--warning-color), #ffc720); }
+    .allocation-fill.low { background: linear-gradient(90deg, var(--success-color), #20c997); }
+
+    .dashboard-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Executive Metrics -->
+<div class="executive-metrics">
+    <div class="metric-card revenue">
+        <div class="metric-icon revenue">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="metric-value">KES {{ director_stats.total_revenue|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Monthly Revenue</div>
+        <div class="metric-badges">
+            <span class="status-badge {% if director_stats.revenue_change >= 0 %}positive{% else %}negative{% endif %}">
+                {{ director_stats.revenue_change|default:0 }}% vs last month
+            </span>
+        </div>
+    </div>
+
+    <div class="metric-card profit">
+        <div class="metric-icon profit">
+            <i class="fas fa-coins"></i>
+        </div>
+        <div class="metric-value">KES {{ director_stats.net_profit|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Net Profit</div>
+        <div class="metric-badges">
+            <span class="status-badge {% if director_stats.profit_change >= 0 %}positive{% else %}negative{% endif %}">
+                {{ director_stats.profit_change|default:0 }}% growth
+            </span>
+        </div>
+    </div>
+
+    <div class="metric-card growth">
+        <div class="metric-icon growth">
+            <i class="fas fa-rocket"></i>
+        </div>
+        <div class="metric-value">{{ director_stats.yoy_growth|default:0 }}%</div>
+        <div class="metric-label">Year-over-Year Growth</div>
+        <div class="metric-badges">
+            <span class="status-badge {% if director_stats.yoy_growth >= 10 %}positive{% else %}negative{% endif %}">
+                {% if director_stats.yoy_growth >= 10 %}Excellent{% else %}Needs Attention{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="metric-card staff">
+        <div class="metric-icon staff">
+            <i class="fas fa-users-cog"></i>
+        </div>
+        <div class="metric-value">{{ director_stats.total_staff|default:0 }}</div>
+        <div class="metric-label">Total Staff</div>
+        <div class="metric-badges">
+            <span class="status-badge positive">
+                {{ director_stats.company_health|default:0 }}% health score
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Sections -->
+<div class="dashboard-sections">
+    <!-- Main Chart -->
+    <div class="main-chart">
+        <h4 class="mb-3">
+            <i class="fas fa-chart-area me-2"></i>Revenue & Growth Trends
+        </h4>
+        <canvas id="companyChart" style="max-height: 400px;"></canvas>
+    </div>
+
+    <!-- Enhanced Side Panel with Multiple Sections -->
+    <div class="dashboard-sidebar">
+        <!-- KPIs Overview -->
+        <div class="kpi-overview">
+            <h4 class="mb-3">
+                <i class="fas fa-bullseye me-2"></i>Key Performance Indicators
+            </h4>
+
+            <div class="kpi-item">
+                <div class="kpi-icon customer">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-title">Customer Satisfaction</div>
+                    <div class="kpi-value">{{ kpis.customer_satisfaction|default:0 }}%</div>
+                </div>
+            </div>
+
+            <div class="kpi-item">
+                <div class="kpi-icon satisfaction">
+                    <i class="fas fa-smile"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-title">Revenue Target</div>
+                    <div class="kpi-value">{{ kpis.revenue_kpi|default:0 }}%</div>
+                    <span class="kpi-target">of monthly goal</span>
+                </div>
+            </div>
+
+            <div class="kpi-item">
+                <div class="kpi-icon engagement">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-title">Staff Engagement</div>
+                    <div class="kpi-value">{{ kpis.employee_engagement|default:0 }}%</div>
+                </div>
+            </div>
+
+            <div class="kpi-item">
+                <div class="kpi-icon efficiency">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-title">Operational Efficiency</div>
+                    <div class="kpi-value">{{ kpis.operational_efficiency|default:0 }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategic Overview -->
+        <div class="strategic-overview">
+            <h4 class="mb-3">
+                <i class="fas fa-flag me-2"></i>Company Snapshot
+            </h4>
+
+            <div class="mb-3">
+                <strong>Active Projects:</strong>
+                <span class="float-end text-primary">{{ director_stats.active_projects|default:0 }}</span>
+            </div>
+
+            <div class="mb-3">
+                <strong>Completed Projects:</strong>
+                <span class="float-end text-success">{{ director_stats.completed_projects|default:0 }}</span>
+            </div>
+
+            <div class="mb-3">
+                <strong>Total Customers:</strong>
+                <span class="float-end text-info">{{ director_stats.total_customers|default:0 }}</span>
+            </div>
+
+            <div class="mb-3">
+                <strong>Sales Team:</strong>
+                <span class="float-end text-warning">{{ director_stats.sales_team|default:0 }}</span>
+            </div>
+
+            <div class="mb-3">
+                <strong>Technical Team:</strong>
+                <span class="float-end text-secondary">{{ director_stats.technical_team|default:0 }}</span>
+            </div>
+
+            <div class="mb-3">
+                <strong>Management Team:</strong>
+                <span class="float-end text-dark">{{ director_stats.management_team|default:0 }}</span>
+            </div>
+        </div>
+
+        <!-- Recent Executive Activities -->
+        <div class="card" style="box-shadow: var(--shadow);">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activities
+                </h6>
+            </div>
+            <div class="card-body p-2">
+                <div class="activity-item p-2 border-bottom">
+                    <small class="text-muted">2 mins ago</small>
+                    <div><strong>Project Approved:</strong> Solar Panel Installation Q3</div>
+                </div>
+                <div class="activity-item p-2 border-bottom">
+                    <small class="text-muted">15 mins ago</small>
+                    <div><strong>Budget Reviewed:</strong> Marketing Q4 2025</div>
+                </div>
+                <div class="activity-item p-2 border-bottom">
+                    <small class="text-muted">1 hour ago</small>
+                    <div><strong>New Hire:</strong> Project Manager - Technical Team</div>
+                </div>
+                <div class="activity-item p-2">
+                    <small class="text-muted">2 hours ago</small>
+                    <div><strong>Report Generated:</strong> Monthly Performance Report</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions for Directors -->
+        <div class="card" style="box-shadow: var(--shadow);">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <a href="#generateReport" class="btn btn-outline-primary btn-sm w-100 text-start p-2 border-0 rounded-0">
+                    <i class="fas fa-file-pdf me-2"></i>Generate Executive Report
+                </a>
+                <a href="#scheduleMeeting" class="btn btn-outline-info btn-sm w-100 text-start p-2 border-0 border-top">
+                    <i class="fas fa-calendar-plus me-2"></i>Schedule Board Meeting
+                </a>
+                <a href="#sendCommunication" class="btn btn-outline-warning btn-sm w-100 text-start p-2 border-0 border-top">
+                    <i class="fas fa-bullhorn me-2"></i>Company-wide Announcement
+                </a>
+                <a href="#budgetReview" class="btn btn-outline-success btn-sm w-100 text-start p-2 border-0 border-top rounded-bottom">
+                    <i class="fas fa-dollar-sign me-2"></i>Budget Review Meeting
+                </a>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="card" style="box-shadow: var(--shadow);">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-server me-2"></i>System Status
+                </h6>
+            </div>
+            <div class="card-body p-2">
+                <div class="status-item d-flex justify-content-between align-items-center mb-2">
+                    <span><i class="fas fa-database text-success me-2"></i>Database</span>
+                    <span class="badge bg-success">Optimal</span>
+                </div>
+                <div class="status-item d-flex justify-content-between align-items-center mb-2">
+                    <span><i class="fas fa-globe text-success me-2"></i>Website</span>
+                    <span class="badge bg-success">Online</span>
+                </div>
+                <div class="status-item d-flex justify-content-between align-items-center mb-2">
+                    <span><i class="fas fa-envelope text-success me-2"></i>Mail Server</span>
+                    <span class="badge bg-success">Active</span>
+                </div>
+                <div class="status-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-mobile-alt text-success me-2"></i>Mobile API</span>
+                    <span class="badge bg-success">Operational</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategic Initiatives & Alerts -->
+<div class="row" style="margin-bottom: 2rem;">
+    <div class="col-lg-8">
+        <div class="strategic-initiatives">
+            <h4 class="mb-4">
+                <i class="fas fa-road me-2"></i>Strategic Initiatives
+            </h4>
+
+            {% for initiative in strategic_initiatives %}
+            <div class="initiative-item {% if initiative.progress >= 75 %}on-track{% elif initiative.progress >= 50 %}at-risk{% else %}delayed{% endif %}">
+                <div class="initiative-header">
+                    <span class="initiative-name">{{ initiative.name }}</span>
+                    <span class="initiative-status {% if initiative.progress >= 75 %}on-track{% elif initiative.progress >= 50 %}at-risk{% else %}delayed{% endif %}">
+                        {% if initiative.progress >= 75 %}On Track{% elif initiative.progress >= 50 %}At Risk{% else %}Delayed{% endif %}
+                    </span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill {% if initiative.progress >= 75 %}on-track{% elif initiative.progress >= 50 %}at-risk{% else %}delayed{% endif %}"
+                         style="width: {{ initiative.progress|default:0 }}%"></div>
+                </div>
+                <div class="initiative-details">
+                    <span>{{ initiative.progress|default:0 }}% complete</span>
+                    <span>Due: {{ initiative.due_date|default:'TBD' }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <i class="fas fa-road fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No strategic initiatives currently defined</p>
+                <button class="btn btn-primary" onclick="addInitiative()">Add Strategic Initiative</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="executive-alerts">
+            <h4 class="mb-4">
+                <i class="fas fa-bell me-2"></i>Executive Alerts
+            </h4>
+
+            {% for alert in executive_alerts %}
+            <div class="alert-item {{ alert.type }}">
+                <div class="alert-icon {{ alert.type }}">
+                    <i class="fas {% if alert.type == 'success' %}check-circle{% elif alert.type == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                </div>
+                <div class="alert-content">
+                    <div class="alert-title">{{ alert.message }}</div>
+                    <div class="alert-timestamp">{{ alert.timestamp|default:'Just now' }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <p class="text-muted">All systems operating normally</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Department Performance & Resource Allocation -->
+<div class="row" style="margin-bottom: 2rem;">
+    <div class="col-lg-6">
+        <div class="department-performance">
+            <h4 class="mb-4">
+                <i class="fas fa-building me-2"></i>Department Performance
+            </h4>
+
+            {% for dept in department_performance %}
+            <div class="dept-card">
+                <div class="dept-header">
+                    <span class="dept-name">{{ dept.name }}</span>
+                    <span class="dept-performance">{{ dept.performance }}%</span>
+                </div>
+                <div class="dept-details">
+                    <span>{{ dept.headcount }} employees</span>
+                    <span>{{ dept.budget_allocation }} budget</span>
+                    <span class="fw-bold">{{ dept.key_metric }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Department performance data not available</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="resource-allocations">
+            <h4 class="mb-4">
+                <i class="fas fa-balance-scale me-2"></i>Resource Utilization
+            </h4>
+
+            <div class="allocation-item">
+                <div class="allocation-header">
+                    <span class="allocation-name">Sales Team</span>
+                    <span class="allocation-percentage {% if resource_allocation.sales_utilization >= 85 %}high{% elif resource_allocation.sales_utilization >= 70 %}medium{% else %}low{% endif %}">
+                        {{ resource_allocation.sales_utilization|default:0 }}%
+                    </span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="allocation-fill {% if resource_allocation.sales_utilization >= 85 %}high{% elif resource_allocation.sales_utilization >= 70 %}medium{% else %}low{% endif %}"
+                         style="width: {{ resource_allocation.sales_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+
+            <div class="allocation-item">
+                <div class="allocation-header">
+                    <span class="allocation-name">Projects Team</span>
+                    <span class="allocation-percentage {% if resource_allocation.projects_utilization >= 85 %}high{% elif resource_allocation.projects_utilization >= 70 %}medium{% else %}low{% endif %}">
+                        {{ resource_allocation.projects_utilization|default:0 }}%
+                    </span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="allocation-fill {% if resource_allocation.projects_utilization >= 85 %}high{% elif resource_allocation.projects_utilization >= 70 %}medium{% else %}low{% endif %}"
+                         style="width: {{ resource_allocation.projects_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+
+            <div class="allocation-item">
+                <div class="allocation-header">
+                    <span class="allocation-name">Inventory Management</span>
+                    <span class="allocation-percentage {% if resource_allocation.inventory_utilization >= 85 %}high{% elif resource_allocation.inventory_utilization >= 70 %}medium{% else %}low{% endif %}">
+                        {{ resource_allocation.inventory_utilization|default:0 }}%
+                    </span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="allocation-fill {% if resource_allocation.inventory_utilization >= 85 %}high{% elif resource_allocation.inventory_utilization >= 70 %}medium{% else %}low{% endif %}"
+                         style="width: {{ resource_allocation.inventory_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+
+            <div class="allocation-item">
+                <div class="allocation-header">
+                    <span class="allocation-name">Human Resources</span>
+                    <span class="allocation-percentage {% if resource_allocation.hr_utilization >= 85 %}high{% elif resource_allocation.hr_utilization >= 70 %}medium{% else %}low{% endif %}">
+                        {{ resource_allocation.hr_utilization|default:0 }}%
+                    </span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="allocation-fill {% if resource_allocation.hr_utilization >= 85 %}high{% elif resource_allocation.hr_utilization >= 70 %}medium{% else %}low{% endif %}"
+                         style="width: {{ resource_allocation.hr_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+
+            <div class="allocation-item">
+                <div class="allocation-header">
+                    <span class="allocation-name">Finance & Accounting</span>
+                    <span class="allocation-percentage {% if resource_allocation.financial_utilization >= 85 %}high{% elif resource_allocation.financial_utilization >= 70 %}medium{% else %}low{% endif %}">
+                        {{ resource_allocation.financial_utilization|default:0 }}%
+                    </span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="allocation-fill {% if resource_allocation.financial_utilization >= 85 %}high{% elif resource_allocation.financial_utilization >= 70 %}medium{% else %}low{% endif %}"
+                         style="width: {{ resource_allocation.financial_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Managerial Access & Team Control -->
+<div class="row" style="margin-bottom: 2rem;">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-users-cog me-2"></i>Management Control Panel
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Team Management -->
+                    <div class="col-md-6">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-users me-2"></i>Team Management
+                        </h5>
+
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'accounts:all_users' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye me-2"></i>View All Users
+                            </a>
+
+                            <a href="{% url 'accounts:staff_management' %}" class="btn btn-outline-success">
+                                <i class="fas fa-user-plus me-2"></i>Manage Staff
+                            </a>
+
+                            <a href="#" onclick="assignTeamMember()" class="btn btn-outline-info">
+                                <i class="fas fa-user-tie me-2"></i>Assign Roles
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Operations Control -->
+                    <div class="col-md-6">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-cogs me-2"></i>Operations Control
+                        </h5>
+
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'quotations:list' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-file-invoice me-2"></i>All Quotations
+                            </a>
+
+                            <a href="{% url 'projects:list' %}" class="btn btn-outline-success">
+                                <i class="fas fa-project-diagram me-2"></i>All Projects
+                            </a>
+
+                            <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-warning">
+                                <i class="fas fa-boxes me-2"></i>Inventory Mgmt
+                            </a>
+
+                            <a href="{% url 'crm:dashboard' %}" class="btn btn-outline-info">
+                                <i class="fas fa-users-cog me-2"></i>CRM System
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats for Management -->
+                <hr class="my-4">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-primary mb-1">{{ director_stats.total_staff|default:0 }}</h4>
+                            <small class="text-muted">Total Staff</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-success mb-1">{{ director_stats.sales_team|default:0 }}</h4>
+                            <small class="text-muted">Sales Team</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-info mb-1">{{ director_stats.technical_team|default:0 }}</h4>
+                            <small class="text-muted">Technical Team</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-warning mb-1">{{ director_stats.management_team|default:0 }}</h4>
+                            <small class="text-muted">Management</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approvals for Directors -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>Pending Approvals
+                    <span class="badge bg-danger ms-2">{{ pending_approvals.count|default:0 }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if pending_approvals %}
+                    {% for approval in pending_approvals %}
+                    <div class="approval-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ approval.title }}</h6>
+                                <small class="text-muted">{{ approval.requester }} • KES {{ approval.amount|floatformat:0 }}</small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-success btn-sm" onclick="approveRequest({{ approval.id }})">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="rejectRequest({{ approval.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p class="text-muted">No pending approvals</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff Tools & Quick Actions -->
+<div class="row" style="margin-bottom: 2rem;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Staff Tools & Quick Actions
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Sales & Customer Tools -->
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <h6 class="text-info mb-3">
+                            <i class="fas fa-shopping-cart me-2"></i>Sales & Customers
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'quotations:create' %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-plus me-2"></i>Create Quotation
+                            </a>
+                            <a href="{% url 'pos:main' %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-cash-register me-2"></i>POS Terminal
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Project Management -->
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-project-diagram me-2"></i>Project Management
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'projects:create' %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-plus me-2"></i>New Project
+                            </a>
+                            <a href="{% url 'projects:list' %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-list me-2"></i>All Projects
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Inventory & Operations -->
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-boxes me-2"></i>Inventory & Operations
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'inventory:dashboard' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fas fa-warehouse me-2"></i>Inventory Dashboard
+                            </a>
+                            <a href="{% url 'inventory:items' %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-cube me-2"></i>Items List
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Communication & Reports -->
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <h6 class="text-secondary mb-3">
+                            <i class="fas fa-comments me-2"></i>Communication & Reports
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'chat:dashboard' %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-comments me-2"></i>Team Chat
+                            </a>
+                            <a href="#" onclick="exportDashboard()" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-file-pdf me-2"></i>Export Report
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+{# Pass chart data to JavaScript using json_script for safety #}
+{{ chart_data|json_script:"chartData" }}
+<script>
+// Revenue & Growth Chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('companyChart');
+    if (ctx) {
+        const context = ctx.getContext('2d');
+
+        // Chart data from Django view
+        const labels = chartData.labels;
+        const revenueData = chartData.revenue;
+        const profitData = chartData.profit;
+        const customersData = chartData.customers;
+
+        new Chart(context, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Revenue (KES)',
+                        data: revenueData,
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Profit (KES)',
+                        data: profitData,
+                        borderColor: 'rgba(23, 162, 184, 1)',
+                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Customers',
+                        data: customersData,
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'customerAxis'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'KES ' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    customerAxis: {
+                        beginAtZero: true,
+                        position: 'right',
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + ' cust';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+
+// Strategic initiative management functions
+window.addInitiative = function() {
+    // Implementation for adding strategic initiatives
+    alert('Add Strategic Initiative functionality would be implemented here');
+};
+
+window.editInitiative = function(id) {
+    // Implementation for editing strategic initiatives
+    alert('Edit Strategic Initiative functionality would be implemented here');
+};
+
+// Export dashboard data
+window.exportDashboard = function() {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('/api/dashboard/export/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            format: 'pdf',
+            includeCharts: true,
+            includeKPIs: true
+        })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Executive_Dashboard_' + new Date().toISOString().split('T')[0] + '.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error exporting dashboard:', error);
+        alert('Failed to export dashboard. Please try again.');
+    });
+};
+</script>
+{% endblock %}

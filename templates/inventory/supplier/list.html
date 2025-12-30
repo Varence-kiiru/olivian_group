@@ -1,0 +1,329 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Suppliers - {{ block.super }}{% endblock %}
+
+{% block page_title %}Supplier Management{% endblock %}
+{% block page_subtitle %}Manage and monitor supplier relationships{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item active">Suppliers</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .supplier-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .supplier-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .supplier-card.active { border-left-color: var(--success-color); }
+    .supplier-card.inactive { border-left-color: var(--danger-color); }
+    .supplier-card.preferred { border-left-color: var(--primary-color); }
+    
+    .supplier-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+    
+    .supplier-metrics {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.25rem 0;
+    }
+    
+    .metric-item:not(:last-child) {
+        border-bottom: 1px solid #e3e6f0;
+        margin-bottom: 0.25rem;
+        padding-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Search Suppliers</label>
+            <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" 
+                   placeholder="Search by name, contact, email...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="preferred" {% if request.GET.status == 'preferred' %}selected{% endif %}>Preferred</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Country</label>
+            <select class="form-select" name="country">
+                <option value="">All Countries</option>
+                <option value="Kenya" {% if request.GET.country == 'Kenya' %}selected{% endif %}>Kenya</option>
+                <option value="Uganda" {% if request.GET.country == 'Uganda' %}selected{% endif %}>Uganda</option>
+                <option value="Tanzania" {% if request.GET.country == 'Tanzania' %}selected{% endif %}>Tanzania</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Suppliers ({{ suppliers|length }})</h5>
+    <div class="btn-group">
+        <a href="{% url 'inventory:supplier_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Supplier
+        </a>
+        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-download"></i> Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel"></i> Excel</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf"></i> PDF</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Supplier Cards -->
+<div class="row">
+    {% for supplier in suppliers %}
+    <div class="col-12">
+        <div class="supplier-card {% if supplier.is_active %}active{% else %}inactive{% endif %} {% if supplier.is_preferred %}preferred{% endif %}">
+            <div class="supplier-status">
+                {% if supplier.is_preferred %}
+                    <span class="badge bg-primary me-1">Preferred</span>
+                {% endif %}
+                {% if supplier.is_active %}
+                    <span class="badge bg-success">Active</span>
+                {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-1">
+                            <a href="{% url 'inventory:supplier_detail' supplier.pk %}" class="text-decoration-none">
+                                {{ supplier.name }}
+                            </a>
+                        </h5>
+                        <div class="rating-stars">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= supplier.rating %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-user"></i> {{ supplier.contact_person }}
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-envelope"></i> {{ supplier.email }}
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-phone"></i> {{ supplier.phone }}
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt"></i> {{ supplier.city }}, {{ supplier.country }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Terms & Lead Time -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar"></i> {{ supplier.payment_terms }}
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> {{ supplier.lead_time_days }} days lead time
+                            </small>
+                        </div>
+                        {% if supplier.website %}
+                        <div class="col-auto">
+                            <small>
+                                <a href="{{ supplier.website }}" target="_blank" class="text-primary">
+                                    <i class="fas fa-globe"></i> Website
+                                </a>
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="supplier-metrics">
+                        <div class="metric-item">
+                            <span class="text-muted small">Credit Limit:</span>
+                            <strong>KES {{ supplier.credit_limit|floatformat:0 }}</strong>
+                        </div>
+                        <div class="metric-item">
+                            <span class="text-muted small">Min Order:</span>
+                            <strong>KES {{ supplier.minimum_order_amount|floatformat:0 }}</strong>
+                        </div>
+                        <div class="metric-item">
+                            <span class="text-muted small">Total Orders:</span>
+                            <strong>{{ supplier.purchase_orders.count }}</strong>
+                        </div>
+                        {% if supplier.get_outstanding_balance %}
+                        <div class="metric-item">
+                            <span class="text-muted small">Outstanding:</span>
+                            <strong class="text-warning">KES {{ supplier.get_outstanding_balance|floatformat:0 }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="btn-group mt-3 w-100">
+                        <a href="{% url 'inventory:supplier_detail' supplier.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="{% url 'inventory:supplier_edit' supplier.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'inventory:purchase_order_create' %}?supplier={{ supplier.pk }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> New PO
+                        </a>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-file-export"></i> Export Data</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-envelope"></i> Send Email</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'inventory:supplier_delete' supplier.pk %}">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-handshake fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No suppliers found</h5>
+            <p class="text-muted">Add your first supplier to start managing your supply chain.</p>
+            <a href="{% url 'inventory:supplier_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Supplier
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Supplier pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Supplier search functionality
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+    }
+    
+    // Auto-submit form on filter change
+    const filterSelects = document.querySelectorAll('select[name="status"], select[name="country"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+});
+</script>
+{% endblock %}

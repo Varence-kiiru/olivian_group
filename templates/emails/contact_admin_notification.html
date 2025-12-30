@@ -1,0 +1,119 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="padding: 30px 0;">
+    <h2 style="color: #333; margin-bottom: 20px;">🔔 New Contact Form Submission</h2>
+    
+    <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+        <p style="color: #856404; margin: 0; font-size: 16px;">
+            <strong>Action Required:</strong> A new {{ inquiry_type|lower }} inquiry has been submitted and requires your attention.
+        </p>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">Contact Information</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555; width: 25%;">Name:</td>
+                <td style="padding: 8px 0; color: #333;">{{ customer_name }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Email:</td>
+                <td style="padding: 8px 0; color: #333;">
+                    <a href="mailto:{{ contact.email }}" style="color: #38b6ff; text-decoration: none;">{{ contact.email }}</a>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Phone:</td>
+                <td style="padding: 8px 0; color: #333;">
+                    <a href="tel:{{ contact.phone }}" style="color: #38b6ff; text-decoration: none;">{{ contact.phone }}</a>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Submitted:</td>
+                <td style="padding: 8px 0; color: #333;">{{ submission_time|date:"F d, Y \a\t g:i A" }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">Property & Project Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555; width: 25%;">Inquiry Type:</td>
+                <td style="padding: 8px 0; color: #333;">
+                    <span style="background-color: #38b6ff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                        {{ inquiry_type }}
+                    </span>
+                </td>
+            </tr>
+            {% if contact.location %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Location:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.location }}</td>
+            </tr>
+            {% endif %}
+            {% if contact.property_type %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Property Type:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.get_property_type_display }}</td>
+            </tr>
+            {% endif %}
+            {% if contact.monthly_bill %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Monthly Bill:</td>
+                <td style="padding: 8px 0; color: #333;">
+                    <strong>KES {{ contact.monthly_bill|floatformat:0 }}</strong>
+                    <span style="color: #666; font-size: 12px;">
+                        (Est. system size: {% widthratio contact.monthly_bill|floatformat:0|add:"0" 15 1 %} kW)
+                    </span>
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    
+    <div style="background-color: #fff; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">Customer Message:</h3>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; border-left: 3px solid #38b6ff;">
+            <p style="font-size: 14px; line-height: 1.6; color: #333; margin: 0; white-space: pre-wrap;">{{ contact.message }}</p>
+        </div>
+    </div>
+    
+    {% if contact.subscribe_newsletter %}
+    <div style="background-color: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <p style="color: #155724; margin: 0; font-size: 14px;">
+            <strong>✓ Newsletter:</strong> Customer opted in for newsletter subscription
+        </p>
+    </div>
+    {% endif %}
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 30px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">⚡ Quick Actions</h3>
+        <div style="margin-bottom: 15px;">
+            <a href="mailto:{{ contact.email }}?subject=Re: Your {{ inquiry_type }} Inquiry&body=Dear {{ customer_name }},%0D%0A%0D%0AThank you for your interest in solar energy solutions..." 
+               style="background-color: #38b6ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">
+                📧 Reply via Email
+            </a>
+            
+            <a href="tel:{{ contact.phone }}" 
+               style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                📞 Call Customer
+            </a>
+        </div>
+        
+        {% if contact.inquiry_type == 'quotation' %}
+        <p style="color: #666; font-size: 13px; margin: 10px 0;">
+            <strong>💡 Tip:</strong> For quotation requests, schedule a site visit to provide accurate assessment and pricing.
+        </p>
+        {% endif %}
+    </div>
+    
+    <div style="border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
+        <p style="color: #666; font-size: 12px; margin: 0;">
+            <strong>Admin Panel:</strong> View and manage this contact message in the 
+            <a href="/admin/core/contactmessage/" style="color: #38b6ff;">Django Admin</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

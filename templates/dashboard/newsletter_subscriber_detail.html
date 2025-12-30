@@ -1,0 +1,324 @@
+{% extends "dashboard/base.html" %}
+
+{% block page_title %}Subscriber: {{ subscriber.get_full_name|default:subscriber.email }}{% endblock %}
+{% block page_subtitle %}View subscriber details and activity{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_dashboard' %}">Newsletter</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_subscriber_list' %}">Subscribers</a></li>
+<li class="breadcrumb-item active">{{ subscriber.get_full_name|default:subscriber.email|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="avatar-circle-large me-3" style="width: 60px; height: 60px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.5rem;">
+                    {% if subscriber.first_name %}{{ subscriber.first_name.0|upper }}{% else %}{{ subscriber.email.0|upper }}{% endif %}
+                </div>
+                <div>
+                    <h4 class="mb-0">{{ subscriber.get_full_name|default:subscriber.email }}</h4>
+                    <p class="text-muted mb-1">{{ subscriber.email }}</p>
+                    <div>
+                        {% if subscriber.is_active %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check me-1"></i>Active Subscriber
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-6">
+                                <i class="fas fa-pause me-1"></i>Inactive Subscriber
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                {% if subscriber.is_active %}
+                <form method="post" action="{% url 'core:newsletter_subscriber_toggle' subscriber.pk %}" class="me-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to deactivate this subscriber?')">
+                        <i class="fas fa-pause me-1"></i>Deactivate
+                    </button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'core:newsletter_subscriber_toggle' subscriber.pk %}" class="me-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to reactivate this subscriber?')">
+                        <i class="fas fa-play me-1"></i>Reactivate
+                    </button>
+                </form>
+                {% endif %}
+                <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Subscribers
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Subscriber Details -->
+    <div class="col-lg-8 mb-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Subscriber Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Email:</dt>
+                            <dd class="col-sm-8">
+                                <a href="mailto:{{ subscriber.email }}" class="text-decoration-none">
+                                    {{ subscriber.email }}
+                                    <i class="fas fa-external-link-alt ms-1 small"></i>
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-4">Name:</dt>
+                            <dd class="col-sm-8">{{ subscriber.get_full_name|default:"Not provided" }}</dd>
+
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">
+                                {% if subscriber.is_active %}
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle me-1"></i>Active
+                                    </span>
+                                {% else %}
+                                    <span class="text-secondary">
+                                        <i class="fas fa-pause-circle me-1"></i>Inactive
+                                    </span>
+                                {% endif %}
+                            </dd>
+
+                            <dt class="col-sm-4">Source:</dt>
+                            <dd class="col-sm-8">{{ subscriber.subscription_source|title }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Subscribed:</dt>
+                            <dd class="col-sm-8">{{ subscriber.subscribed_at|date:"M d, Y g:i A" }}</dd>
+
+                            {% if subscriber.unsubscribed_at %}
+                            <dt class="col-sm-4">Unsubscribed:</dt>
+                            <dd class="col-sm-8">{{ subscriber.unsubscribed_at|date:"M d, Y g:i A" }}</dd>
+                            {% endif %}
+
+                            <dt class="col-sm-4">Subscription:</dt>
+                            <dd class="col-sm-8">
+                                {% if subscriber.is_active %}
+                                    <span class="text-success">Receiving emails</span>
+                                {% else %}
+                                    <span class="text-muted">Not receiving emails</span>
+                                {% endif %}
+                            </dd>
+
+                            {% if subscriber.first_name or subscriber.last_name %}
+                            <dt class="col-sm-4">First Name:</dt>
+                            <dd class="col-sm-8">{{ subscriber.first_name|default:"-" }}</dd>
+
+                            <dt class="col-sm-4">Last Name:</dt>
+                            <dd class="col-sm-8">{{ subscriber.last_name|default:"-" }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Email Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if send_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Sent</th>
+                                    <th>Status</th>
+                                    <th>Opened</th>
+                                    <th>Clicked</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in send_logs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ log.campaign.title }}</strong>
+                                        <br><small class="text-muted">{{ log.campaign.subject|truncatechars:40 }}</small>
+                                    </td>
+                                    <td>{{ log.sent_at|date:"M d, g:i A" }}</td>
+                                    <td>
+                                        {% if log.delivery_status == 'sent' %}
+                                            <span class="badge bg-success">Delivered</span>
+                                        {% elif log.delivery_status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% elif log.delivery_status == 'bounced' %}
+                                            <span class="badge bg-warning">Bounced</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ log.get_delivery_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.opened_at %}
+                                            <span class="text-success">
+                                                <i class="fas fa-check"></i> {{ log.opened_at|date:"M d, g:i A" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.clicked_at %}
+                                            <span class="text-warning">
+                                                <i class="fas fa-check"></i> {{ log.clicked_at|date:"M d, g:i A" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if send_logs|length >= 20 %}
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            Showing last {{ send_logs|length }} email activities.
+                        </small>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No email activity yet</h5>
+                        <p class="text-muted">This subscriber hasn't received any campaigns yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscriber Stats & Actions -->
+    <div class="col-lg-4 mb-4">
+        <!-- Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="stats-value text-info">{{ total_sent }}</div>
+                        <div class="stats-label small">Sent</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-value text-success">{{ total_opens }}</div>
+                        <div class="stats-label small">Opens</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-value text-warning">{{ total_clicks }}</div>
+                        <div class="stats-label small">Clicks</div>
+                    </div>
+                </div>
+
+                {% if total_sent > 0 %}
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted">Open Rate</small>
+                    <div class="progress mt-1" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: {{ open_rate }}%"></div>
+                    </div>
+                    <small class="text-success">{{ open_rate }}%</small>
+                </div>
+
+                <div class="mb-2">
+                    <small class="text-muted">Click Rate</small>
+                    <div class="progress mt-1" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: {{ click_rate }}%"></div>
+                    </div>
+                    <small class="text-warning">{{ click_rate }}%</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Campaigns -->
+        {% if send_logs %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Recent Campaigns</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for log in send_logs|slice:":5" %}
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <small><strong>{{ log.campaign.title|truncatechars:25 }}</strong></small>
+                                <div class="mt-1">
+                                    {% if log.opened_at %}
+                                    <span class="badge bg-success badge-sm">
+                                        <i class="fas fa-envelope-open me-1"></i>Opened
+                                    </span>
+                                    {% endif %}
+                                    {% if log.clicked_at %}
+                                    <span class="badge bg-warning badge-sm ms-1">
+                                        <i class="fas fa-mouse-pointer me-1"></i>Clicked
+                                    </span>
+                                    {% endif %}
+                                    {% if log.delivery_status == 'failed' %}
+                                    <span class="badge bg-danger badge-sm">
+                                        <i class="fas fa-times me-1"></i>Failed
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ log.sent_at|date:"M d" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="mailto:{{ subscriber.email }}" class="btn btn-outline-primary">
+                        <i class="fas fa-envelope me-2"></i>Send Email
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Details
+                    </button>
+                    <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+
+                {% if not subscriber.is_active %}
+                <hr>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>This subscriber is currently inactive and will not receive new campaigns.</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

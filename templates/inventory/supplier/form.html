@@ -1,0 +1,455 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Edit Supplier{% else %}Add Supplier{% endif %} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if object %}Edit Supplier{% else %}Add New Supplier{% endif %}{% endblock %}
+{% block page_subtitle %}{% if object %}Update supplier information and settings{% else %}Enter supplier details and business information{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:supplier_list' %}">Suppliers</a></li>
+<li class="breadcrumb-item active">{% if object %}Edit{% else %}Add{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .form-floating label {
+        color: #666;
+    }
+    
+    .required-field label::after {
+        content: ' *';
+        color: var(--danger-color);
+    }
+    
+    .rating-input {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .rating-star {
+        font-size: 1.5rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    
+    .rating-star.active,
+    .rating-star:hover {
+        color: #ffc107;
+    }
+    
+    .checkbox-card {
+        background: #f8f9fa;
+        border: 1px solid #e3e6f0;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .checkbox-card:hover {
+        background: #e3f2fd;
+        border-color: var(--primary-color);
+    }
+    
+    .checkbox-card input:checked + .checkbox-content {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="supplier-form">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-building text-primary"></i> Basic Information
+        </h4>
+        
+        <div class="row g-3">
+            <div class="col-md-6 required-field">
+                <div class="form-floating">
+                    {{ form.name }}
+                    <label for="{{ form.name.id_for_label }}">Company Name</label>
+                </div>
+                {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 required-field">
+                <div class="form-floating">
+                    {{ form.contact_person }}
+                    <label for="{{ form.contact_person.id_for_label }}">Contact Person</label>
+                </div>
+                {% if form.contact_person.errors %}
+                    <div class="text-danger small mt-1">{{ form.contact_person.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 required-field">
+                <div class="form-floating">
+                    {{ form.email }}
+                    <label for="{{ form.email.id_for_label }}">Email Address</label>
+                </div>
+                {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 required-field">
+                <div class="form-floating">
+                    {{ form.phone }}
+                    <label for="{{ form.phone.id_for_label }}">Phone Number</label>
+                </div>
+                {% if form.phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-12">
+                <div class="form-floating">
+                    {{ form.address }}
+                    <label for="{{ form.address.id_for_label }}">Address</label>
+                </div>
+                {% if form.address.errors %}
+                    <div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.city }}
+                    <label for="{{ form.city.id_for_label }}">City</label>
+                </div>
+                {% if form.city.errors %}
+                    <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.country }}
+                    <label for="{{ form.country.id_for_label }}">Country</label>
+                </div>
+                {% if form.country.errors %}
+                    <div class="text-danger small mt-1">{{ form.country.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.website }}
+                    <label for="{{ form.website.id_for_label }}">Website (Optional)</label>
+                </div>
+                {% if form.website.errors %}
+                    <div class="text-danger small mt-1">{{ form.website.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Business Details -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-file-contract text-primary"></i> Business Details
+        </h4>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.tax_number }}
+                    <label for="{{ form.tax_number.id_for_label }}">Tax Number</label>
+                </div>
+                {% if form.tax_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.tax_number.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.registration_number }}
+                    <label for="{{ form.registration_number.id_for_label }}">Registration Number</label>
+                </div>
+                {% if form.registration_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.registration_number.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-12">
+                <div class="form-floating">
+                    {{ form.bank_details }}
+                    <label for="{{ form.bank_details.id_for_label }}">Bank Details</label>
+                </div>
+                {% if form.bank_details.errors %}
+                    <div class="text-danger small mt-1">{{ form.bank_details.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Terms & Limits -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-money-bill-wave text-primary"></i> Payment Terms & Limits
+        </h4>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.payment_terms }}
+                    <label for="{{ form.payment_terms.id_for_label }}">Payment Terms</label>
+                </div>
+                {% if form.payment_terms.errors %}
+                    <div class="text-danger small mt-1">{{ form.payment_terms.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.lead_time_days }}
+                    <label for="{{ form.lead_time_days.id_for_label }}">Lead Time (Days)</label>
+                </div>
+                {% if form.lead_time_days.errors %}
+                    <div class="text-danger small mt-1">{{ form.lead_time_days.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.credit_limit }}
+                    <label for="{{ form.credit_limit.id_for_label }}">Credit Limit (KES)</label>
+                </div>
+                {% if form.credit_limit.errors %}
+                    <div class="text-danger small mt-1">{{ form.credit_limit.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.minimum_order_amount }}
+                    <label for="{{ form.minimum_order_amount.id_for_label }}">Minimum Order Amount (KES)</label>
+                </div>
+                {% if form.minimum_order_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.minimum_order_amount.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Rating & Status -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-star text-primary"></i> Rating & Status
+        </h4>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Supplier Rating</label>
+                <div class="rating-input" data-rating="{{ form.rating.value|default:5 }}">
+                    {% for i in "12345" %}
+                    <i class="fas fa-star rating-star" data-rating="{{ forloop.counter }}"></i>
+                    {% endfor %}
+                </div>
+                {{ form.rating }}
+                {% if form.rating.errors %}
+                    <div class="text-danger small mt-1">{{ form.rating.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="checkbox-card">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label checkbox-content" for="{{ form.is_active.id_for_label }}">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>Active Supplier</strong>
+                                    <div class="text-muted small">Available for new orders and transactions</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="checkbox-card">
+                            <div class="form-check">
+                                {{ form.is_preferred }}
+                                <label class="form-check-label checkbox-content" for="{{ form.is_preferred.id_for_label }}">
+                                    <i class="fas fa-star text-warning me-2"></i>
+                                    <strong>Preferred Supplier</strong>
+                                    <div class="text-muted small">Prioritized for procurement decisions</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Notes -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-sticky-note text-primary"></i> Additional Information
+        </h4>
+        
+        <div class="form-floating">
+            {{ form.notes }}
+            <label for="{{ form.notes.id_for_label }}">Notes & Comments</label>
+        </div>
+        {% if form.notes.errors %}
+            <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="form-section">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'inventory:supplier_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Suppliers
+            </a>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if object %}Update Supplier{% else %}Save Supplier{% endif %}
+                </button>
+                {% if object %}
+                <button type="submit" name="save_and_continue" class="btn btn-outline-primary">
+                    <i class="fas fa-save"></i> Save & Continue Editing
+                </button>
+                {% else %}
+                <button type="submit" name="save_and_new" class="btn btn-outline-primary">
+                    <i class="fas fa-plus"></i> Save & Add Another
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Rating system
+    const ratingContainer = document.querySelector('.rating-input');
+    const ratingInput = document.getElementById('{{ form.rating.id_for_label }}');
+    const stars = ratingContainer.querySelectorAll('.rating-star');
+    
+    // Set initial rating
+    const currentRating = parseInt(ratingContainer.getAttribute('data-rating') || 5);
+    updateStars(currentRating);
+    
+    // Add click handlers
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.getAttribute('data-rating'));
+            ratingInput.value = rating;
+            updateStars(rating);
+        });
+        
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.getAttribute('data-rating'));
+            highlightStars(rating);
+        });
+    });
+    
+    ratingContainer.addEventListener('mouseleave', function() {
+        const currentRating = parseInt(ratingInput.value || 5);
+        updateStars(currentRating);
+    });
+    
+    function updateStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.classList.add('active');
+            } else {
+                star.classList.remove('active');
+            }
+        });
+    }
+    
+    function highlightStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.style.color = '#ffc107';
+            } else {
+                star.style.color = '#ddd';
+            }
+        });
+    }
+    
+    // Form validation
+    const form = document.querySelector('.supplier-form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('.required-field input, .required-field textarea, .required-field select');
+        let hasErrors = false;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                hasErrors = true;
+                field.classList.add('is-invalid');
+                
+                // Remove error class on input
+                field.addEventListener('input', function() {
+                    this.classList.remove('is-invalid');
+                }, { once: true });
+            }
+        });
+        
+        if (hasErrors) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Phone number formatting
+    const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
+    phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.startsWith('254')) {
+            value = '+' + value;
+        } else if (value.startsWith('0')) {
+            value = '+254' + value.substring(1);
+        }
+        e.target.value = value;
+    });
+    
+    // Auto-uppercase country input
+    const countryInput = document.getElementById('{{ form.country.id_for_label }}');
+    countryInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.replace(/\b\w/g, l => l.toUpperCase());
+    });
+});
+</script>
+{% endblock %}

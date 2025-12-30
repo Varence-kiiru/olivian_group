@@ -1,0 +1,698 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Goods Receipt - {{ purchase_order.po_number }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}Goods Receipt{% endblock %}
+{% block page_subtitle %}Receive and inspect goods for PO {{ purchase_order.po_number }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:po_list' %}">Purchase Orders</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:po_detail' purchase_order.pk %}">{{ purchase_order.po_number }}</a></li>
+<li class="breadcrumb-item active">Goods Receipt</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-form {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .receipt-header {
+        background: linear-gradient(135deg, var(--success-color), #388e3c);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.25rem -1.25rem 1.5rem -1.25rem;
+    }
+    
+    .po-summary {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .item-row {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .item-row.received {
+        background: #e8f5e8;
+        border-color: #4caf50;
+    }
+    
+    .item-row.partial {
+        background: #fff3e0;
+        border-color: #ff9800;
+    }
+    
+    .item-counter {
+        position: absolute;
+        top: -12px;
+        left: 15px;
+        background: var(--primary-color);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 3px solid white;
+    }
+    
+    .quantity-input {
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-align: center;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+    
+    .quantity-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .inspection-section {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .quality-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .star-rating {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .star {
+        font-size: 1.5rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    
+    .star.active,
+    .star:hover {
+        color: #ffc107;
+    }
+    
+    .delivery-info {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .progress-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .progress-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 1;
+    }
+    
+    .progress-step {
+        background: white;
+        border: 3px solid #e0e0e0;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+    
+    .progress-step.completed {
+        background: #4caf50;
+        border-color: #4caf50;
+        color: white;
+    }
+    
+    .progress-step.current {
+        background: #ff9800;
+        border-color: #ff9800;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    .discrepancy-alert {
+        background: #ffebee;
+        border: 1px solid #f44336;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .action-buttons {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0 0 10px 10px;
+        border-top: 1px solid #e0e0e0;
+        text-align: right;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        position: sticky;
+        top: calc(var(--topbar-height) + 1rem);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Form -->
+    <div class="col-lg-8">
+        <form method="post" class="receipt-form" id="goodsReceiptForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Header -->
+            <div class="receipt-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-2">Goods Receipt</h4>
+                        <p class="mb-1 opacity-75">Purchase Order: {{ purchase_order.po_number }}</p>
+                        <p class="mb-0 opacity-75">Vendor: {{ purchase_order.vendor.company_name }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="text-white">
+                            <div class="small opacity-75">Expected Delivery</div>
+                            <div class="h6 mb-0">{{ purchase_order.required_date }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Indicator -->
+            <div class="progress-indicator">
+                <div class="progress-step completed">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="progress-step completed">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <div class="progress-step current">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="progress-step">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+            </div>
+            
+            <!-- Delivery Information -->
+            <div class="delivery-info">
+                <h6 class="mb-3">
+                    <i class="fas fa-truck me-2"></i>Delivery Information
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_date" class="form-label">Delivery Date *</label>
+                            <input type="date" class="form-control" id="delivery_date" name="delivery_date" 
+                                   value="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_time" class="form-label">Delivery Time</label>
+                            <input type="time" class="form-control" id="delivery_time" name="delivery_time" 
+                                   value="{{ now|date:'H:i' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_note" class="form-label">Delivery Note Number</label>
+                            <input type="text" class="form-control" id="delivery_note" name="delivery_note" 
+                                   placeholder="DN-2024-001">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="vehicle_number" class="form-label">Vehicle Number</label>
+                            <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" 
+                                   placeholder="KCA 123A">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="driver_name" class="form-label">Driver Name</label>
+                    <input type="text" class="form-control" id="driver_name" name="driver_name" 
+                           placeholder="Driver's full name">
+                </div>
+            </div>
+            
+            <!-- Items to Receive -->
+            <div class="mb-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-boxes me-2"></i>Items to Receive
+                </h6>
+                
+                {% for item in purchase_order.items.all %}
+                <div class="item-row" id="item-{{ item.id }}">
+                    <div class="item-counter">{{ forloop.counter }}</div>
+                    
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h6 class="mb-1">{{ item.item_name }}</h6>
+                            <p class="text-muted small mb-0">{{ item.description|truncatechars:50 }}</p>
+                            <div class="mt-1">
+                                <span class="badge bg-info">Ordered: {{ item.quantity }}</span>
+                                {% if item.quantity_received > 0 %}
+                                <span class="badge bg-success">Received: {{ item.quantity_received }}</span>
+                                {% endif %}
+                                <span class="badge bg-warning">Pending: {{ item.quantity_pending }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Quantity Received *</label>
+                            <input type="number" class="form-control quantity-input" 
+                                   name="items[{{ item.id }}][quantity_received]" 
+                                   id="qty-{{ item.id }}"
+                                   min="0" max="{{ item.quantity_pending }}" step="1" 
+                                   value="0" required
+                                   onchange="updateItemStatus({{ item.id }})">
+                            <small class="text-muted">Max: {{ item.quantity_pending }}</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Quality Rating</label>
+                            <div class="star-rating" data-item-id="{{ item.id }}">
+                                {% for i in "12345" %}
+                                <span class="star" data-rating="{{ forloop.counter }}" onclick="setRating({{ item.id }}, {{ forloop.counter }})">
+                                    <i class="fas fa-star"></i>
+                                </span>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="items[{{ item.id }}][quality_rating]" id="rating-{{ item.id }}" value="5">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Condition</label>
+                            <select class="form-select form-select-sm" name="items[{{ item.id }}][condition]">
+                                <option value="good">Good</option>
+                                <option value="damaged">Damaged</option>
+                                <option value="defective">Defective</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Inspection Notes -->
+                    <div class="inspection-section mt-3">
+                        <label class="form-label small fw-bold">
+                            <i class="fas fa-search me-1"></i>Inspection Notes
+                        </label>
+                        <textarea class="form-control" name="items[{{ item.id }}][inspection_notes]" 
+                                  rows="2" placeholder="Any observations about this item's condition, packaging, etc."></textarea>
+                    </div>
+                    
+                    <!-- Discrepancy Alert -->
+                    <div class="discrepancy-alert" id="discrepancy-{{ item.id }}" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                            <strong class="text-danger">Quantity Discrepancy Detected</strong>
+                        </div>
+                        <p class="mb-2 small">The received quantity doesn't match the ordered quantity. Please provide a reason:</p>
+                        <select class="form-select form-select-sm" name="items[{{ item.id }}][discrepancy_reason]">
+                            <option value="">Select reason...</option>
+                            <option value="partial_delivery">Partial Delivery</option>
+                            <option value="damaged_in_transit">Damaged in Transit</option>
+                            <option value="wrong_item">Wrong Item Delivered</option>
+                            <option value="vendor_shortage">Vendor Shortage</option>
+                            <option value="quality_issue">Quality Issue</option>
+                            <option value="other">Other (specify in notes)</option>
+                        </select>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Overall Delivery Assessment -->
+            <div class="delivery-info">
+                <h6 class="mb-3">
+                    <i class="fas fa-clipboard-check me-2"></i>Overall Delivery Assessment
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_status" class="form-label">Delivery Status *</label>
+                            <select class="form-select" id="delivery_status" name="delivery_status" required>
+                                <option value="">Select status...</option>
+                                <option value="complete">Complete Delivery</option>
+                                <option value="partial">Partial Delivery</option>
+                                <option value="over_delivery">Over Delivery</option>
+                                <option value="damaged">Damaged Goods</option>
+                                <option value="wrong_items">Wrong Items</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="overall_rating" class="form-label">Overall Rating</label>
+                            <div class="star-rating" data-item-id="overall">
+                                {% for i in "12345" %}
+                                <span class="star active" data-rating="{{ forloop.counter }}" onclick="setOverallRating({{ forloop.counter }})">
+                                    <i class="fas fa-star"></i>
+                                </span>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="overall_rating" id="overall_rating" value="5">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="general_comments" class="form-label">General Comments</label>
+                    <textarea class="form-control" id="general_comments" name="general_comments" rows="3"
+                              placeholder="Overall assessment of the delivery, vendor performance, any issues or commendations..."></textarea>
+                </div>
+            </div>
+            
+            <!-- Attachments -->
+            <div class="delivery-info">
+                <h6 class="mb-3">
+                    <i class="fas fa-paperclip me-2"></i>Attachments
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_photos" class="form-label">Delivery Photos</label>
+                            <input type="file" class="form-control" id="delivery_photos" name="delivery_photos" 
+                                   accept="image/*" multiple>
+                            <div class="form-text">Upload photos of delivered items (optional)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="delivery_documents" class="form-label">Delivery Documents</label>
+                            <input type="file" class="form-control" id="delivery_documents" name="delivery_documents" 
+                                   accept=".pdf,.jpg,.jpeg,.png" multiple>
+                            <div class="form-text">Delivery note, invoice copy, etc.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{% url 'procurement:po_detail' purchase_order.pk %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Back to PO
+                </a>
+                <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-save me-2"></i>Save Draft
+                </button>
+                <button type="submit" name="action" value="complete" class="btn btn-success">
+                    <i class="fas fa-check me-2"></i>Complete Receipt
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Summary Sidebar -->
+    <div class="col-lg-4">
+        <div class="summary-card">
+            <h6 class="mb-3">Receipt Summary</h6>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Purchase Order:</span>
+                    <strong>{{ purchase_order.po_number }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Vendor:</span>
+                    <strong>{{ purchase_order.vendor.company_name }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Total Items:</span>
+                    <strong id="total-items">{{ purchase_order.items.count }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Items Received:</span>
+                    <strong id="items-received" class="text-success">0</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Items Pending:</span>
+                    <strong id="items-pending" class="text-warning">{{ purchase_order.items.count }}</strong>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Order Value:</span>
+                    <strong>{{ purchase_order.currency }} {{ purchase_order.total_amount|floatformat:2 }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Value Received:</span>
+                    <strong id="value-received" class="text-success">{{ purchase_order.currency }} 0.00</strong>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Quick Stats -->
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="card bg-light text-center p-2">
+                        <div class="fw-bold text-success" id="completion-rate">0%</div>
+                        <small class="text-muted">Complete</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card bg-light text-center p-2">
+                        <div class="fw-bold text-warning" id="avg-rating">5.0</div>
+                        <small class="text-muted">Avg Rating</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Delivery Timeline -->
+            <h6 class="mb-2">Delivery Timeline</h6>
+            <div class="small text-muted mb-1">
+                Ordered: {{ purchase_order.order_date }}
+            </div>
+            <div class="small text-muted mb-1">
+                Required: {{ purchase_order.required_date }}
+            </div>
+            {% if purchase_order.promised_date %}
+            <div class="small text-muted mb-1">
+                Promised: {{ purchase_order.promised_date }}
+            </div>
+            {% endif %}
+            <div class="small mb-3">
+                <strong>Receiving: <span id="receipt-date">{{ today|date:"M d, Y" }}</span></strong>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instructions:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Inspect all items carefully</li>
+                    <li>Record actual quantities received</li>
+                    <li>Rate quality for each item</li>
+                    <li>Note any discrepancies or damage</li>
+                    <li>Take photos if needed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateItemStatus(itemId) {
+    const qtyInput = document.getElementById(`qty-${itemId}`);
+    const quantity = parseFloat(qtyInput.value) || 0;
+    const maxQty = parseFloat(qtyInput.max);
+    const itemRow = document.getElementById(`item-${itemId}`);
+    const discrepancy = document.getElementById(`discrepancy-${itemId}`);
+    
+    // Update item row styling
+    itemRow.classList.remove('received', 'partial');
+    if (quantity === maxQty) {
+        itemRow.classList.add('received');
+    } else if (quantity > 0) {
+        itemRow.classList.add('partial');
+    }
+    
+    // Show/hide discrepancy alert
+    if (quantity !== maxQty && quantity > 0) {
+        discrepancy.style.display = 'block';
+    } else {
+        discrepancy.style.display = 'none';
+    }
+    
+    updateSummary();
+}
+
+function setRating(itemId, rating) {
+    const stars = document.querySelectorAll(`[data-item-id="${itemId}"] .star`);
+    const hiddenInput = document.getElementById(`rating-${itemId}`);
+    
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+    
+    hiddenInput.value = rating;
+    updateSummary();
+}
+
+function setOverallRating(rating) {
+    const stars = document.querySelectorAll('[data-item-id="overall"] .star');
+    const hiddenInput = document.getElementById('overall_rating');
+    
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+    
+    hiddenInput.value = rating;
+}
+
+function updateSummary() {
+    const qtyInputs = document.querySelectorAll('.quantity-input');
+    let itemsReceived = 0;
+    let totalItems = qtyInputs.length;
+    let valueReceived = 0;
+    let totalRating = 0;
+    let ratingCount = 0;
+    
+    qtyInputs.forEach(input => {
+        const quantity = parseFloat(input.value) || 0;
+        if (quantity > 0) {
+            itemsReceived++;
+        }
+        
+        // Calculate value received (this would need actual unit prices)
+        // For now, we'll use a placeholder calculation
+        valueReceived += quantity * 1000; // Placeholder
+        
+        // Get rating for this item
+        const itemId = input.id.replace('qty-', '');
+        const ratingInput = document.getElementById(`rating-${itemId}`);
+        if (ratingInput) {
+            totalRating += parseFloat(ratingInput.value) || 0;
+            ratingCount++;
+        }
+    });
+    
+    // Update summary display
+    document.getElementById('items-received').textContent = itemsReceived;
+    document.getElementById('items-pending').textContent = totalItems - itemsReceived;
+    document.getElementById('value-received').textContent = `KES ${valueReceived.toLocaleString()}`;
+    
+    const completionRate = totalItems > 0 ? Math.round((itemsReceived / totalItems) * 100) : 0;
+    document.getElementById('completion-rate').textContent = `${completionRate}%`;
+    
+    const avgRating = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : '5.0';
+    document.getElementById('avg-rating').textContent = avgRating;
+}
+
+// Update receipt date when delivery date changes
+document.getElementById('delivery_date').addEventListener('change', function() {
+    const date = new Date(this.value);
+    const formattedDate = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+    document.getElementById('receipt-date').textContent = formattedDate;
+});
+
+// Form validation
+document.getElementById('goodsReceiptForm').addEventListener('submit', function(e) {
+    const qtyInputs = document.querySelectorAll('.quantity-input');
+    let hasQuantity = false;
+    
+    qtyInputs.forEach(input => {
+        if (parseFloat(input.value) > 0) {
+            hasQuantity = true;
+        }
+    });
+    
+    if (!hasQuantity) {
+        alert('Please enter at least one quantity received.');
+        e.preventDefault();
+        return false;
+    }
+    
+    const action = e.submitter.value;
+    if (action === 'complete') {
+        if (!confirm('Complete this goods receipt? This will update inventory levels and cannot be easily undone.')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateSummary();
+});
+</script>
+{% endblock %}

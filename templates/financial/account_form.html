@@ -1,0 +1,568 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Account - {{ object.account_name }}{% else %}Add Bank Account{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Bank Account{% else %}Add Bank Account{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    {% if object %}Update bank account details and settings{% else %}Create a new bank account{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:account_list' %}">Bank Accounts</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit {{ object.account_name }}{% else %}Add Account{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .account-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .account-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .account-type-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .account-type-card:hover {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.05);
+    }
+    
+    .account-type-card.selected {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.1);
+    }
+    
+    .account-type-icon {
+        font-size: 2rem;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .btn-action {
+        min-width: 120px;
+    }
+    
+    .balance-input-group {
+        position: relative;
+    }
+    
+    .currency-prefix {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-weight: 600;
+        z-index: 5;
+    }
+    
+    .currency-input {
+        padding-left: 3rem;
+    }
+    
+    .alert-info {
+        background-color: #e8f4f8;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+    
+    <div class="form-card">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i>
+                Basic Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.account_name.id_for_label }}" class="form-label required">Account Name</label>
+                        {{ form.account_name }}
+                        {% if form.account_name.errors %}
+                            <div class="text-danger small">{{ form.account_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.account_number.id_for_label }}" class="form-label required">Account Number</label>
+                        {{ form.account_number }}
+                        {% if form.account_number.errors %}
+                            <div class="text-danger small">{{ form.account_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.bank.id_for_label }}" class="form-label required">Bank</label>
+                        {{ form.bank }}
+                        {% if form.bank.errors %}
+                            <div class="text-danger small">{{ form.bank.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.currency.id_for_label }}" class="form-label required">Currency</label>
+                        {{ form.currency }}
+                        {% if form.currency.errors %}
+                            <div class="text-danger small">{{ form.currency.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label required">Account Type</label>
+                <div class="account-type-selector">
+                    <div class="account-type-card" data-type="current">
+                        <div class="account-type-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="small fw-bold">Current</div>
+                        <div class="small text-muted">Day-to-day operations</div>
+                    </div>
+                    
+                    <div class="account-type-card" data-type="savings">
+                        <div class="account-type-icon">
+                            <i class="fas fa-piggy-bank"></i>
+                        </div>
+                        <div class="small fw-bold">Savings</div>
+                        <div class="small text-muted">Interest earning</div>
+                    </div>
+                    
+                    <div class="account-type-card" data-type="fixed_deposit">
+                        <div class="account-type-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div class="small fw-bold">Fixed Deposit</div>
+                        <div class="small text-muted">Fixed term investment</div>
+                    </div>
+                    
+                    <div class="account-type-card" data-type="credit">
+                        <div class="account-type-icon">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div class="small fw-bold">Credit</div>
+                        <div class="small text-muted">Credit facility</div>
+                    </div>
+                    
+                    <div class="account-type-card" data-type="mpesa">
+                        <div class="account-type-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="small fw-bold">M-Pesa</div>
+                        <div class="small text-muted">Mobile money</div>
+                    </div>
+                </div>
+                {{ form.account_type }}
+                {% if form.account_type.errors %}
+                    <div class="text-danger small">{{ form.account_type.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Balance Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Balance Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.current_balance.id_for_label }}" class="form-label">Current Balance</label>
+                        <div class="balance-input-group">
+                            <span class="currency-prefix" id="balance-currency">KES</span>
+                            {{ form.current_balance }}
+                        </div>
+                        <div class="form-help">The current account balance as of today</div>
+                        {% if form.current_balance.errors %}
+                            <div class="text-danger small">{{ form.current_balance.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.available_balance.id_for_label }}" class="form-label">Available Balance</label>
+                        <div class="balance-input-group">
+                            <span class="currency-prefix" id="available-currency">KES</span>
+                            {{ form.available_balance }}
+                        </div>
+                        <div class="form-help">Available balance after pending transactions</div>
+                        {% if form.available_balance.errors %}
+                            <div class="text-danger small">{{ form.available_balance.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Branch Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-map-marker-alt"></i>
+                Branch Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.branch_name.id_for_label }}" class="form-label">Branch Name</label>
+                        {{ form.branch_name }}
+                        {% if form.branch_name.errors %}
+                            <div class="text-danger small">{{ form.branch_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.branch_code.id_for_label }}" class="form-label">Branch Code</label>
+                        {{ form.branch_code }}
+                        {% if form.branch_code.errors %}
+                            <div class="text-danger small">{{ form.branch_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.contact_person.id_for_label }}" class="form-label">Contact Person</label>
+                        {{ form.contact_person }}
+                        {% if form.contact_person.errors %}
+                            <div class="text-danger small">{{ form.contact_person.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.contact_phone.id_for_label }}" class="form-label">Contact Phone</label>
+                        {{ form.contact_phone }}
+                        {% if form.contact_phone.errors %}
+                            <div class="text-danger small">{{ form.contact_phone.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-cog"></i>
+                Settings
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-check mb-3">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            Active
+                        </label>
+                        <div class="form-help">Enable this account for transactions</div>
+                        {% if form.is_active.errors %}
+                            <div class="text-danger small">{{ form.is_active.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-check mb-3">
+                        {{ form.is_default }}
+                        <label class="form-check-label" for="{{ form.is_default.id_for_label }}">
+                            Default Account
+                        </label>
+                        <div class="form-help">Use as default for this currency</div>
+                        {% if form.is_default.errors %}
+                            <div class="text-danger small">{{ form.is_default.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-check mb-3">
+                        {{ form.enable_auto_reconciliation }}
+                        <label class="form-check-label" for="{{ form.enable_auto_reconciliation.id_for_label }}">
+                            Auto Reconciliation
+                        </label>
+                        <div class="form-help">Enable automatic reconciliation</div>
+                        {% if form.enable_auto_reconciliation.errors %}
+                            <div class="text-danger small">{{ form.enable_auto_reconciliation.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if object and object.is_default %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                This is the default account for {{ object.currency.code }} transactions.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Preview Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-eye"></i>
+                Preview
+            </div>
+            
+            <div class="account-preview">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6 class="mb-1">
+                            <span id="preview-name">{{ form.account_name.value|default:"Account Name" }}</span>
+                            <span class="badge bg-secondary ms-2" id="preview-number">{{ form.account_number.value|default:"0000000000" }}</span>
+                        </h6>
+                        <div class="text-muted small mb-2">
+                            <span id="preview-bank">Bank Name</span> • 
+                            <span id="preview-branch">Branch Name</span>
+                        </div>
+                        <div class="small">
+                            <span class="badge bg-info" id="preview-type">Account Type</span>
+                            <span class="badge bg-success ms-1" id="preview-currency">Currency</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="h5 mb-1" id="preview-balance">
+                            <span id="preview-currency-symbol">KES</span> 0.00
+                        </div>
+                        <div class="small text-muted">Current Balance</div>
+                        <div class="mt-2" id="preview-badges">
+                            <!-- Status badges will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'financial:account_list' %}" class="btn btn-outline-secondary btn-action">
+            <i class="fas fa-arrow-left me-2"></i>Cancel
+        </a>
+        
+        <div class="d-flex gap-2">
+            {% if object %}
+                <a href="{% url 'financial:account_detail' object.pk %}" class="btn btn-outline-info btn-action">
+                    <i class="fas fa-eye me-2"></i>View
+                </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="fas fa-save me-2"></i>
+                {% if object %}Update{% else %}Create{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form fields
+    const nameField = document.getElementById('{{ form.account_name.id_for_label }}');
+    const numberField = document.getElementById('{{ form.account_number.id_for_label }}');
+    const bankField = document.getElementById('{{ form.bank.id_for_label }}');
+    const currencyField = document.getElementById('{{ form.currency.id_for_label }}');
+    const typeField = document.getElementById('{{ form.account_type.id_for_label }}');
+    const balanceField = document.getElementById('{{ form.current_balance.id_for_label }}');
+    const branchField = document.getElementById('{{ form.branch_name.id_for_label }}');
+    const activeField = document.getElementById('{{ form.is_active.id_for_label }}');
+    const defaultField = document.getElementById('{{ form.is_default.id_for_label }}');
+    
+    // Account type cards
+    const typeCards = document.querySelectorAll('.account-type-card');
+    
+    // Currency input styling
+    const currentBalanceField = document.getElementById('{{ form.current_balance.id_for_label }}');
+    const availableBalanceField = document.getElementById('{{ form.available_balance.id_for_label }}');
+    
+    if (currentBalanceField) {
+        currentBalanceField.classList.add('form-control', 'currency-input');
+    }
+    if (availableBalanceField) {
+        availableBalanceField.classList.add('form-control', 'currency-input');
+    }
+    
+    // Account type selection
+    typeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            typeField.value = type;
+            
+            // Update visual selection
+            typeCards.forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            updatePreview();
+        });
+    });
+    
+    // Set initial selected type
+    const currentType = typeField.value;
+    if (currentType) {
+        const selectedCard = document.querySelector(`[data-type="${currentType}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+    }
+    
+    function updatePreview() {
+        // Get values
+        const name = nameField.value || 'Account Name';
+        const number = numberField.value || '0000000000';
+        const bankText = bankField.options[bankField.selectedIndex]?.text || 'Bank Name';
+        const currencyText = currencyField.options[currencyField.selectedIndex]?.text || 'Currency';
+        const typeText = typeField.options[typeField.selectedIndex]?.text || 'Account Type';
+        const balance = balanceField.value || '0.00';
+        const branch = branchField.value || 'Branch Name';
+        const isActive = activeField.checked;
+        const isDefault = defaultField.checked;
+        
+        // Update currency symbols
+        const currencySymbol = getCurrencySymbol(currencyText);
+        document.getElementById('balance-currency').textContent = currencySymbol;
+        document.getElementById('available-currency').textContent = currencySymbol;
+        
+        // Update preview
+        document.getElementById('preview-name').textContent = name;
+        document.getElementById('preview-number').textContent = number;
+        document.getElementById('preview-bank').textContent = bankText;
+        document.getElementById('preview-branch').textContent = branch;
+        document.getElementById('preview-type').textContent = typeText;
+        document.getElementById('preview-currency').textContent = currencyText.split(' ')[0] || 'Currency';
+        document.getElementById('preview-balance').innerHTML = `${currencySymbol} ${parseFloat(balance || 0).toFixed(2)}`;
+        document.getElementById('preview-currency-symbol').textContent = currencySymbol;
+        
+        // Update status badges
+        const badgesContainer = document.getElementById('preview-badges');
+        let badges = '';
+        
+        if (isActive) {
+            badges += '<span class="badge bg-success me-1">Active</span>';
+        } else {
+            badges += '<span class="badge bg-danger me-1">Inactive</span>';
+        }
+        
+        if (isDefault) {
+            badges += '<span class="badge bg-primary me-1">Default</span>';
+        }
+        
+        badgesContainer.innerHTML = badges;
+    }
+    
+    function getCurrencySymbol(currencyText) {
+        if (currencyText.includes('KES')) return 'KES';
+        if (currencyText.includes('USD')) return '$';
+        if (currencyText.includes('EUR')) return '€';
+        if (currencyText.includes('GBP')) return '£';
+        return 'KES'; // Default
+    }
+    
+    // Add event listeners
+    [nameField, numberField, bankField, currencyField, typeField, balanceField, branchField].forEach(field => {
+        if (field) {
+            field.addEventListener('input', updatePreview);
+            field.addEventListener('change', updatePreview);
+        }
+    });
+    
+    [activeField, defaultField].forEach(field => {
+        if (field) {
+            field.addEventListener('change', updatePreview);
+        }
+    });
+    
+    // Initial update
+    updatePreview();
+});
+</script>
+{% endblock %}

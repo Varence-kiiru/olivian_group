@@ -1,0 +1,253 @@
+{% extends "dashboard/base.html" %}
+
+{% block page_title %}Newsletter Dashboard{% endblock %}
+{% block page_subtitle %}Manage email campaigns and subscribers{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Newsletter</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ total_subscribers|default:0 }}</div>
+            <div class="stats-label">Total Subscribers</div>
+            <i class="fas fa-users stats-icon"></i>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ new_subscribers_30d|default:0 }}</div>
+            <div class="stats-label">New This Month</div>
+            <i class="fas fa-user-plus stats-icon"></i>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ sent_campaigns|default:0 }}</div>
+            <div class="stats-label">Sent Campaigns</div>
+            <i class="fas fa-paper-plane stats-icon"></i>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ overall_open_rate|default:0 }}%</div>
+            <div class="stats-label">Avg Open Rate</div>
+            <i class="fas fa-envelope-open stats-icon"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Campaigns -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Campaigns</h5>
+                <a href="{% url 'core:newsletter_campaign_list' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list me-1"></i>View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_campaigns %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Sent</th>
+                                    <th>Open Rate</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in recent_campaigns %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ campaign.title }}</strong>
+                                        <br><small class="text-muted">{{ campaign.subject|truncatechars:50 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if campaign.status == 'sent' %}success{% elif campaign.status == 'sending' %}warning{% elif campaign.status == 'scheduled' %}info{% else %}secondary{% endif %}">
+                                            {{ campaign.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ campaign.total_sent|default:0 }}</td>
+                                    <td>
+                                        {% if campaign.total_sent %}
+                                            {{ campaign.open_rate|floatformat:1 }}%
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ campaign.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'core:newsletter_campaign_detail' campaign.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if campaign.can_send %}
+                                        <form method="post" action="{% url 'core:newsletter_campaign_send' campaign.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to send this campaign?')">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No campaigns yet</h5>
+                        <p class="text-muted">Create your first newsletter campaign to get started.</p>
+                        <a href="{% url 'core:newsletter_campaign_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Campaign
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Recent Subscribers -->
+    <div class="col-lg-4 mb-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'core:newsletter_campaign_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Campaign
+                    </a>
+                    <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-2"></i>Manage Subscribers
+                    </a>
+                    <a href="{% url 'core:newsletter_campaign_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>View All Campaigns
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Subscribers -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Subscribers</h5>
+                <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-users me-1"></i>View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_subscribers %}
+                    <div class="list-group list-group-flush">
+                        {% for subscriber in recent_subscribers %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ subscriber.get_full_name|default:subscriber.email }}</strong>
+                                    <br><small class="text-muted">{{ subscriber.email }}</small>
+                                </div>
+                                <small class="text-muted">{{ subscriber.subscribed_at|date:"M d" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No subscribers yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Overall Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="stats-value text-info">{{ total_sent|default:0 }}</div>
+                        <div class="stats-label">Total Emails Sent</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-value text-success">{{ total_opens|default:0 }}</div>
+                        <div class="stats-label">Total Opens</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="stats-value text-warning">{{ total_clicks|default:0 }}</div>
+                        <div class="stats-label">Total Clicks</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-value text-primary">{{ overall_click_rate|default:0 }}%</div>
+                        <div class="stats-label">Click Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Status Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center mb-3">
+                            <div class="stats-value text-success">{{ sent_campaigns|default:0 }}</div>
+                            <div class="stats-label">Sent</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center mb-3">
+                            <div class="stats-value text-secondary">{{ draft_campaigns|default:0 }}</div>
+                            <div class="stats-label">Drafts</div>
+                        </div>
+                    </div>
+                </div>
+                {% with total=sent_campaigns|add:draft_campaigns %}
+                {% if total > 0 %}
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" role="progressbar"
+                         style="width: {% widthratio sent_campaigns total 100 %}%;"
+                         aria-valuenow="{{ sent_campaigns }}" aria-valuemin="0" aria-valuemax="{{ total }}">
+                        Sent ({{ sent_campaigns }})
+                    </div>
+                    <div class="progress-bar bg-secondary" role="progressbar"
+                         style="width: {% widthratio draft_campaigns total 100 %}%;"
+                         aria-valuenow="{{ draft_campaigns }}" aria-valuemin="0" aria-valuemax="{{ total }}">
+                        Drafts ({{ draft_campaigns }})
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

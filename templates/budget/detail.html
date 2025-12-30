@@ -1,0 +1,527 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget Details - {{ budget.name|default:"Budget" }} - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block page_title %}Budget Details{% endblock %}
+{% block page_subtitle %}{{ budget.name|default:"Budget Overview" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="/budget/">Budget</a></li>
+<li class="breadcrumb-item active">{{ budget.name|default:"Budget Details" }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .budget-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .budget-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .status-active { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+    .status-completed { background: rgba(23, 162, 184, 0.2); color: #17a2b8; }
+    .status-on_hold { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+    .status-cancelled { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+    
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+    
+    .expense-item {
+        border-left: 4px solid var(--primary-color);
+        background: white;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        transition: var(--transition);
+    }
+    
+    .expense-item:hover {
+        transform: translateX(2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 1rem 0;
+    }
+    
+    .approval-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .approval-pending { background: #fff3cd; color: #856404; }
+    .approval-approved { background: #d4edda; color: #155724; }
+    .approval-rejected { background: #f8d7da; color: #721c24; }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        border-left: 2px solid #e3e6f0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        top: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--primary-color);
+    }
+    
+    .timeline-item:last-child {
+        border-left: none;
+    }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .chart-container { height: 200px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Budget Header -->
+<div class="budget-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-2">{{ budget.name|default:"Solar Installation Project Q1" }}</h2>
+            <p class="mb-3 opacity-75">{{ budget.description|default:"Budget for Q1 solar installations and equipment purchases" }}</p>
+            <div class="d-flex align-items-center gap-3">
+                <span class="budget-status status-{{ budget.status|default:'active' }}">
+                    {{ budget.get_status_display|default:"Active" }}
+                </span>
+                <span class="text-white-50">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Created: {{ budget.created_at|default:"Jan 15, 2024"|date:"M j, Y" }}
+                </span>
+                <span class="text-white-50">
+                    <i class="fas fa-user me-1"></i>
+                    Manager: {{ budget.manager|default:"John Doe" }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="no-print">
+                <div class="btn-group mb-2">
+                    <button class="btn btn-light" onclick="printBudget()">
+                        <i class="fas fa-print me-1"></i>Print
+                    </button>
+                    <button class="btn btn-light" onclick="exportBudget()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+                <br>
+                <a href="/budget/{{ budget.id|default:'1' }}/edit/" class="btn btn-warning me-2">
+                    <i class="fas fa-edit me-1"></i>Edit Budget
+                </a>
+                <button class="btn btn-success" onclick="requestExpense()">
+                    <i class="fas fa-plus me-1"></i>New Expense
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Overview Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-wallet stats-icon"></i>
+                <div class="stats-value">{{ company.default_currency|default:"KES" }} {{ budget.total_amount|default:"1,200,000"|floatformat:0 }}</div>
+                <div class="stats-label">Total Budget</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-money-bill-wave stats-icon text-success"></i>
+                <div class="stats-value text-success">{{ company.default_currency|default:"KES" }} {{ budget.spent_amount|default:"850,000"|floatformat:0 }}</div>
+                <div class="stats-label">Amount Spent</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-piggy-bank stats-icon text-info"></i>
+                <div class="stats-value text-info">KES {{ budget.remaining_amount|default:"350,000"|floatformat:0 }}</div>
+                <div class="stats-label">Remaining</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-percentage stats-icon text-warning"></i>
+                <div class="stats-value text-warning">{{ budget.progress_percentage|default:"71" }}%</div>
+                <div class="stats-label">Utilization</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column -->
+    <div class="col-lg-8">
+        <!-- Budget Progress Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Budget Utilization Trend
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Expenses -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-receipt me-2"></i>Recent Expenses
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewAllExpenses()">
+                    View All
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>VAT ({{ company.vat_rate|default:16 }}%)</th>
+                                <th>Total</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th class="no-print">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>Solar Panel Purchase</strong>
+                                        <br><small class="text-muted">50 x 400W Monocrystalline panels</small>
+                                    </div>
+                                </td>
+                                <td>KES 320,000</td>
+                                <td>KES 51,200</td>
+                                <td><strong>KES 371,200</strong></td>
+                                <td>Jan 28, 2024</td>
+                                <td><span class="approval-badge approval-approved">Approved</span></td>
+                                <td class="no-print">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewExpense(1)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>Installation Tools</strong>
+                                        <br><small class="text-muted">Specialized installation equipment</small>
+                                    </div>
+                                </td>
+                                <td>KES 85,000</td>
+                                <td>KES 13,600</td>
+                                <td><strong>KES 98,600</strong></td>
+                                <td>Jan 25, 2024</td>
+                                <td><span class="approval-badge approval-pending">Pending</span></td>
+                                <td class="no-print">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewExpense(2)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>Transportation Costs</strong>
+                                        <br><small class="text-muted">Equipment delivery to sites</small>
+                                    </div>
+                                </td>
+                                <td>KES 25,000</td>
+                                <td>KES 4,000</td>
+                                <td><strong>KES 29,000</strong></td>
+                                <td>Jan 22, 2024</td>
+                                <td><span class="approval-badge approval-approved">Approved</span></td>
+                                <td class="no-print">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewExpense(3)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column -->
+    <div class="col-lg-4">
+        <!-- Budget Breakdown -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Budget Breakdown
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="breakdownChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-circle text-primary me-1"></i>Equipment</span>
+                        <strong>KES 600,000 (50%)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-circle text-success me-1"></i>Labor</span>
+                        <strong>KES 360,000 (30%)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-circle text-warning me-1"></i>Materials</span>
+                        <strong>KES 180,000 (15%)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-circle text-info me-1"></i>Other</span>
+                        <strong>KES 60,000 (5%)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Budget Timeline -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Budget Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>Budget Created</strong>
+                        <small class="text-muted">Jan 15, 2024</small>
+                    </div>
+                    <p class="mb-0 text-muted">Initial budget allocation of KES 1,200,000</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>First Expense Approved</strong>
+                        <small class="text-muted">Jan 18, 2024</small>
+                    </div>
+                    <p class="mb-0 text-muted">Solar panel purchase approved for KES 371,200</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>Budget Review</strong>
+                        <small class="text-muted">Jan 25, 2024</small>
+                    </div>
+                    <p class="mb-0 text-muted">Monthly budget review completed</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>Expense Request</strong>
+                        <small class="text-muted">Jan 28, 2024</small>
+                    </div>
+                    <p class="mb-0 text-muted">New expense request pending approval</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <p class="mb-0">Processing request...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    initializeCharts();
+    setupEventHandlers();
+});
+
+function initializeCharts() {
+    // Budget Trend Chart
+    const ctx1 = document.getElementById('budgetChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: ['Jan 15', 'Jan 20', 'Jan 25', 'Jan 30'],
+            datasets: [{
+                label: 'Budget Spent',
+                data: [0, 250000, 650000, 850000],
+                borderColor: 'var(--primary-color)',
+                backgroundColor: 'rgba(56, 182, 255, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Budget Allocated',
+                data: [1200000, 1200000, 1200000, 1200000],
+                borderColor: 'var(--warning-color)',
+                backgroundColor: 'transparent',
+                borderDash: [5, 5]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Budget Breakdown Chart
+    const ctx2 = document.getElementById('breakdownChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Equipment', 'Labor', 'Materials', 'Other'],
+            datasets: [{
+                data: [600000, 360000, 180000, 60000],
+                backgroundColor: [
+                    'var(--primary-color)',
+                    'var(--success-color)',
+                    'var(--warning-color)',
+                    'var(--info-color)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function setupEventHandlers() {
+    // Auto-refresh data every 5 minutes
+    setInterval(refreshBudgetData, 300000);
+}
+
+function refreshBudgetData() {
+    $.ajax({
+        url: `/api/budgets/{{ budget.id|default:'1' }}/`,
+        method: 'GET',
+        success: function(data) {
+            // Update budget statistics
+            updateBudgetStats(data);
+        },
+        error: function(xhr) {
+            console.error('Error refreshing budget data:', xhr);
+        }
+    });
+}
+
+function updateBudgetStats(data) {
+    // Update the stats cards with fresh data
+    $('.stats-value').each(function(index) {
+        const values = [data.total_amount, data.spent_amount, data.remaining_amount, data.progress_percentage + '%'];
+        $(this).text('KES ' + (values[index] || '0'));
+    });
+}
+
+function printBudget() {
+    window.print();
+}
+
+function exportBudget() {
+    showLoading();
+    window.open(`/api/budgets/{{ budget.id|default:'1' }}/export/`, '_blank');
+    hideLoading();
+}
+
+function requestExpense() {
+    window.location.href = `/budget/{{ budget.id|default:'1' }}/expense/create/`;
+}
+
+function viewExpense(expenseId) {
+    window.location.href = `/budget/expenses/${expenseId}/`;
+}
+
+function viewAllExpenses() {
+    window.location.href = `/budget/{{ budget.id|default:'1' }}/expenses/`;
+}
+
+function showLoading() {
+    $('#loadingModal').modal('show');
+}
+
+function hideLoading() {
+    $('#loadingModal').modal('hide');
+}
+
+// CSRF Token setup for AJAX
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+        }
+    }
+});
+</script>
+{% endblock %}

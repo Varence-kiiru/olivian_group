@@ -1,0 +1,636 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ item.product.name }} - Item Details - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:item_list' %}">Items</a></li>
+<li class="breadcrumb-item active">{{ item.product.name }}</li>
+{% endblock %}
+
+{% block page_name %}Item Details{% endblock %}
+{% block page_title %}{{ item.product.name }}{% endblock %}
+{% block page_subtitle %}Complete inventory item information and stock management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .item-header {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stock-meter {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    
+    .stock-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .stock-critical { background-color: #dc3545; }
+    .stock-low { background-color: #ffc107; }
+    .stock-good { background-color: #28a745; }
+    .stock-over { background-color: #17a2b8; }
+    
+    .stat-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        border-left: 4px solid;
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .stat-card-primary { border-left-color: #38b6ff; }
+    .stat-card-success { border-left-color: #28a745; }
+    .stat-card-warning { border-left-color: #ffc107; }
+    .stat-card-danger { border-left-color: #dc3545; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #38b6ff;
+        display: block;
+    }
+    
+    .movement-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e3e6f0;
+        transition: background-color 0.2s;
+    }
+    
+    .movement-item:hover {
+        background-color: rgba(56, 182, 255, 0.05);
+    }
+    
+    .movement-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .movement-in { background-color: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .movement-out { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .movement-transfer { background-color: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+    .movement-adjustment { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    
+    .product-image {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .product-placeholder {
+        width: 150px;
+        height: 150px;
+        background: #e9ecef;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 3rem;
+    }
+    
+    .info-card {
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .location-card {
+        border-left: 4px solid #28a745;
+    }
+    
+    .thresholds-card {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .actions-card {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .threshold-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+        position: relative;
+    }
+    
+    .threshold-marker {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: #dc3545;
+    }
+    
+    .current-stock-marker {
+        background: #007bff;
+    }
+    
+    .costing-info {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Item Header -->
+<div class="item-header">
+    <div class="row align-items-center">
+        <div class="col-md-2">
+            {% if item.product.images.first %}
+            <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" class="product-image">
+            {% else %}
+            <div class="product-placeholder">
+                <i class="fas fa-box"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <h2 class="mb-2">{{ item.product.name }}</h2>
+            <p class="mb-3">
+                <code>{{ item.product.sku }}</code> • 
+                {{ item.product.category }} • 
+                <span class="badge bg-light text-dark">{{ item.warehouse.name }}</span>
+            </p>
+            
+            <!-- Stock Level Meter -->
+            <div class="mt-3">
+                <div class="d-flex justify-content-between text-white-50 small">
+                    <span>Stock Level</span>
+                    <span>{{ item.quantity_on_hand }} / {{ item.maximum_stock }} units</span>
+                </div>
+                <div class="stock-meter">
+                    {% with percentage=item.quantity_on_hand|floatformat:0|add:0 max_stock=item.maximum_stock|floatformat:0|add:0 %}
+                    {% if max_stock > 0 %}
+                        {% widthratio percentage max_stock 100 as progress_width %}
+                        <div class="stock-fill 
+                            {% if item.quantity_on_hand == 0 %}stock-critical
+                            {% elif item.needs_reorder %}stock-low
+                            {% elif item.is_overstocked %}stock-over
+                            {% else %}stock-good{% endif %}" 
+                             style="width: {{ progress_width }}%"></div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="d-flex justify-content-between text-white-50 small mt-1">
+                    <span>Available: {{ item.available_quantity }}</span>
+                    <span>Reorder at: {{ item.reorder_point }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="text-center">
+                {% if item.quantity_on_hand == 0 %}
+                    <span class="badge bg-danger fs-6 mb-2">Out of Stock</span>
+                {% elif item.needs_reorder %}
+                    <span class="badge bg-warning fs-6 mb-2">Low Stock</span>
+                {% elif item.is_overstocked %}
+                    <span class="badge bg-info fs-6 mb-2">Overstock</span>
+                {% else %}
+                    <span class="badge bg-success fs-6 mb-2">In Stock</span>
+                {% endif %}
+                <div class="h3 mb-0">{{ item.quantity_on_hand }}</div>
+                <small>units on hand</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-primary">
+            <span class="stat-number">{{ item.quantity_on_hand }}</span>
+            <div class="text-muted">On Hand</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-success">
+            <span class="stat-number">{{ item.available_quantity }}</span>
+            <div class="text-muted">Available</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-warning">
+            <span class="stat-number">{{ item.quantity_allocated }}</span>
+            <div class="text-muted">Allocated</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-danger">
+            <span class="stat-number">{{ company.default_currency|default:"KES" }} {{ stock_value|floatformat:2 }}</span>
+            <div class="text-muted">Stock Value</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Movements -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-history me-2"></i>Recent Movements
+                    <span class="badge bg-primary ms-2">{{ recent_movements.count }}</span>
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="#" onclick="quickAdjustment()" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-1"></i>Quick Adjustment
+                    </a>
+                    <a href="{% url 'inventory:movement_list' %}?item={{ item.pk }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_movements %}
+                <div style="max-height: 500px; overflow-y: auto;">
+                    {% for movement in recent_movements %}
+                    <div class="movement-item d-flex align-items-center">
+                        <div class="movement-icon movement-{{ movement.movement_type }}">
+                            {% if movement.movement_type == 'in' %}
+                                <i class="fas fa-arrow-up"></i>
+                            {% elif movement.movement_type == 'out' %}
+                                <i class="fas fa-arrow-down"></i>
+                            {% elif movement.movement_type == 'transfer' %}
+                                <i class="fas fa-exchange-alt"></i>
+                            {% elif movement.movement_type == 'adjustment' %}
+                                <i class="fas fa-edit"></i>
+                            {% else %}
+                                <i class="fas fa-question"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-bold">{{ movement.get_movement_type_display }}</div>
+                                    <small class="text-muted">
+                                        {% if movement.reference %}
+                                            Ref: {{ movement.reference }}
+                                        {% else %}
+                                            Manual adjustment
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold {% if movement.quantity_change > 0 %}text-success{% elif movement.quantity_change < 0 %}text-danger{% else %}text-info{% endif %}">
+                                        {% if movement.quantity_change > 0 %}+{% endif %}{{ movement.quantity_change }}
+                                    </div>
+                                    <small class="text-muted">Balance: {{ movement.balance_after }}</small>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted">{{ movement.performed_by.get_full_name|default:movement.performed_by.username }}</small>
+                                <small class="text-muted">{{ movement.created_at|timesince }} ago</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No recent movements found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Information -->
+    <div class="col-lg-4">
+        <!-- Basic Information -->
+        <div class="card info-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>Item Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Product Name</label>
+                    <div class="fw-bold">{{ item.product.name }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">SKU</label>
+                    <div><code>{{ item.product.sku }}</code></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Category</label>
+                    <div>{{ item.product.category }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Unit</label>
+                    <div>{{ item.product.unit|default:"Units" }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Last Counted</label>
+                    <div>
+                        {% if item.last_counted %}
+                            {{ item.last_counted|date:"M d, Y" }}
+                            <small class="text-muted">({{ item.last_counted|timesince }} ago)</small>
+                        {% else %}
+                            <span class="text-muted">Never counted</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Information -->
+        <div class="card location-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-map-marker-alt me-2"></i>Location Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Warehouse</label>
+                    <div class="fw-bold">{{ item.warehouse.name }}</div>
+                    <small class="text-muted">{{ item.warehouse.address }}</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Bin Location</label>
+                    <div>
+                        {% if item.bin_location %}
+                            <span class="badge bg-primary">{{ item.bin_location }}</span>
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if item.row or item.shelf %}
+                <div class="row">
+                    {% if item.row %}
+                    <div class="col-6">
+                        <label class="form-label text-muted">Row</label>
+                        <div>{{ item.row }}</div>
+                    </div>
+                    {% endif %}
+                    {% if item.shelf %}
+                    <div class="col-6">
+                        <label class="form-label text-muted">Shelf</label>
+                        <div>{{ item.shelf }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stock Thresholds -->
+        <div class="card thresholds-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>Stock Thresholds
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Reorder Point</label>
+                    <div class="fw-bold text-warning">{{ item.reorder_point }} units</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Safety Stock</label>
+                    <div>{{ item.safety_stock }} units</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Maximum Stock</label>
+                    <div>{{ item.maximum_stock }} units</div>
+                </div>
+                
+                <!-- Threshold Visualization -->
+                <div class="threshold-bar">
+                    {% widthratio item.quantity_on_hand item.maximum_stock 100 as current_pct %}
+                                    {% widthratio item.reorder_point item.maximum_stock 100 as reorder_pct %}
+                    <div class="threshold-marker" style="left: {{ reorder_pct }}%;" title="Reorder Point"></div>
+                    <div class="threshold-marker current-stock-marker" style="left: {{ current_pct }}%;" title="Current Stock"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>0</span>
+                    <span>Reorder</span>
+                    <span>Max</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Costing Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-money-bill-wave me-2"></i>Costing Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="costing-info">
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Average Cost</label>
+                            <div class="fw-bold">{{ company.default_currency|default:"KES" }} {{ item.average_cost|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Last Cost</label>
+                            <div>{{ company.default_currency|default:"KES" }} {{ item.last_cost|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-2">
+                    
+                    <div class="text-center">
+                        <label class="form-label text-muted small">Total Stock Value</label>
+                        <div class="h5 text-primary mb-0">{{ company.default_currency|default:"KES" }} {{ stock_value|floatformat:2 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card actions-card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-warning" onclick="quickAdjustment()">
+                        <i class="fas fa-edit me-2"></i>Stock Adjustment
+                    </button>
+                    
+                    <a href="{% url 'inventory:transfer_create' %}?item={{ item.pk }}" class="btn btn-info">
+                        <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+                    </a>
+                    
+                    <a href="{% url 'inventory:item_edit' item.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Item
+                    </a>
+                    
+                    <a href="#" onclick="cycleCount()" class="btn btn-outline-secondary">
+                        <i class="fas fa-clipboard-check me-2"></i>Cycle Count
+                    </a>
+                    
+                    <a href="#" onclick="generateReport()" class="btn btn-outline-dark">
+                        <i class="fas fa-file-pdf me-2"></i>Generate Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Adjustment Modal -->
+<div class="modal fade" id="quickAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Quick Stock Adjustment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickAdjustmentForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Stock</label>
+                        <input type="text" class="form-control" value="{{ item.quantity_on_hand }}" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Type</label>
+                        <select class="form-select" name="adjustment_type" required>
+                            <option value="">Select Type</option>
+                            <option value="increase">Increase Stock</option>
+                            <option value="decrease">Decrease Stock</option>
+                            <option value="set">Set Exact Amount</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" name="quantity" min="0" step="0.01" required>
+                        <div class="form-text">Enter the quantity to adjust or set</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="reason" rows="3" placeholder="Reason for adjustment..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i>Save Adjustment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function quickAdjustment() {
+    const modal = new bootstrap.Modal(document.getElementById('quickAdjustmentModal'));
+    modal.show();
+}
+
+function cycleCount() {
+    if (confirm('Start a cycle count for this item? This will create a new stock adjustment.')) {
+        window.location.href = `{% url 'inventory:adjustment_create' %}?item={{ item.pk }}&type=recount`;
+    }
+}
+
+function generateReport() {
+    window.open(`/inventory/items/{{ item.pk }}/report/`, '_blank');
+}
+
+document.getElementById('quickAdjustmentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('item_id', '{{ item.pk }}');
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+    submitBtn.disabled = true;
+    
+    fetch('/inventory/items/{{ item.pk }}/quick-adjustment/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error processing adjustment');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// Initialize stock level animation
+document.addEventListener('DOMContentLoaded', function() {
+    const stockFill = document.querySelector('.stock-fill');
+    if (stockFill) {
+        const targetWidth = stockFill.style.width;
+        stockFill.style.width = '0%';
+        setTimeout(() => {
+            stockFill.style.width = targetWidth;
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

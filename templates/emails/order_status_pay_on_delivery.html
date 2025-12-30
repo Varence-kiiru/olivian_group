@@ -1,0 +1,74 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Confirmed - Pay on Delivery #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>Order Confirmed - Pay on Delivery</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Great news! Your order has been confirmed and set for <strong>Pay on Delivery</strong>. You can pay when your items arrive at your doorstep.</p>
+
+<div class="highlight-box">
+    <h3>Order Summary:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+    <p><strong>Total Amount:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+    <p><strong>Delivery Address:</strong> {{ order.shipping_address|linebreaks }}</p>
+</div>
+
+<div class="status-box" style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #856404; margin: 0 0 10px 0;">Payment Instructions</h4>
+    <p style="margin: 0; color: #856404;">
+        You will pay <strong>KES {{ total_amount|floatformat:2|add:","|cut:" " }}</strong> when your order arrives. 
+        Please have the exact amount ready, or we can provide change for cash payments.
+    </p>
+</div>
+
+<h3>What's Next?</h3>
+<ul>
+    <li><strong>Processing:</strong> We'll prepare your items (1-2 business days)</li>
+    <li><strong>Dispatch:</strong> Your order will be shipped to your address</li>
+    <li><strong>Delivery:</strong> Pay when you receive your items</li>
+    {% if installation_required %}
+    <li><strong>Installation:</strong> Our technicians will schedule installation</li>
+    {% endif %}
+</ul>
+
+<h3>Items in Your Order:</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Product</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Qty</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Unit Price</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.product_name }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.quantity }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ item.unit_price|floatformat:2|add:","|cut:" " }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ item.total_price|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: #f8f9fa; font-weight: bold;">
+            <td colspan="3" style="padding: 10px; border: 1px solid #ddd; text-align: right;">Total Amount:</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ total_amount|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>We'll keep you updated as your order progresses. If you have any questions, please don't hesitate to contact us.</p>
+
+<p>Thank you for choosing Olivian Group for your solar energy needs!</p>
+
+{% endblock %}

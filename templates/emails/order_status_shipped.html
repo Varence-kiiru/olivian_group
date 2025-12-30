@@ -1,0 +1,80 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Shipped #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[SHIPPING] Your Order Has Been Shipped!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Exciting news! Your solar equipment has been shipped and is on its way to you. You should receive it within the next few days.</p>
+
+<div class="highlight-box">
+    <h3>Shipping Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Current Status:</strong> {{ status_display }}</p>
+    {% if tracking_number %}
+    <p><strong>Tracking Number:</strong> {{ tracking_number }}</p>
+    {% endif %}
+    {% if estimated_delivery %}
+    <p><strong>Estimated Delivery:</strong> {{ estimated_delivery|date:"F d, Y" }}</p>
+    {% endif %}
+    <p><strong>Delivery Address:</strong></p>
+    <div style="background-color: #f8f9fa; padding: 10px; border-left: 4px solid #007bff;">
+        {{ order.shipping_address|linebreaks }}
+    </div>
+</div>
+
+{% if order.payment_method == 'cash_on_delivery' %}
+<div class="status-box" style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #856404; margin: 0 0 10px 0;">[PAYMENT] Payment Reminder</h4>
+    <p style="margin: 0; color: #856404;">
+        <strong>Amount to Pay:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}<br>
+        Please have the exact amount ready, or we can provide change for cash payments.
+    </p>
+</div>
+{% endif %}
+
+<h3>What to Expect:</h3>
+<ul>
+    <li><strong>Delivery Call:</strong> Our delivery team will call you before arrival</li>
+    <li><strong>Inspection:</strong> Please inspect all items upon delivery</li>
+    {% if order.payment_method == 'cash_on_delivery' %}
+    <li><strong>Payment:</strong> Pay the delivery team upon receipt</li>
+    {% endif %}
+    {% if installation_required %}
+    <li><strong>Installation:</strong> Our technicians will contact you to schedule installation</li>
+    {% endif %}
+</ul>
+
+<h3>Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'processing' %}
+            <li>[COMPLETE] <strong>Processing</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'packed_ready' %}
+            <li>[COMPLETE] <strong>Packed & Ready</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[COMPLETE] <strong>Shipped</strong> (Current Stage)</li>
+    <li>[PENDING] <strong>Out for Delivery</strong></li>
+    <li>[PENDING] <strong>Delivered</strong></li>
+    {% if installation_required %}
+    <li>[PENDING] <strong>Installation Scheduled</strong></li>
+    {% endif %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>Thank you for choosing Olivian Group. We're excited to help you harness the power of solar energy!</p>
+
+{% endblock %}

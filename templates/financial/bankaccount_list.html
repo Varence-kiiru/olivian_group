@@ -1,0 +1,282 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Bank Accounts - {{ block.super }}{% endblock %}
+
+{% block page_title %}Bank Account Management{% endblock %}
+{% block page_subtitle %}Manage company bank accounts and monitor balances{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Bank Accounts</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .account-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .account-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .account-card.positive { border-left-color: #28a745; }
+    .account-card.negative { border-left-color: #dc3545; }
+    .account-card.zero { border-left-color: #6c757d; }
+    .account-card.default { border-left-color: #38b6ff; }
+    
+    .balance-amount {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .balance-positive { color: #28a745; }
+    .balance-negative { color: #dc3545; }
+    .balance-zero { color: #6c757d; }
+    
+    .account-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active { background: #d4edda; color: #155724; }
+    .status-inactive { background: #f8d7da; color: #721c24; }
+    .status-default { background: #cce5ff; color: #004085; }
+    
+    .account-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-university me-2"></i>Bank Accounts
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="alert('Add Account feature coming soon!')">
+            <i class="fas fa-plus me-2"></i>Add Bank Account
+        </button>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Account name, number, bank...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="bank" class="form-label">Bank</label>
+            <select class="form-select" id="bank" name="bank">
+                <option value="">All Banks</option>
+                {% for bank in banks %}
+                <option value="{{ bank.id }}" {% if current_bank == bank.id|stringformat:"s" %}selected{% endif %}>
+                    {{ bank.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="currency" class="form-label">Currency</label>
+            <select class="form-select" id="currency" name="currency">
+                <option value="">All Currencies</option>
+                {% for currency in currencies %}
+                <option value="{{ currency.id }}" {% if current_currency == currency.id|stringformat:"s" %}selected{% endif %}>
+                    {{ currency.code }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Accounts Grid -->
+<div class="row">
+    {% for account in accounts %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="account-card {% if account.is_default %}default{% elif account.current_balance > 0 %}positive{% elif account.current_balance < 0 %}negative{% else %}zero{% endif %}">
+            <!-- Account Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'financial:account_detail' account.pk %}" class="text-decoration-none">
+                            {{ account.account_name }}
+                        </a>
+                    </h6>
+                    <div class="account-meta">
+                        {{ account.bank.name }} • {{ account.account_number }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    {% if account.is_active %}
+                        <span class="account-status status-active">Active</span>
+                    {% else %}
+                        <span class="account-status status-inactive">Inactive</span>
+                    {% endif %}
+                    {% if account.is_default %}
+                        <div class="mt-1">
+                            <span class="account-status status-default">Default</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Current Balance -->
+            <div class="mb-3">
+                <div class="account-meta mb-1">Current Balance</div>
+                <div class="balance-amount {% if account.current_balance > 0 %}balance-positive{% elif account.current_balance < 0 %}balance-negative{% else %}balance-zero{% endif %}">
+                    KES {{ account.current_balance|floatformat:2 }}
+                </div>
+                <div class="small text-muted">{{ account.currency.code|default:"KES" }}</div>
+            </div>
+            
+            <!-- Account Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="account-meta mb-1">Account Type</div>
+                    <div class="small">{{ account.get_account_type_display|default:"Business" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="account-meta mb-1">Available Balance</div>
+                    <div class="small">KES {{ account.available_balance|default:account.current_balance|floatformat:2 }}</div>
+                </div>
+            </div>
+            
+            <!-- Reconciliation Status -->
+            <div class="mb-3">
+                <div class="account-meta mb-1">Last Reconciled</div>
+                {% if account.last_reconciled_date %}
+                    <div class="small">{{ account.last_reconciled_date|date:"M d, Y" }}</div>
+                    <div class="small text-muted">
+                        Balance: KES {{ account.last_reconciled_balance|floatformat:2 }}
+                    </div>
+                {% else %}
+                    <div class="small text-warning">Never reconciled</div>
+                {% endif %}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'financial:account_detail' account.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <button class="btn btn-outline-success btn-sm" onclick="alert('Reconcile feature coming soon!')">
+                    <i class="fas fa-balance-scale me-1"></i>Reconcile
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="alert('Edit feature coming soon!')">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-university fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No bank accounts found</h5>
+            <p class="text-muted">
+                {% if current_search or current_bank or current_currency or current_status %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by adding your first bank account.
+                {% endif %}
+            </p>
+            <button class="btn btn-primary" onclick="alert('Add Account feature coming soon!')">
+                <i class="fas fa-plus me-2"></i>Add Bank Account
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Accounts pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_bank %}&bank={{ current_bank }}{% endif %}{% if current_currency %}&currency={{ current_currency }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_bank %}&bank={{ current_bank }}{% endif %}{% if current_currency %}&currency={{ current_currency }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_bank %}&bank={{ current_bank }}{% endif %}{% if current_currency %}&currency={{ current_currency }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_bank %}&bank={{ current_bank }}{% endif %}{% if current_currency %}&currency={{ current_currency }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

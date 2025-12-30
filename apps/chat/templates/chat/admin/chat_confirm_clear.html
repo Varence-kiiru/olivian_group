@@ -1,0 +1,494 @@
+{% extends "admin/base.html" %}
+{% load admin_urls static %}
+
+{% block title %}Confirm {{ action_desc }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:chat_system_management' %}">Chat Management</a>
+    &rsaquo; Confirm {{ action_desc }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="confirm-dialog">
+        <!-- Warning Header -->
+        <div class="warning-header">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="warning-content">
+                <h1>Confirm {{ action_desc }}</h1>
+                <p class="warning-subtitle">This action cannot be undone. Please review carefully.</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="dialog-content">
+            <div class="message-section">
+                <div class="message-header">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Operation Details</span>
+                </div>
+                <div class="message-text">
+                    {{ message_text }}
+                </div>
+            </div>
+
+            <!-- Impact Assessment -->
+            <div class="impact-section">
+                <h3><i class="fas fa-chart-line"></i> Potential Impact</h3>
+                <div class="impact-grid">
+                    <div class="impact-item">
+                        <div class="impact-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="impact-text">
+                            <strong>Database Records</strong>
+                            <span>Will be permanently deleted</span>
+                        </div>
+                    </div>
+                    <div class="impact-item">
+                        <div class="impact-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="impact-text">
+                            <strong>Data Recovery</strong>
+                            <span>Not possible after deletion</span>
+                        </div>
+                    </div>
+                    <div class="impact-item">
+                        <div class="impact-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="impact-text">
+                            <strong>User Impact</strong>
+                            <span>Immediate effect on all users</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Check -->
+            <div class="security-section">
+                <div class="security-header">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Confirmation</span>
+                </div>
+                <div class="security-note">
+                    <p>For security purposes, you must manually type <strong>"CONFIRM"</strong> below to proceed:</p>
+                    <div class="confirmation-input-group">
+                        <input type="text"
+                               id="confirmation-input"
+                               class="confirmation-input"
+                               placeholder="Type CONFIRM to proceed"
+                               maxlength="7"
+                               pattern="CONFIRM"
+                               title="Please type CONFIRM exactly"
+                               required>
+                        <span class="confirmation-status" id="confirmation-status">
+                            <i class="fas fa-times"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="dialog-actions">
+            <a href="{% url 'admin:chat_system_management' %}" class="btn-secondary">
+                <i class="fas fa-arrow-left"></i> Cancel & Return
+            </a>
+
+            <button type="submit" form="confirm-form" class="btn-danger" id="confirm-submit" disabled>
+                <i class="fas fa-trash-alt"></i> {{ action_desc }}
+            </button>
+        </div>
+
+        <!-- Hidden Form -->
+        <form id="confirm-form" method="post" action="" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="{{ action_name }}">
+            <input type="hidden" name="confirm_clear" value="1">
+            {% for obj in queryset %}
+            <input type="hidden" name="_selected_action" value="{{ obj.pk }}">
+            {% endfor %}
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmationInput = document.getElementById('confirmation-input');
+    const confirmationStatus = document.getElementById('confirmation-status');
+    const confirmSubmit = document.getElementById('confirm-submit');
+
+    function checkConfirmation() {
+        const value = confirmationInput.value.toUpperCase();
+        const isValid = value === 'CONFIRM';
+
+        if (isValid) {
+            confirmationStatus.innerHTML = '<i class="fas fa-check text-success"></i>';
+            confirmationStatus.className = 'confirmation-status valid';
+            confirmSubmit.disabled = false;
+            confirmSubmit.classList.add('enabled');
+        } else {
+            confirmationStatus.innerHTML = '<i class="fas fa-times text-danger"></i>';
+            confirmationStatus.className = 'confirmation-status invalid';
+            confirmSubmit.disabled = true;
+            confirmSubmit.classList.remove('enabled');
+        }
+    }
+
+    confirmationInput.addEventListener('input', checkConfirmation);
+    checkConfirmation(); // Check initial state
+});
+</script>
+
+<style>
+.confirm-dialog {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+/* Warning Header */
+.warning-header {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.warning-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.warning-header h1 {
+    margin: 0 0 5px 0;
+    font-size: 1.8rem;
+    font-weight: 300;
+}
+
+.warning-subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+/* Dialog Content */
+.dialog-content {
+    padding: 30px;
+}
+
+/* Message Section */
+.message-section {
+    margin-bottom: 30px;
+}
+
+.message-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.message-header i {
+    color: #ffc107;
+}
+
+.message-text {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #495057;
+}
+
+/* Impact Section */
+.impact-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+}
+
+.impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.impact-item {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.impact-icon {
+    width: 40px;
+    height: 40px;
+    background: #856404;
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.impact-text strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #856404;
+    margin-bottom: 2px;
+}
+
+.impact-text span {
+    font-size: 0.85rem;
+    color: #664d03;
+}
+
+/* Security Section */
+.security-section {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.security-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.security-header i {
+    color: #28a745;
+}
+
+.security-note {
+    margin-bottom: 15px;
+}
+
+.confirmation-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.confirmation-input {
+    flex: 1;
+    padding: 12px 40px 12px 16px;
+    border: 2px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.confirmation-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25);
+}
+
+.confirmation-status {
+    position: absolute;
+    right: 12px;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.confirmation-status.valid {
+    color: #28a745;
+}
+
+.confirmation-status.invalid {
+    color: #dc3545;
+}
+
+/* Dialog Actions */
+.dialog-actions {
+    background: #f8f9fa;
+    padding: 25px 30px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-secondary, .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    text-decoration: none;
+    color: white;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-danger.enabled {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.btn-danger.enabled:hover {
+    background: #c82333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .warning-header {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .warning-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .dialog-content {
+        padding: 20px;
+    }
+
+    .dialog-actions {
+        padding: 20px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-secondary, .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .impact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .confirmation-input-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .confirmation-status {
+        position: static;
+        align-self: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .confirm-dialog {
+        margin: 10px;
+        border-radius: 12px;
+    }
+
+    .warning-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
+    }
+}
+
+/* Animations */
+.confirm-dialog {
+    animation: slideInScale 0.4s ease-out;
+}
+
+@keyframes slideInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Focus states */
+.confirmation-input:focus + .confirmation-status,
+.confirmation-input:focus + .confirmation-status.valid,
+.confirmation-input:focus + .confirmation-status.invalid {
+    transform: scale(1.1);
+}
+
+/* Print styles */
+@media print {
+    .dialog-actions,
+    .security-section {
+        display: none !important;
+    }
+
+    .warning-header {
+        background: none !important;
+        color: black !important;
+        border: 2px solid black !important;
+    }
+
+    .warning-icon {
+        background: black !important;
+        color: white !important;
+    }
+}
+</style>
+{% endblock %}

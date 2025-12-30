@@ -1,0 +1,157 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Manage Blog Posts - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Posts{% endblock %}
+{% block page_subtitle %}Create, edit, and manage your blog content{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-file-alt me-2"></i>
+                    All Posts
+                </h5>
+                <a href="{% url 'blog:post_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>
+                    New Post
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <form method="GET" class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <input type="text" name="search" class="form-control" placeholder="Search posts..." value="{{ search }}">
+                            </div>
+                            <select name="status" class="form-select" style="width: auto;">
+                                <option value="">All Status</option>
+                                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                                <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                            </select>
+                            <select name="category" class="form-select" style="width: auto;">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.pk }}" {% if category_filter == category.pk|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Posts Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Views</th>
+                                <th>Featured</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in posts %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ post.title }}</strong>
+                                            <div class="small text-muted">{{ post.excerpt|truncatechars:60 }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ post.author.get_full_name }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ post.category.name }}</span>
+                                    </td>
+                                    <td>
+                                        {% if post.status == 'published' %}
+                                            <a href="{% url 'blog:toggle_post_status' post.pk %}" class="badge bg-success" style="text-decoration: none; cursor: pointer;">Published</a>
+                                        {% else %}
+                                            <a href="{% url 'blog:toggle_post_status' post.pk %}" class="badge bg-warning" style="text-decoration: none; cursor: pointer;">Draft</a>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ post.views }}</td>
+                                    <td>
+                                        <a href="{% url 'blog:toggle_post_featured' post.pk %}" style="color: {% if post.is_featured %}#28a745{% else %}#6c757d{% endif %}; text-decoration: none;" title="{% if post.is_featured %}Remove from featured{% else %}Mark as featured{% endif %}">
+                                            <i class="fas fa-star"></i>
+                                        </a>
+                                    </td>
+                                    <td>{{ post.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if post.status == 'published' %}
+                                                <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-sm btn-outline-primary" target="_blank" title="View Public">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'blog:post_preview' post.pk %}" class="btn btn-sm btn-outline-primary" target="_blank" title="Preview Draft">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'blog:post_edit' post.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'blog:post_delete' post.pk %}" class="btn btn-sm btn-outline-danger" title="Delete"
+                                               onclick="return confirm('Are you sure you want to delete this post?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <i class="fas fa-file-alt fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No posts found.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if posts.has_other_pages %}
+                    <nav aria-label="Posts pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if posts.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ posts.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in posts.paginator.page_range %}
+                                {% if page_num >= posts.number|add:-2 and page_num <= posts.number|add:2 %}
+                                    <li class="page-item {% if page_num == posts.number %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if posts.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ posts.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Vendors - {{ block.super }}{% endblock %}
+
+{% block page_title %}Vendor Management{% endblock %}
+{% block page_subtitle %}Manage suppliers and service providers{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Vendors</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .vendor-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .vendor-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active { background: #e8f5e8; color: #2e7d32; }
+    .status-inactive { background: #f8f9fa; color: #6c757d; }
+    .status-blacklisted { background: #ffebee; color: #c62828; }
+    .status-pending { background: #fff3e0; color: #f57c00; }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-truck me-2"></i>Vendors
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'procurement:vendor_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Vendor
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Company name, contact, email...">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="vendor_type" class="form-label">Type</label>
+            <select class="form-select" id="vendor_type" name="vendor_type">
+                <option value="">All Types</option>
+                {% for value, label in vendor_types %}
+                <option value="{{ value }}" {% if current_vendor_type == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary me-2">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <a href="{% url 'procurement:vendor_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Vendors Grid -->
+<div class="row">
+    {% for vendor in vendors %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="vendor-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'procurement:vendor_detail' vendor.pk %}" class="text-decoration-none">
+                            {{ vendor.company_name }}
+                        </a>
+                    </h6>
+                    <small class="text-muted">{{ vendor.vendor_code }}</small>
+                </div>
+                <span class="status-badge status-{{ vendor.status }}">
+                    {{ vendor.get_status_display }}
+                </span>
+            </div>
+            
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Contact Person</div>
+                <div>{{ vendor.contact_person }}</div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Email & Phone</div>
+                <div class="small">
+                    <i class="fas fa-envelope me-1"></i>{{ vendor.email }}<br>
+                    <i class="fas fa-phone me-1"></i>{{ vendor.phone }}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small text-muted">Type</div>
+                    <span class="badge bg-secondary">{{ vendor.get_vendor_type_display }}</span>
+                </div>
+                <div class="text-end">
+                    <div class="small text-muted">Rating</div>
+                    <div class="rating-stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= vendor.rating %}
+                                <i class="fas fa-star"></i>
+                            {% else %}
+                                <i class="far fa-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3 d-flex gap-2">
+                <a href="{% url 'procurement:vendor_detail' vendor.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <a href="{% url 'procurement:vendor_edit' vendor.pk %}" class="btn btn-outline-secondary btn-sm flex-fill">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No vendors found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_vendor_type %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by adding your first vendor.
+                {% endif %}
+            </p>
+            <a href="{% url 'procurement:vendor_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Vendor
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Vendors pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_vendor_type %}&vendor_type={{ current_vendor_type }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_vendor_type %}&vendor_type={{ current_vendor_type }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_vendor_type %}&vendor_type={{ current_vendor_type }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_vendor_type %}&vendor_type={{ current_vendor_type }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

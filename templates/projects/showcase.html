@@ -1,0 +1,768 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Our Projects - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Projects</li>
+{% endblock %}
+
+{% block meta_description %}Explore our completed solar installation projects across Kenya. See real results from residential and commercial solar energy systems.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-projects {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 120px 0 80px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-projects::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        animation: float 20s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(2deg); }
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+    
+    .project-card {
+        background: white;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .project-image {
+        height: 250px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .project-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: var(--transition);
+    }
+    
+    .project-card:hover .project-image img {
+        transform: scale(1.05);
+    }
+    
+    .project-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(56, 182, 255, 0.8), rgba(44, 143, 214, 0.8));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: var(--transition);
+        color: white;
+    }
+    
+    .project-card:hover .project-overlay {
+        opacity: 1;
+    }
+    
+    .project-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        z-index: 3;
+    }
+    
+    .status-completed {
+        background: rgba(40, 167, 69, 0.9);
+        color: white;
+    }
+    
+    .status-in-progress {
+        background: rgba(255, 193, 7, 0.9);
+        color: #333;
+    }
+    
+    .status-planning {
+        background: rgba(108, 117, 125, 0.9);
+        color: white;
+    }
+    
+    .project-info {
+        padding: 1.5rem;
+    }
+    
+    .project-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .project-location {
+        color: #666;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .project-location i {
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .project-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .project-description {
+        color: #666;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filters-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin: -60px auto 80px;
+        max-width: 800px;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        z-index: 10;
+    }
+    
+    .filter-btn {
+        padding: 0.75rem 1.5rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        color: #666;
+        border-radius: 25px;
+        margin: 0.25rem;
+        transition: var(--transition);
+        cursor: pointer;
+        font-weight: 500;
+    }
+    
+    .filter-btn.active,
+    .filter-btn:hover {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .stats-overview {
+        background: linear-gradient(135deg, var(--dark-color) 0%, #34495e 100%);
+        color: white;
+        padding: 80px 0;
+        margin: 80px 0;
+    }
+    
+    .overview-stat {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .overview-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--primary-light);
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .overview-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .testimonial-section {
+        background: #f8f9fa;
+        padding: 80px 0;
+    }
+    
+    .testimonial-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .testimonial-quote {
+        font-size: 1.1rem;
+        font-style: italic;
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    
+    .testimonial-author {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .testimonial-company {
+        color: var(--primary-color);
+        font-size: 0.9rem;
+    }
+    
+    .testimonial-card::before {
+        content: '"';
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 4rem;
+        color: var(--primary-color);
+        opacity: 0.3;
+        font-family: serif;
+    }
+    
+    .cta-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 80px 0;
+        text-align: center;
+    }
+    
+    .load-more {
+        text-align: center;
+        margin: 3rem 0;
+    }
+    
+    .project-gallery {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .gallery-content {
+        max-width: 90%;
+        max-height: 90%;
+        position: relative;
+    }
+    
+    .gallery-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .gallery-close {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        background: none;
+        border: none;
+    }
+    
+    @media (max-width: 768px) {
+        .hero-projects {
+            padding: 80px 0 60px;
+        }
+        
+        .filters-section {
+            margin: -40px 1rem 60px;
+            padding: 1.5rem;
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .project-stats {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            text-align: left;
+        }
+        
+        .overview-number {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-projects">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="display-4 mb-4">Our Solar Projects</h1>
+            <p class="lead mb-4">Discover how we're transforming Kenya with clean, renewable solar energy solutions</p>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <p class="mb-4">
+                        From residential rooftops to large commercial installations, explore our portfolio of 
+                        successful solar projects that are making a real impact on communities across Kenya.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Filters Section -->
+<div class="container">
+    <div class="filters-section">
+        <div class="text-center mb-4">
+            <h4 class="mb-3">Browse Our Projects</h4>
+            <p class="text-muted">Filter by project type, status, or location to find what interests you most</p>
+        </div>
+        
+        <div class="text-center">
+            <button class="filter-btn active" data-filter="all">All Projects</button>
+            <button class="filter-btn" data-filter="residential">Residential</button>
+            <button class="filter-btn" data-filter="commercial">Commercial</button>
+            <button class="filter-btn" data-filter="industrial">Industrial</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+            <button class="filter-btn" data-filter="in-progress">In Progress</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<section class="stats-overview">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 col-md-6">
+                <div class="overview-stat">
+                    <span class="overview-number">{{ stats.projects_completed|default:0 }}</span>
+                    <div class="overview-label">Projects Completed</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="overview-stat">
+                    <span class="overview-number">{{ stats.total_capacity_display|default:"0kW" }}</span>
+                    <div class="overview-label">Solar Installed</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="overview-stat">
+                    <span class="overview-number">{{ stats.co2_saved_tons|floatformat:0|default:0 }}</span>
+                    <div class="overview-label">Tons CO₂ Saved</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="overview-stat">
+                    <span class="overview-number">{{ stats.cities_served|default:0 }}</span>
+                    <div class="overview-label">Cities Served</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Projects Grid -->
+<section class="section">
+    <div class="container">
+        <div class="row" id="projectsGrid">
+            {% for project in projects %}
+            <div class="col-lg-4 col-md-6 project-item" 
+                 data-category="{{ project.project_type }}"
+                 data-status="{{ project.status }}">
+                
+                <div class="project-card">
+                    <div class="project-image">
+                        {% if project.featured_image %}
+                            <img src="{{ project.featured_image.url }}" alt="{{ project.name }}" 
+                                 onclick="openGallery('{{ project.featured_image.url }}', '{{ project.name }}')">
+                        {% else %}
+                            <img src="{% static 'images/solar-project-default.jpg' %}" alt="{{ project.name }}">
+                        {% endif %}
+                        
+                        <div class="project-overlay">
+                            <div>
+                                <i class="fas fa-search-plus fa-2x mb-2"></i>
+                                <div>View Project</div>
+                            </div>
+                        </div>
+                        
+                        <div class="project-status status-{{ project.status }}">
+                            {{ project.get_status_display }}
+                        </div>
+                    </div>
+                    
+                    <div class="project-info">
+                        <h5 class="project-title">{{ project.name }}</h5>
+                        
+                        {% if project.city %}
+                        <div class="project-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ project.city }}{% if project.county %}, {{ project.county }}{% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="project-stats">
+                            {% if project.system_capacity %}
+                            <div class="stat-item">
+                                <span class="stat-value">{{ project.system_capacity }} kW</span>
+                                <span class="stat-label">System Size</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if project.system_type %}
+                            <div class="stat-item">
+                                <span class="stat-value">{{ project.get_system_type_display }}</span>
+                                <span class="stat-label">System Type</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if project.estimated_generation %}
+                            <div class="stat-item">
+                                <span class="stat-value">{{ project.estimated_generation|floatformat:0 }} kWh</span>
+                                <span class="stat-label">Monthly Generation</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if project.description %}
+                        <p class="project-description">
+                            {{ project.description|truncatewords:20 }}
+                        </p>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if project.actual_completion %}
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Completed {{ project.actual_completion|date:"M Y" }}
+                            </small>
+                            {% elif project.target_completion %}
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Target: {{ project.target_completion|date:"M Y" }}
+                            </small>
+                            {% elif project.start_date %}
+                            <small class="text-muted">
+                                <i class="fas fa-play me-1"></i>
+                                Started {{ project.start_date|date:"M Y" }}
+                            </small>
+                            {% else %}
+                            <span></span>
+                            {% endif %}
+                            
+                            <a href="{% url 'projects:showcase_detail' project_number=project.project_number %}" class="btn btn-outline-primary btn-sm">
+                                Learn More
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-solar-panel fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No projects to showcase yet</h4>
+                    <p class="text-muted">Check back soon as we continue to expand our portfolio of solar installations</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if projects.has_next %}
+        <div class="load-more">
+            <button class="btn btn-outline-primary btn-lg" onclick="loadMoreProjects()">
+                <i class="fas fa-plus me-2"></i>Load More Projects
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+{% if testimonials %}
+<section class="testimonial-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">What Our Clients Say</h2>
+            <p class="section-subtitle">Real experiences from satisfied customers who chose solar energy</p>
+        </div>
+        
+        <div class="row">
+            {% for testimonial in testimonials %}
+            <div class="col-lg-4 col-md-6">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">{{ testimonial.quote }}</p>
+                    <div class="testimonial-author">{{ testimonial.client_name }}</div>
+                    <div class="testimonial-company">{{ testimonial.company|default:testimonial.location }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Call to Action -->
+<section class="cta-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="mb-4">Ready to Start Your Solar Journey?</h2>
+                <p class="lead mb-4">
+                    Join the growing number of Kenyans who are saving money and protecting the environment with solar energy.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{% url 'quotations:calculator' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-calculator me-2"></i>Get Free Quote
+                    </a>
+                    <a href="{% url 'core:contact' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-phone me-2"></i>Speak to Expert
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Project Gallery Modal -->
+<div class="project-gallery" id="projectGallery">
+    <div class="gallery-content">
+        <button class="gallery-close" onclick="closeGallery()">
+            <i class="fas fa-times"></i>
+        </button>
+        <img class="gallery-image" id="galleryImage" src="" alt="">
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Project filtering
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const projectItems = document.querySelectorAll('.project-item');
+    
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active button
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.getAttribute('data-filter');
+            
+            // Filter projects
+            projectItems.forEach(item => {
+                if (filter === 'all') {
+                    item.style.display = 'block';
+                } else {
+                    const category = item.getAttribute('data-category');
+                    const status = item.getAttribute('data-status');
+                    
+                    if (category === filter || status === filter) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Animate visible items
+            setTimeout(() => {
+                const visibleItems = document.querySelectorAll('.project-item[style*="block"]');
+                visibleItems.forEach((item, index) => {
+                    item.style.animation = 'none';
+                    item.offsetHeight; // Trigger reflow
+                    item.style.animation = `fadeIn 0.6s ease ${index * 0.1}s both`;
+                });
+            }, 50);
+        });
+    });
+});
+
+// Project gallery
+function openGallery(imageSrc, title) {
+    const gallery = document.getElementById('projectGallery');
+    const galleryImage = document.getElementById('galleryImage');
+    
+    galleryImage.src = imageSrc;
+    galleryImage.alt = title;
+    gallery.style.display = 'flex';
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+function closeGallery() {
+    const gallery = document.getElementById('projectGallery');
+    gallery.style.display = 'none';
+    
+    // Restore body scroll
+    document.body.style.overflow = 'auto';
+}
+
+// Close gallery on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeGallery();
+    }
+});
+
+// Close gallery on backdrop click
+document.getElementById('projectGallery').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeGallery();
+    }
+});
+
+// Project details modal (placeholder)
+function showProjectDetails(projectId) {
+    // This would typically open a modal with detailed project information
+    alert(`Project details for project ID: ${projectId}\n\nThis functionality would show detailed project information including multiple images, specifications, timeline, and impact metrics.`);
+}
+
+// Load more projects (placeholder)
+function loadMoreProjects() {
+    // This would typically load more projects via AJAX
+    alert('Load more functionality would fetch additional projects from the server');
+}
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// Intersection Observer for animations
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.style.animation = 'fadeIn 0.8s ease both';
+        }
+    });
+}, observerOptions);
+
+// Observe project cards and stat sections
+document.querySelectorAll('.project-card, .overview-stat, .testimonial-card').forEach(el => {
+    observer.observe(el);
+});
+
+// Counter animation for statistics
+function animateCounter(element, target, duration = 2000) {
+    let start = 0;
+    const increment = target / (duration / 16);
+    
+    const timer = setInterval(() => {
+        start += increment;
+        if (start >= target) {
+            element.textContent = target;
+            clearInterval(timer);
+        } else {
+            element.textContent = Math.floor(start);
+        }
+    }, 16);
+}
+
+// Trigger counter animations when stats come into view
+const statsObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const numberElement = entry.target.querySelector('.overview-number');
+            const targetValue = parseInt(numberElement.textContent);
+            
+            if (targetValue > 0) {
+                numberElement.textContent = '0';
+                animateCounter(numberElement, targetValue);
+            }
+            
+            // Only animate once
+            statsObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.overview-stat').forEach(stat => {
+    statsObserver.observe(stat);
+});
+</script>
+{% endblock %}

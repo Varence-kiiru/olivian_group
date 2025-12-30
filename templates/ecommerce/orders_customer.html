@@ -1,0 +1,451 @@
+{% extends 'website/base.html' %}
+
+{% block title %}My Orders - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Account</a></li>
+<li class="breadcrumb-item active">My Orders</li>
+{% endblock %}
+
+{% block content %}
+<!-- Orders Section -->
+<section class="section" style="padding-top: 120px;">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>My Orders</h1>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'ecommerce:track_order' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-search me-2"></i>Track Order
+                        </a>
+                        <a href="{% url 'products:list' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Continue Shopping
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Filter by Status:</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="">All Orders</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date-filter" class="form-label">Filter by Date:</label>
+                        <select class="form-select" id="date-filter">
+                            <option value="">All Time</option>
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 3 months</option>
+                            <option value="365">Last year</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search-orders" class="form-label">Search Orders:</label>
+                        <input type="text" class="form-control" id="search-orders" 
+                               placeholder="Search by order number or product...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-primary w-100" onclick="clearFilters()">
+                            <i class="fas fa-refresh me-2"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orders List -->
+        <div id="orders-container">
+            <!-- Orders will be loaded here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-orders" class="text-center py-5" style="display: none;">
+            <i class="fas fa-shopping-bag text-muted" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">No orders found</h4>
+            <p class="text-muted">You haven't placed any orders yet</p>
+            <a href="{% url 'products:list' %}" class="btn btn-primary">Start Shopping</a>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Orders pagination" id="orders-pagination" style="display: none;">
+            <ul class="pagination justify-content-center">
+                <!-- Pagination will be generated here -->
+            </ul>
+        </nav>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dynamic company settings
+const CURRENCY = '{{ company.default_currency|default:"KES" }}';
+const VAT_RATE = {{ company.vat_rate|default:16 }};
+
+let currentPage = 1;
+let totalPages = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrders();
+    setupFilters();
+});
+
+function setupFilters() {
+    document.getElementById('status-filter').addEventListener('change', loadOrders);
+    document.getElementById('date-filter').addEventListener('change', loadOrders);
+    document.getElementById('search-orders').addEventListener('input', debounce(loadOrders, 500));
+}
+
+function loadOrders(page = 1) {
+    currentPage = page;
+    
+    const filters = {
+        status: document.getElementById('status-filter').value,
+        date_range: document.getElementById('date-filter').value,
+        search: document.getElementById('search-orders').value,
+        page: page
+    };
+    
+    // Show loading state
+    document.getElementById('orders-container').innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading orders...</p>
+        </div>
+    `;
+    
+    // Simulate API call - replace with actual API endpoint
+    setTimeout(() => {
+        const mockOrders = generateMockOrders(filters);
+        displayOrders(mockOrders);
+    }, 500);
+}
+
+function generateMockOrders(filters) {
+    // Mock orders data - replace with actual API call
+    const allOrders = [
+        {
+            id: 1,
+            order_number: 'ORD-2024-0001',
+            date: '2024-01-15',
+            status: 'delivered',
+            total: 135000,
+            items_count: 3,
+            payment_method: 'mpesa',
+            delivery_address: 'Nairobi, Kenya',
+            items: [
+                { name: '450W Solar Panel', quantity: 2, price: 25000 },
+                { name: '5kW Inverter', quantity: 1, price: 85000 }
+            ]
+        },
+        {
+            id: 2,
+            order_number: 'ORD-2024-0002',
+            date: '2024-01-20',
+            status: 'processing',
+            total: 75000,
+            items_count: 2,
+            payment_method: 'bank_transfer',
+            delivery_address: 'Kiambu, Kenya',
+            items: [
+                { name: 'Solar Battery 200Ah', quantity: 1, price: 65000 }
+            ]
+        },
+        {
+            id: 3,
+            order_number: 'ORD-2024-0003',
+            date: '2024-01-25',
+            status: 'shipped',
+            total: 45000,
+            items_count: 1,
+            payment_method: 'mpesa',
+            delivery_address: 'Machakos, Kenya',
+            items: [
+                { name: 'Solar Charge Controller', quantity: 1, price: 38000 }
+            ]
+        }
+    ];
+    
+    let filteredOrders = allOrders;
+    
+    // Apply filters
+    if (filters.status) {
+        filteredOrders = filteredOrders.filter(order => order.status === filters.status);
+    }
+    
+    if (filters.search) {
+        filteredOrders = filteredOrders.filter(order => 
+            order.order_number.toLowerCase().includes(filters.search.toLowerCase()) ||
+            order.items.some(item => item.name.toLowerCase().includes(filters.search.toLowerCase()))
+        );
+    }
+    
+    // Calculate pagination
+    const itemsPerPage = 5;
+    const startIndex = (filters.page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+    
+    return {
+        orders: filteredOrders.slice(startIndex, endIndex),
+        total: filteredOrders.length,
+        page: filters.page,
+        pages: totalPages
+    };
+}
+
+function displayOrders(data) {
+    const container = document.getElementById('orders-container');
+    const emptyState = document.getElementById('empty-orders');
+    const pagination = document.getElementById('orders-pagination');
+    
+    if (data.orders.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        pagination.style.display = 'none';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    let ordersHTML = '';
+    data.orders.forEach(order => {
+        ordersHTML += `
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h6 class="mb-0">
+                                <a href="/shop/orders/${order.order_number}/" class="text-decoration-none">
+                                    ${order.order_number}
+                                </a>
+                            </h6>
+                            <small class="text-muted">${formatDate(order.date)}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge bg-${getStatusColor(order.status)} rounded-pill">
+                                ${getStatusText(order.status)}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <strong>${CURRENCY} ${order.total.toLocaleString()}</strong>
+                            <br><small class="text-muted">${order.items_count} item(s)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                ${order.delivery_address}
+                            </small>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="/shop/orders/${order.order_number}/" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                ${order.status === 'delivered' ? `
+                                    <button class="btn btn-outline-success btn-sm" onclick="downloadReceipt('${order.order_number}')">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                ` : ''}
+                                ${['pending', 'confirmed'].includes(order.status) ? `
+                                    <button class="btn btn-outline-danger btn-sm" onclick="cancelOrder('${order.order_number}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6>Items:</h6>
+                            <div class="row">
+                                ${order.items.map(item => `
+                                    <div class="col-md-6 mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span>${item.name} x${item.quantity}</span>
+                                            <span>${CURRENCY} ${(item.price * item.quantity).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-credit-card text-muted me-2"></i>
+                                <span>${getPaymentMethodText(order.payment_method)}</span>
+                            </div>
+                            ${getOrderActions(order)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = ordersHTML;
+    
+    // Show pagination if needed
+    if (data.pages > 1) {
+        pagination.style.display = 'block';
+        renderPagination(data.page, data.pages);
+    } else {
+        pagination.style.display = 'none';
+    }
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'pending': 'warning',
+        'confirmed': 'info',
+        'processing': 'primary',
+        'shipped': 'secondary',
+        'delivered': 'success',
+        'cancelled': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+function getStatusText(status) {
+    const texts = {
+        'pending': 'Pending',
+        'confirmed': 'Confirmed',
+        'processing': 'Processing',
+        'shipped': 'Shipped',
+        'delivered': 'Delivered',
+        'cancelled': 'Cancelled'
+    };
+    return texts[status] || status;
+}
+
+function getPaymentMethodText(method) {
+    const methods = {
+        'mpesa': 'M-Pesa',
+        'bank_transfer': 'Bank Transfer',
+        'cash_on_delivery': 'Cash on Delivery'
+    };
+    return methods[method] || method;
+}
+
+function getOrderActions(order) {
+    if (order.status === 'shipped') {
+        return `
+            <button class="btn btn-sm btn-outline-primary" onclick="trackOrder('${order.order_number}')">
+                <i class="fas fa-truck me-1"></i>Track Order
+            </button>
+        `;
+    } else if (order.status === 'delivered') {
+        return `
+            <button class="btn btn-sm btn-success" onclick="reorderItems('${order.order_number}')">
+                <i class="fas fa-redo me-1"></i>Reorder
+            </button>
+        `;
+    }
+    return '';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function renderPagination(currentPage, totalPages) {
+    const pagination = document.getElementById('orders-pagination').querySelector('ul');
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="loadOrders(${currentPage - 1}); return false;">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+    `;
+    
+    // Page numbers
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        paginationHTML += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="loadOrders(${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+    
+    // Next button
+    paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="loadOrders(${currentPage + 1}); return false;">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    `;
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+function clearFilters() {
+    document.getElementById('status-filter').value = '';
+    document.getElementById('date-filter').value = '';
+    document.getElementById('search-orders').value = '';
+    loadOrders(1);
+}
+
+function trackOrder(orderNumber) {
+    window.location.href = `/shop/orders/${orderNumber}/track/`;
+}
+
+function cancelOrder(orderNumber) {
+    if (confirm('Are you sure you want to cancel this order?')) {
+        // API call to cancel order
+        alert('Order cancellation request submitted');
+    }
+}
+
+function downloadReceipt(orderNumber) {
+    window.open(`/shop/orders/${orderNumber}/receipt/`, '_blank');
+}
+
+function reorderItems(orderNumber) {
+    if (confirm('Add all items from this order to your cart?')) {
+        // Add items to cart
+        alert('Items added to cart');
+        window.location.href = '/shop/cart/';
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

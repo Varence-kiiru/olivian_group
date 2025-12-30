@@ -1,0 +1,331 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Email Template - {{ object.name }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Email Template{% endblock %}
+{% block page_subtitle %}Confirm deletion of "{{ object.name }}"{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:email_template_list' %}">Email Templates</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Delete Confirmation Styles */
+    :root {
+        --email-primary: #6366f1;
+        --email-danger: #ef4444;
+        --border-radius: 10px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .delete-warning {
+        background: linear-gradient(135deg, var(--email-danger), #dc2626);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .delete-warning::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+
+    .template-summary {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+        border-left: 4px solid var(--email-primary);
+    }
+
+    .impact-analysis {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .impact-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 6px;
+    }
+
+    .impact-item i {
+        margin-right: 0.75rem;
+        font-size: 1.2rem;
+    }
+
+    .form-actions {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .btn-delete {
+        background: var(--email-danger);
+        border-color: var(--email-danger);
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .btn-delete:hover {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: white;
+    }
+
+    .btn-cancel {
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .alert-secondary {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Delete Warning Header -->
+    <div class="delete-warning">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-exclamation-triangle fa-3x me-4"></i>
+                    <div>
+                        <h3 class="mb-2">Delete Email Template</h3>
+                        <p class="mb-0 opacity-75">Are you sure you want to delete this template? This action cannot be undone.</p>
+                    </div>
+                </div>
+                <p class="opacity-75 mb-0">
+                    You are about to permanently delete the template "<strong>{{ object.name }}</strong>".
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <small class="opacity-75">
+                    Template created on<br>
+                    <strong>{{ object.created_at|date:"F d, Y" }}</strong>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Summary -->
+    <div class="template-summary">
+        <h5 class="mb-3">
+            <i class="fas fa-envelope me-2" style="color: var(--email-primary);"></i>
+            Template Information
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <strong>Template Name:</strong><br>
+                    {{ object.name }}
+                </div>
+
+                <div class="mb-3">
+                    <strong>Type:</strong><br>
+                    <span class="badge bg-primary">{{ object.get_template_type_display }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Status:</strong><br>
+                    <span class="badge {% if object.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if object.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <strong>Subject Line:</strong><br>
+                    {{ object.subject|truncatechars:50 }}
+                </div>
+
+                <div class="mb-3">
+                    <strong>Description:</strong><br>
+                    {{ object.description|default:"No description provided" }}
+                </div>
+
+                <div class="mb-3">
+                    <strong>Usage:</strong><br>
+                    {% if object.usage_count %}
+                        Used {{ object.usage_count }} times
+                        <br><small class="text-muted">Last used: {{ object.last_used|date:"M d, Y" }}</small>
+                    {% else %}
+                        Never used
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="alert alert-secondary">
+            <h6><i class="fas fa-info-circle me-2"></i>Template Preview</h6>
+            <div class="mt-2">
+                <strong>Subject:</strong> {{ object.subject }}
+            </div>
+            <div class="mt-2">
+                <strong>Content Preview:</strong><br>
+                {{ object.body_html|striptags|truncatechars:200 }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Impact Analysis -->
+    <div class="impact-analysis">
+        <h5 class="mb-3">
+            <i class="fas fa-chart-pie me-2"></i>
+            What will happen if you delete this template?
+        </h5>
+
+        <div class="impact-item">
+            <i class="fas fa-envelope text-warning"></i>
+            <div>
+                <strong>Email Communications:</strong> This template will no longer be available for sending emails.
+            </div>
+        </div>
+
+        <div class="impact-item">
+            <i class="fas fa-history text-info"></i>
+            <div>
+                <strong>Usage History:</strong> All previous sent emails using this template will remain unchanged.
+            </div>
+        </div>
+
+        <div class="impact-item">
+            <i class="fas fa-copy text-success"></i>
+            <div>
+                <strong>Template Copies:</strong> You can create new templates based on this content before deletion.
+            </div>
+        </div>
+
+        <div class="impact-item">
+            <i class="fas fa-users text-primary"></i>
+            <div>
+                <strong>Automation:</strong> Any automated email workflows using this template will stop working.
+            </div>
+        </div>
+
+        <div class="mt-3 p-3" style="background: rgba(255, 255, 255, 0.9); border-radius: 6px;">
+            <small class="text-muted">
+                <strong>Note:</strong> This action cannot be undone. Consider backing up the template content if you might want to recreate it later.
+            </small>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+        <h5 class="mb-3">
+            <i class="fas fa-question-circle me-2" style="color: var(--email-primary);"></i>
+            Confirm Deletion
+        </h5>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Type "{{ object.name }}" to confirm deletion</h6>
+                <input type="text" class="form-control" id="confirmationInput"
+                       placeholder="Type template name here..." autocomplete="off"
+                       onkeyup="checkConfirmation()">
+                <small class="text-muted mt-1">
+                    This is a security measure to prevent accidental deletions.
+                </small>
+            </div>
+
+            <div class="d-flex justify-content-end gap-3">
+                <a href="{% url 'crm:email_template_list' %}" class="btn btn-secondary btn-cancel">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel & Go Back
+                </a>
+
+                <button type="button" class="btn btn-outline-primary btn-cancel" onclick="duplicateTemplate()">
+                    <i class="fas fa-copy me-2"></i>Make a Copy First
+                </button>
+
+                <button type="submit" class="btn btn-delete" id="deleteBtn" disabled>
+                    <i class="fas fa-trash me-2"></i>Yes, Delete Template
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Hidden Template Data (for JavaScript) -->
+<div id="templateData" style="display: none;">
+    <span id="templateName">{{ object.name }}</span>
+    <span id="templateId">{{ object.pk }}</span>
+</div>
+{% endblock %}
+
+{% block extra_js_block %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmationInput = document.getElementById('confirmationInput');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const templateName = document.getElementById('templateName').textContent.trim();
+
+    function checkConfirmation() {
+        const userInput = confirmationInput.value.trim();
+        deleteBtn.disabled = (userInput !== templateName);
+    }
+
+    // Re-check on form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (deleteBtn.disabled) {
+            e.preventDefault();
+            alert('Please type the template name to confirm deletion.');
+            confirmationInput.focus();
+        } else {
+            // Final confirmation
+            if (!confirm('Final confirmation: Are you absolutely sure you want to delete this template?\n\nThis action cannot be undone!')) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+
+function duplicateTemplate() {
+    const templateId = document.getElementById('templateId').textContent.trim();
+    const templateName = document.getElementById('templateName').textContent.trim();
+
+    if (confirm('Create a copy of "' + templateName + '" before deleting?')) {
+        // Implementation for duplicating template
+        // This would typically involve an AJAX call or redirect to create view
+        alert('Duplication functionality would redirect to create a copy of this template.');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'website/base.html' %}
+{% comment %}
+Default auth base template - uses website base
+For staff context, use auth_base_staff.html instead
+{% endcomment %}
+
+{% comment %}
+Common page structure for authentication pages
+{% endcomment %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="container">
+        <div class="row justify-content-center min-vh-100 align-items-center">
+            <div class="col-md-6 col-lg-5">
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    .auth-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba({{ company.primary_color|default:"56, 182, 255" }}, 0.1);
+    }
+    .auth-header {
+        background: linear-gradient(135deg, {{ company.primary_color|default:"#38b6ff" }} 0%, #2c8fd6 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px 15px 0 0;
+        text-align: center;
+    }
+    .auth-body {
+        padding: 2rem;
+    }
+</style>
+{% endblock %}

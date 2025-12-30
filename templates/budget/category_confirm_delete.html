@@ -1,0 +1,222 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Category - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Budget Category{% endblock %}
+{% block page_subtitle %}Confirm category deletion{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:detail' object.budget.pk %}">{{ object.budget.name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:category_list' budget_id=object.budget.pk %}">Categories</a></li>
+<li class="breadcrumb-item active">Delete Category</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        border-left: 4px solid #dc3545;
+    }
+    
+    .category-info {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .danger-box {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="delete-card">
+            <div class="text-center mb-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h4 class="text-danger">Delete Budget Category</h4>
+                <p class="text-muted">This action cannot be undone. Please review the details below.</p>
+            </div>
+            
+            <!-- Category Information -->
+            <div class="category-info">
+                <h6 class="mb-3">Category Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted">Category Name</div>
+                        <div class="fw-semibold">{{ object.name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Category Type</div>
+                        <div class="fw-semibold">{{ object.get_category_type_display }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Budget</div>
+                        <div class="fw-semibold">{{ object.budget.name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Status</div>
+                        <div class="fw-semibold">
+                            {% if object.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if object.description %}
+                <div class="mt-3">
+                    <div class="small text-muted">Description</div>
+                    <div>{{ object.description }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Financial Impact -->
+            <div class="category-info">
+                <h6 class="mb-3">Financial Impact</h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="small text-muted">Allocated Amount</div>
+                        <div class="fw-semibold text-primary">KES {{ object.allocated_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted">Spent Amount</div>
+                        <div class="fw-semibold {% if object.spent_amount > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            KES {{ object.spent_amount|floatformat:0 }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted">Committed Amount</div>
+                        <div class="fw-semibold {% if object.committed_amount > 0 %}text-warning{% else %}text-muted{% endif %}">
+                            KES {{ object.committed_amount|floatformat:0 }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted">Available Amount</div>
+                        <div class="fw-semibold {% if object.available_amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                            KES {{ object.available_amount|floatformat:0 }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="small text-muted">Utilization Rate</div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if object.utilization_percentage > 100 %}bg-danger{% elif object.utilization_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                             style="width: {{ object.utilization_percentage|floatformat:0 }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ object.utilization_percentage|floatformat:1 }}% utilized</small>
+                </div>
+            </div>
+            
+            <!-- Warnings -->
+            {% if object.spent_amount > 0 or object.committed_amount > 0 %}
+            <div class="danger-box">
+                <h6 class="text-danger mb-2">
+                    <i class="fas fa-exclamation-circle"></i> Critical Warning
+                </h6>
+                <ul class="mb-0">
+                    {% if object.spent_amount > 0 %}
+                    <li>This category has <strong>KES {{ object.spent_amount|floatformat:0 }}</strong> in spent amounts. Deleting it may affect financial reporting.</li>
+                    {% endif %}
+                    {% if object.committed_amount > 0 %}
+                    <li>This category has <strong>KES {{ object.committed_amount|floatformat:0 }}</strong> in committed amounts. Active commitments may be affected.</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if object.requires_approval %}
+            <div class="warning-box">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-shield-alt"></i> Approval Settings
+                </h6>
+                <p class="mb-0">This category requires approval for expenses over KES {{ object.approval_threshold|floatformat:0 }}. Any pending approvals for this category may be affected.</p>
+            </div>
+            {% endif %}
+            
+            <!-- Confirmation Form -->
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                    <label class="form-check-label" for="confirmDelete">
+                        I understand that this action cannot be undone and may affect financial reporting.
+                    </label>
+                </div>
+                
+                {% if object.spent_amount > 0 or object.committed_amount > 0 %}
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmFinancialImpact" required>
+                    <label class="form-check-label" for="confirmFinancialImpact">
+                        I acknowledge the financial impact of deleting this category with existing transactions.
+                    </label>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between pt-3 border-top">
+                    <a href="{% url 'budget:category_list' budget_id=object.budget.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                        <i class="fas fa-trash"></i> Delete Category
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmDelete = document.getElementById('confirmDelete');
+    const confirmFinancialImpact = document.getElementById('confirmFinancialImpact');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    function updateDeleteButton() {
+        const allChecked = confirmDelete.checked && 
+                          (!confirmFinancialImpact || confirmFinancialImpact.checked);
+        deleteButton.disabled = !allChecked;
+    }
+    
+    confirmDelete.addEventListener('change', updateDeleteButton);
+    if (confirmFinancialImpact) {
+        confirmFinancialImpact.addEventListener('change', updateDeleteButton);
+    }
+    
+    // Final confirmation
+    deleteButton.addEventListener('click', function(e) {
+        if (!confirm('Are you absolutely sure you want to delete this budget category? This action cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

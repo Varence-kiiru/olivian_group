@@ -1,0 +1,379 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Opportunity - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Opportunity{% else %}New Opportunity{% endif %}{% endblock %}
+{% block page_subtitle %}{% if form.instance.pk %}Update opportunity details{% else %}Create a new sales opportunity{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:opportunity_list' %}">Opportunities</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}New{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-header {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+
+    .required {
+        color: #dc3545;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .btn-secondary {
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .stage-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .stage-step {
+        flex: 1;
+        text-align: center;
+        padding: 0.5rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6c757d;
+        background: #e9ecef;
+        margin: 0 0.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .stage-step.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .stage-step.completed {
+        background: #28a745;
+        color: white;
+    }
+
+    .probability-range {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .probability-slider {
+        flex: 1;
+    }
+
+    .probability-value {
+        font-weight: 600;
+        color: var(--primary-color);
+        min-width: 3rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Stage Indicator -->
+    {% if form.instance.pk %}
+    <div class="form-card">
+        <div class="stage-indicator">
+            <div class="stage-step {% if form.instance.stage == 'new' %}active{% endif %}">New</div>
+            <div class="stage-step {% if form.instance.stage == 'qualified' %}active{% elif form.instance.stage == 'proposal' or form.instance.stage == 'negotiation' or form.instance.stage == 'won' %}completed{% endif %}">Qualified</div>
+            <div class="stage-step {% if form.instance.stage == 'proposal' %}active{% elif form.instance.stage == 'negotiation' or form.instance.stage == 'won' %}completed{% endif %}">Proposal</div>
+            <div class="stage-step {% if form.instance.stage == 'negotiation' %}active{% elif form.instance.stage == 'won' %}completed{% endif %}">Negotiation</div>
+            <div class="stage-step {% if form.instance.stage == 'won' %}active{% elif form.instance.stage == 'lost' %}lost{% endif %}">{% if form.instance.stage == 'lost' %}Lost{% else %}Won{% endif %}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Basic Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-info-circle me-2"></i>Basic Information
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                        {{ form.name.label }}
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.stage.id_for_label }}" class="form-label">
+                        {{ form.stage.label }}
+                    </label>
+                    {{ form.stage }}
+                    {% if form.stage.errors %}
+                        <div class="text-danger small mt-1">{{ form.stage.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.value.id_for_label }}" class="form-label required-field">
+                        {{ form.value.label }}
+                    </label>
+                    {{ form.value }}
+                    {% if form.value.errors %}
+                        <div class="text-danger small mt-1">{{ form.value.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.probability.id_for_label }}" class="form-label">
+                        {{ form.probability.label }}
+                    </label>
+                    <div class="probability-range">
+                        {{ form.probability }}
+                        <div class="probability-value" id="probabilityValue">
+                            {{ form.probability.value|default:50 }}%
+                        </div>
+                    </div>
+                    {% if form.probability.errors %}
+                        <div class="text-danger small mt-1">{{ form.probability.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact and Company Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-users me-2"></i>Contact & Company Information
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.contact.id_for_label }}" class="form-label required-field">
+                        {{ form.contact.label }}
+                    </label>
+                    {{ form.contact }}
+                    {% if form.contact.errors %}
+                        <div class="text-danger small mt-1">{{ form.contact.errors }}</div>
+                    {% endif %}
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Can't find the contact? <a href="{% url 'crm:contact_create' %}" target="_blank">Add new contact</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.company.id_for_label }}" class="form-label">
+                        {{ form.company.label }}
+                    </label>
+                    {{ form.company }}
+                    {% if form.company.errors %}
+                        <div class="text-danger small mt-1">{{ form.company.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.lead.id_for_label }}" class="form-label">
+                        {{ form.lead.label }}
+                    </label>
+                    {{ form.lead }}
+                    {% if form.lead.errors %}
+                        <div class="text-danger small mt-1">{{ form.lead.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.assigned_to.id_for_label }}" class="form-label required-field">
+                        {{ form.assigned_to.label }}
+                    </label>
+                    {{ form.assigned_to }}
+                    {% if form.assigned_to.errors %}
+                        <div class="text-danger small mt-1">{{ form.assigned_to.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-calendar me-2"></i>Timeline
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.expected_close_date.id_for_label }}" class="form-label required-field">
+                        {{ form.expected_close_date.label }}
+                    </label>
+                    {{ form.expected_close_date }}
+                    {% if form.expected_close_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.expected_close_date.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.actual_close_date.id_for_label }}" class="form-label">
+                        {{ form.actual_close_date.label }}
+                    </label>
+                    {{ form.actual_close_date }}
+                    {% if form.actual_close_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.actual_close_date.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-file-alt me-2"></i>Additional Information
+        </h5>
+
+        <div class="form-group mb-4">
+            <label for="{{ form.description.id_for_label }}" class="form-label">
+                {{ form.description.label }}
+            </label>
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-4">
+            <label for="{{ form.next_steps.id_for_label }}" class="form-label">
+                {{ form.next_steps.label }}
+            </label>
+            {{ form.next_steps }}
+            {% if form.next_steps.errors %}
+                <div class="text-danger small mt-1">{{ form.next_steps.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.competition.id_for_label }}" class="form-label">
+                {{ form.competition.label }}
+            </label>
+            {{ form.competition }}
+            {% if form.competition.errors %}
+                <div class="text-danger small mt-1">{{ form.competition.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-card">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'crm:opportunity_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Cancel
+            </a>
+            <div class="d-flex gap-2">
+                {% if form.instance.pk %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update Opportunity
+                    </button>
+                    <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                        <i class="fas fa-save me-2"></i>Save & Continue Editing
+                    </button>
+                {% else %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Opportunity
+                    </button>
+                    <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>Save & Add Another
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update probability display
+    document.getElementById('id_probability').addEventListener('input', function() {
+        const value = this.value;
+        document.getElementById('probabilityValue').textContent = value + '%';
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

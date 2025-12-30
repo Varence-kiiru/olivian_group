@@ -1,0 +1,433 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ vendor.company_name }} - Vendor Details - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ vendor.company_name }}{% endblock %}
+{% block page_subtitle %}Vendor Details and Performance Metrics{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:vendor_list' %}">Vendors</a></li>
+<li class="breadcrumb-item active">{{ vendor.vendor_code }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vendor-status {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active { background: #e8f5e8; color: #2e7d32; }
+    .status-inactive { background: #f5f5f5; color: #666; }
+    .status-blacklisted { background: #ffebee; color: #d32f2f; }
+    .status-pending { background: #fff3e0; color: #f57c00; }
+    
+    .performance-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .performance-score {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .score-excellent { color: #4caf50; }
+    .score-good { color: #8bc34a; }
+    .score-average { color: #ff9800; }
+    .score-poor { color: #f44336; }
+    
+    .rating-stars {
+        color: #ffc107;
+        font-size: 1.2rem;
+    }
+    
+    .contact-info .info-row {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .contact-info .info-label {
+        font-weight: 600;
+        color: #666;
+        width: 140px;
+        display: inline-block;
+    }
+    
+    .info-icon {
+        width: 16px;
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: calc(var(--topbar-height) + 1rem);
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Vendor Overview -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">Vendor Information</h5>
+                    <small class="text-muted">Code: {{ vendor.vendor_code }}</small>
+                </div>
+                <span class="vendor-status status-{{ vendor.status }}">
+                    {{ vendor.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="contact-info">
+                            <div class="info-row">
+                                <i class="fas fa-building info-icon"></i>
+                                <span class="info-label">Company:</span>
+                                <strong>{{ vendor.company_name }}</strong>
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-user info-icon"></i>
+                                <span class="info-label">Contact Person:</span>
+                                {{ vendor.contact_person }}
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-envelope info-icon"></i>
+                                <span class="info-label">Email:</span>
+                                <a href="mailto:{{ vendor.email }}">{{ vendor.email }}</a>
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-phone info-icon"></i>
+                                <span class="info-label">Phone:</span>
+                                {{ vendor.phone }}
+                            </div>
+                            {% if vendor.alternative_phone %}
+                            <div class="info-row">
+                                <i class="fas fa-phone-alt info-icon"></i>
+                                <span class="info-label">Alt. Phone:</span>
+                                {{ vendor.alternative_phone }}
+                            </div>
+                            {% endif %}
+                            <div class="info-row">
+                                <i class="fas fa-map-marker-alt info-icon"></i>
+                                <span class="info-label">Address:</span>
+                                {{ vendor.address }}
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-city info-icon"></i>
+                                <span class="info-label">City:</span>
+                                {{ vendor.city }}, {{ vendor.country }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="contact-info">
+                            <div class="info-row">
+                                <i class="fas fa-tag info-icon"></i>
+                                <span class="info-label">Type:</span>
+                                {{ vendor.get_vendor_type_display }}
+                            </div>
+                            {% if vendor.tax_number %}
+                            <div class="info-row">
+                                <i class="fas fa-file-invoice info-icon"></i>
+                                <span class="info-label">KRA PIN:</span>
+                                {{ vendor.tax_number }}
+                            </div>
+                            {% endif %}
+                            {% if vendor.bank_name %}
+                            <div class="info-row">
+                                <i class="fas fa-university info-icon"></i>
+                                <span class="info-label">Bank:</span>
+                                {{ vendor.bank_name }}
+                            </div>
+                            {% endif %}
+                            {% if vendor.bank_account %}
+                            <div class="info-row">
+                                <i class="fas fa-credit-card info-icon"></i>
+                                <span class="info-label">Account:</span>
+                                {{ vendor.bank_account }}
+                            </div>
+                            {% endif %}
+                            <div class="info-row">
+                                <i class="fas fa-calendar info-icon"></i>
+                                <span class="info-label">Payment Terms:</span>
+                                {{ vendor.get_payment_terms_display }}
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-money-bill info-icon"></i>
+                                <span class="info-label">Credit Limit:</span>
+                                KES {{ vendor.credit_limit|floatformat:2 }}
+                            </div>
+                            <div class="info-row">
+                                <i class="fas fa-star info-icon"></i>
+                                <span class="info-label">Rating:</span>
+                                <span class="rating-stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= vendor.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if total_orders > 0 %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="performance-card">
+                            <div class="performance-score score-{% if avg_delivery_rating >= 4 %}excellent{% elif avg_delivery_rating >= 3.5 %}good{% elif avg_delivery_rating >= 2.5 %}average{% else %}poor{% endif %}">
+                                {{ avg_delivery_rating|floatformat:1 }}
+                            </div>
+                            <div class="small text-muted">Delivery Rating</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="performance-card">
+                            <div class="performance-score score-{% if avg_quality_rating >= 4 %}excellent{% elif avg_quality_rating >= 3.5 %}good{% elif avg_quality_rating >= 2.5 %}average{% else %}poor{% endif %}">
+                                {{ avg_quality_rating|floatformat:1 }}
+                            </div>
+                            <div class="small text-muted">Quality Rating</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="performance-card">
+                            <div class="performance-score score-{% if avg_service_rating >= 4 %}excellent{% elif avg_service_rating >= 3.5 %}good{% elif avg_service_rating >= 2.5 %}average{% else %}poor{% endif %}">
+                                {{ avg_service_rating|floatformat:1 }}
+                            </div>
+                            <div class="small text-muted">Service Rating</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="performance-card">
+                            <div class="performance-score text-primary">
+                                {{ total_orders }}
+                            </div>
+                            <div class="small text-muted">Total Orders</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No performance data available yet</p>
+                    <small class="text-muted">Performance metrics will appear after completing orders with this vendor</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Purchase Orders -->
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>Recent Purchase Orders
+                </h5>
+                <a href="{% url 'procurement:po_create' %}?vendor={{ vendor.id }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>New PO
+                </a>
+            </div>
+            <div class="card-body">
+                {% if purchase_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>PO Number</th>
+                                <th>Title</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for po in purchase_orders %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'procurement:po_detail' po.pk %}" class="text-decoration-none">
+                                        {{ po.po_number }}
+                                    </a>
+                                </td>
+                                <td>{{ po.title|truncatechars:40 }}</td>
+                                <td>{{ po.currency }} {{ po.total_amount|floatformat:2 }}</td>
+                                <td>
+                                    <span class="badge bg-{{ po.status|yesno:'success,warning,danger' }}">
+                                        {{ po.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ po.order_date }}</td>
+                                <td>
+                                    <a href="{% url 'procurement:po_detail' po.pk %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if total_pos > 10 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'procurement:po_list' %}?vendor={{ vendor.id }}" class="btn btn-outline-primary">
+                        View All {{ total_pos }} Purchase Orders
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No purchase orders found for this vendor</p>
+                    <a href="{% url 'procurement:po_create' %}?vendor={{ vendor.id }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create First Purchase Order
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Sidebar -->
+    <div class="col-lg-4">
+        <div class="action-buttons">
+            <h6 class="mb-3">Quick Actions</h6>
+            <div class="d-grid gap-2">
+                <a href="{% url 'procurement:vendor_edit' vendor.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Vendor
+                </a>
+                <a href="{% url 'procurement:po_create' %}?vendor={{ vendor.id }}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Create Purchase Order
+                </a>
+                <button class="btn btn-info" onclick="contactVendor()">
+                    <i class="fas fa-phone me-2"></i>Contact Vendor
+                </button>
+                <button class="btn btn-warning" onclick="rateVendor()">
+                    <i class="fas fa-star me-2"></i>Rate Performance
+                </button>
+                {% if vendor.status == 'active' %}
+                <button class="btn btn-outline-secondary" onclick="deactivateVendor()">
+                    <i class="fas fa-pause me-2"></i>Deactivate
+                </button>
+                {% else %}
+                <button class="btn btn-outline-success" onclick="activateVendor()">
+                    <i class="fas fa-play me-2"></i>Activate
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Vendor Statistics -->
+            <div class="mt-4">
+                <h6 class="mb-3">Vendor Statistics</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="card bg-light text-center p-2">
+                            <div class="fw-bold text-primary">{{ total_pos }}</div>
+                            <small class="text-muted">Total Orders</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light text-center p-2">
+                            <div class="fw-bold text-success">
+                                {{ vendor.rating }}/5
+                            </div>
+                            <small class="text-muted">Overall Rating</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information Card -->
+            <div class="mt-4">
+                <h6 class="mb-3">Quick Contact</h6>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <h6 class="mb-1">{{ vendor.contact_person }}</h6>
+                            <p class="text-muted small mb-2">{{ vendor.company_name }}</p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="tel:{{ vendor.phone }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-phone"></i>
+                                </a>
+                                <a href="mailto:{{ vendor.email }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-envelope"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function contactVendor() {
+    // Create contact modal or redirect to contact form
+    const phone = '{{ vendor.phone }}';
+    const email = '{{ vendor.email }}';
+    
+    if (confirm('Contact vendor via:\nPhone: ' + phone + '\nEmail: ' + email + '\n\nOpen phone dialer?')) {
+        window.location.href = 'tel:' + phone;
+    }
+}
+
+function rateVendor() {
+    // Show rating modal
+    alert('Performance rating feature coming soon!');
+}
+
+function deactivateVendor() {
+    if (confirm('Are you sure you want to deactivate this vendor?')) {
+        // AJAX call to deactivate vendor
+        alert('Vendor deactivation feature coming soon!');
+    }
+}
+
+function activateVendor() {
+    if (confirm('Are you sure you want to activate this vendor?')) {
+        // AJAX call to activate vendor
+        alert('Vendor activation feature coming soon!');
+    }
+}
+</script>
+{% endblock %}

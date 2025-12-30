@@ -1,0 +1,528 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sale Details - {{ block.super }}{% endblock %}
+
+{% block page_title %}Sale Details{% endblock %}
+{% block page_subtitle %}{{ sale.receipt_number }} • {{ sale.transaction_time|date:"M d, Y H:i" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:sale_list' %}">Sales</a></li>
+<li class="breadcrumb-item active">{{ sale.receipt_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .receipt-header {
+        text-align: center;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .company-logo {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 1rem;
+    }
+    
+    .receipt-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-group {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-size: 1.1rem;
+    }
+    
+    .items-table {
+        margin-bottom: 2rem;
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .totals-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .total-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    
+    .total-line.grand-total {
+        border-top: 2px solid #dee2e6;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #38b6ff;
+    }
+    
+    .payment-info {
+        background: #e8f5e8;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+    }
+    
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-refunded { background: #f8d7da; color: #721c24; }
+    
+    .action-buttons {
+        text-align: center;
+        margin-top: 2rem;
+    }
+    
+    .barcode-section {
+        text-align: center;
+        margin: 2rem 0;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Receipt Display -->
+        <div class="receipt-card">
+            <!-- Receipt Header -->
+            <div class="receipt-header">
+                <img src="{% static 'images/olivian-logo.png' %}" alt="Olivian Group" class="company-logo">
+                <h4 class="mb-1">The Olivian Group Limited</h4>
+                <p class="text-muted mb-0">Professional Solar Solutions</p>
+                <small class="text-muted">Nairobi, Kenya • +254-700-000-000</small>
+            </div>
+            
+            <!-- Sale Information -->
+            <div class="receipt-info">
+                <div class="info-group">
+                    <div class="info-label">Sale Information</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted">Receipt #</small>
+                            <div class="info-value">{{ sale.receipt_number }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Sale #</small>
+                            <div class="info-value">{{ sale.sale_number }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Date</small>
+                            <div class="info-value">{{ sale.transaction_time|date:"M d, Y" }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Time</small>
+                            <div class="info-value">{{ sale.transaction_time|date:"H:i" }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-group">
+                    <div class="info-label">Staff & Terminal</div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <small class="text-muted">Cashier</small>
+                            <div class="info-value">{{ sale.cashier.get_full_name }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Terminal</small>
+                            <div class="info-value">{{ sale.session.terminal.name }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Session</small>
+                            <div class="info-value">{{ sale.session.session_number }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Customer Information -->
+            {% if sale.customer %}
+            <div class="info-group mb-3">
+                <div class="info-label">Customer Information</div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <small class="text-muted">Name</small>
+                        <div class="info-value">{{ sale.customer.get_full_name }}</div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Phone</small>
+                        <div class="info-value">{{ sale.customer.phone|default:"-" }}</div>
+                    </div>
+                    {% if sale.customer.email %}
+                    <div class="col-12">
+                        <small class="text-muted">Email</small>
+                        <div class="info-value">{{ sale.customer.email }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-light">
+                <i class="fas fa-user me-2"></i>Walk-in Customer
+            </div>
+            {% endif %}
+            
+            <!-- Items Table -->
+            <div class="items-table">
+                <h6 class="mb-3">Items Purchased</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in sale.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ item.product_name }}</div>
+                                    {% if item.product_sku %}
+                                        <small class="text-muted">SKU: {{ item.product_sku }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity|floatformat:0 }}</td>
+                                <td class="text-end">KES {{ item.unit_price|floatformat:2 }}</td>
+                                <td class="text-end">KES {{ item.line_total|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Totals Section -->
+            <div class="totals-section">
+                <div class="total-line">
+                    <span>Subtotal:</span>
+                    <span>KES {{ sale.subtotal|floatformat:2 }}</span>
+                </div>
+                {% if sale.discount_amount > 0 %}
+                <div class="total-line">
+                    <span>Discount:</span>
+                    <span class="text-success">-KES {{ sale.discount_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                <div class="total-line">
+                    <span>Tax (16% VAT):</span>
+                    <span>KES {{ sale.tax_amount|floatformat:2 }}</span>
+                </div>
+                <div class="total-line grand-total">
+                    <span>Total Amount:</span>
+                    <span>KES {{ sale.grand_total|floatformat:2 }}</span>
+                </div>
+            </div>
+            
+            <!-- Payment Information -->
+            <div class="payment-info">
+                <h6 class="mb-3">Payment Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">Payment Method</small>
+                        <div class="fw-bold">{{ sale.get_payment_method_display }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Amount Paid</small>
+                        <div class="fw-bold">KES {{ sale.amount_paid|floatformat:2 }}</div>
+                    </div>
+                    {% if sale.change_amount > 0 %}
+                    <div class="col-md-4">
+                        <small class="text-muted">Change Given</small>
+                        <div class="fw-bold">KES {{ sale.change_amount|floatformat:2 }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if sale.mpesa_transaction_id %}
+                <div class="mt-2">
+                    <small class="text-muted">M-Pesa Transaction ID</small>
+                    <div class="fw-bold">{{ sale.mpesa_transaction_id }}</div>
+                </div>
+                {% endif %}
+                
+                {% if sale.card_reference %}
+                <div class="mt-2">
+                    <small class="text-muted">Card Reference</small>
+                    <div class="fw-bold">{{ sale.card_reference }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Barcode -->
+            <div class="barcode-section">
+                <div class="mb-2">Receipt Barcode</div>
+                <div style="font-family: 'Courier New', monospace; font-size: 1.5rem; letter-spacing: 2px;">
+                    ||||| |||| | || ||||| ||
+                </div>
+                <small class="text-muted">{{ sale.receipt_number }}</small>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-muted">
+                <small>
+                    Thank you for your business!<br>
+                    For inquiries: info@oliviangroup.com<br>
+                    www.oliviangroup.com
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Sale Status -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Sale Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="status-badge status-{{ sale.status }}">
+                        {{ sale.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="small text-muted">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Created:</span>
+                        <span>{{ sale.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Updated:</span>
+                        <span>{{ sale.updated_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="printReceipt('{{ sale.id }}')">
+                        <i class="fas fa-print me-2"></i>Print Receipt
+                    </button>
+                    
+                    <button class="btn btn-outline-primary" onclick="emailReceipt('{{ sale.id }}')">
+                        <i class="fas fa-envelope me-2"></i>Email Receipt
+                    </button>
+                    
+                    {% if sale.status == 'completed' %}
+                    <button class="btn btn-outline-warning" onclick="initializeRefund('{{ sale.id }}')">
+                        <i class="fas fa-undo me-2"></i>Process Refund
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary" onclick="duplicateSale('{{ sale.id }}')">
+                        <i class="fas fa-copy me-2"></i>Duplicate Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sale Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Sale Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="h5 text-primary mb-0">{{ sale.items.count }}</div>
+                        <small class="text-muted">Items</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-success mb-0">{{ sale.items.all|length|add:sale.items.all.count }}%</div>
+                        <small class="text-muted">Tax Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Process Refund</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Processing a refund will create a negative sale entry and return the payment to the customer.
+                </div>
+                
+                <form id="refundForm">
+                    <div class="mb-3">
+                        <label class="form-label">Refund Reason</label>
+                        <select class="form-select" id="refundReason" required>
+                            <option value="">Select reason...</option>
+                            <option value="customer_request">Customer Request</option>
+                            <option value="damaged_product">Damaged Product</option>
+                            <option value="wrong_item">Wrong Item</option>
+                            <option value="pricing_error">Pricing Error</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Refund Amount</label>
+                        <input type="number" class="form-control" id="refundAmount" value="{{ sale.grand_total }}" step="0.01" max="{{ sale.grand_total }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="refundNotes" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="processRefund()">Process Refund</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function printReceipt(saleId) {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    
+    // Get the receipt content
+    const receiptContent = document.querySelector('.receipt-card').cloneNode(true);
+    
+    // Remove action buttons for printing
+    const actionButtons = receiptContent.querySelector('.action-buttons');
+    if (actionButtons) {
+        actionButtons.remove();
+    }
+    
+    // Create print document
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Receipt - ${document.querySelector('.receipt-number').textContent}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .receipt-card { max-width: 400px; margin: 0 auto; }
+                    .receipt-header { text-align: center; margin-bottom: 20px; }
+                    .table { width: 100%; border-collapse: collapse; }
+                    .table th, .table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                    .text-end { text-align: right; }
+                    .text-center { text-align: center; }
+                    .total-line { display: flex; justify-content: space-between; margin: 5px 0; }
+                    .grand-total { font-weight: bold; border-top: 2px solid #000; padding-top: 10px; }
+                </style>
+            </head>
+            <body>
+                ${receiptContent.outerHTML}
+                <script>window.print(); window.close();<\/script>
+            </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+}
+
+function emailReceipt(saleId) {
+    // Simulate email functionality
+    const customerEmail = prompt('Enter customer email address:');
+    if (customerEmail) {
+        alert(`Receipt will be emailed to: ${customerEmail}`);
+        // In real implementation, make API call to send email
+    }
+}
+
+function initializeRefund(saleId) {
+    const refundModal = new bootstrap.Modal(document.getElementById('refundModal'));
+    refundModal.show();
+}
+
+function processRefund() {
+    const reason = document.getElementById('refundReason').value;
+    const amount = document.getElementById('refundAmount').value;
+    const notes = document.getElementById('refundNotes').value;
+    
+    if (!reason) {
+        alert('Please select a refund reason');
+        return;
+    }
+    
+    if (confirm(`Process refund of KES ${amount}?`)) {
+        // In real implementation, make API call to process refund
+        alert('Refund processed successfully');
+        bootstrap.Modal.getInstance(document.getElementById('refundModal')).hide();
+        location.reload();
+    }
+}
+
+function duplicateSale(saleId) {
+    if (confirm('Create a new sale with the same items?')) {
+        // In real implementation, navigate to POS terminal with pre-filled items
+        alert('Duplicating sale... Redirecting to POS terminal');
+        window.location.href = "{% url 'pos:terminal' sale.session.terminal.id %}";
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-Pesa Payment Confirmation - The Olivian Group</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #38b6ff 0%, #1e5f99 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 5px 0 0;
+            font-size: 24px;
+            font-weight: bold;
+            display: inline;
+        }
+        .checkmark {
+            color: #4CAF50;
+            font-size: 24px;
+            display: inline;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .content h2 {
+            color: #38b6ff;
+            margin-top: 0;
+            border-bottom: 2px solid #38b6ff;
+            padding-bottom: 10px;
+        }
+        .highlight-box {
+            background-color: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .payment-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #38b6ff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #38b6ff;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .receipt-number {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 16px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .button {
+            display: inline-block;
+            background-color: #38b6ff;
+            color: white !important;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background-color: #2c9cdb;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .contact-info p {
+            margin: 3px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .header, .content, .footer {
+                padding: 20px 15px !important;
+            }
+        }
+        .payment-icon {
+            font-size: 48px;
+            color: #38b6ff;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .payment-timeline {
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+        .payment-timeline li {
+            padding: 8px 0;
+            border-left: 2px solid #38b6ff;
+            margin-left: 15px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .payment-timeline li:before {
+            content: "▶";
+            color: #4CAF50;
+            position: absolute;
+            left: -7px;
+            top: 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="payment-icon">💰</div>
+            <h1>Payment Confirmed</h1>
+            <p>Your M-Pesa payment has been successfully received</p>
+        </div>
+
+        <div class="content">
+            <h2>Dear {{ customer_name }},</h2>
+
+            <p>Thank you for your payment! We have successfully received your M-Pesa payment and recorded it in our system.</p>
+
+            <div class="payment-details">
+                <h3>💳 Payment Details</h3>
+                <p><strong>Amount Paid:</strong></p>
+                <div class="amount">KES {{ amount|floatformat:2 }}</div>
+
+                {% if receipt_number %}
+                <p><strong>M-Pesa Receipt Number:</strong></p>
+                <div class="receipt-number">{{ receipt_number }}</div>
+                {% endif %}
+
+                <p><strong>Transaction Date:</strong> {{ transaction_date|date:"D, d M Y \a\t H:i" }}</p>
+                <p><strong>M-Pesa Phone:</strong> {{ phone_number }}</p>
+            </div>
+
+            <div class="highlight-box">
+                <h4 style="margin-top: 0; color: #4CAF50;">✓ What happens next?</h4>
+                <ul class="payment-timeline">
+                    <li>Your receipt has been attached to this email</li>
+                    <li>A confirmation SMS has been sent to your phone</li>
+                    <li>Our team will process your order within 24 hours</li>
+                    <li>You will receive updates on delivery status</li>
+                </ul>
+            </div>
+
+            <p><strong>Need assistance?</strong><br>
+            If you have any questions about this payment or need help with your order, please don't hesitate to contact our support team.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:info@olivian.co.ke" class="button">Contact Support</a>
+                <a href="https://olivian.co.ke" class="button">Visit Our Website</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="contact-info">
+                <p><strong>The Olivian Group Limited</strong></p>
+                <p>Nairobi, Kenya</p>
+                <p>Phone: +254 XXX XXX XXX | Email: info@olivian.co.ke</p>
+                <p>Website: <a href="https://olivian.co.ke" style="color: #38b6ff;">olivian.co.ke</a></p>
+            </div>
+
+            <div class="social-links">
+                <a href="https://olivian.co.ke">Visit Our Website</a> |
+                <a href="mailto:info@olivian.co.ke">Contact Us</a>
+            </div>
+
+            <p style="margin-top: 20px; font-size: 11px; color: #999;">
+                <strong>Important:</strong> This is an automated message from The Olivian Group Limited.
+                If you believe this email was sent to you in error, please contact us immediately.
+                This email and any attachments may contain confidential information.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

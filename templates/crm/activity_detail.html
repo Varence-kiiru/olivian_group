@@ -1,0 +1,291 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ activity.subject }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ activity.subject }}{% endblock %}
+{% block page_subtitle %}Activity details and tracking{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:activity_list' %}">Activities</a></li>
+<li class="breadcrumb-item active">{{ activity.subject|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-header {
+        background: linear-gradient(135deg, var(--primary-color), #20c997);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .activity-type-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.2);
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-planned { background: #cce5ff; color: #004085; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .status-rescheduled { background: #fff3cd; color: #856404; }
+
+    .quick-actions .btn {
+        text-align: left;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        width: 100%;
+    }
+
+    .quick-actions .btn i {
+        width: 20px;
+        margin-right: 0.5rem;
+    }
+
+    .related-item {
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .related-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Activity Header -->
+<div class="activity-header">
+    <span class="activity-type-badge">
+        <i class="fas {% if activity.activity_type == 'call' %}fa-phone{% elif activity.activity_type == 'email' %}fa-envelope{% elif activity.activity_type == 'meeting' %}fa-users{% elif activity.activity_type == 'task' %}fa-tasks{% else %}fa-calendar{% endif %} me-2"></i>
+        {{ activity.get_activity_type_display }}
+    </span>
+
+    <h2 class="mb-3">{{ activity.subject }}</h2>
+
+    <div class="d-flex gap-4 mb-3">
+        <div>
+            <small class="opacity-75">Schedule</small><br>
+            <strong>{{ activity.scheduled_datetime|date:"M d, Y H:i" }}</strong>
+        </div>
+        <div>
+            <small class="opacity-75">Duration</small><br>
+            <strong>{{ activity.duration_minutes }} minutes</strong>
+        </div>
+        <div>
+            <small class="opacity-75">Status</small><br>
+            <span class="status-badge status-{{ activity.status }}">
+                {{ activity.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+    <div class="opacity-75">
+        <i class="fas fa-user me-2"></i>Assigned to {{ activity.assigned_to.get_full_name }}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Activity Details -->
+        <div class="info-card">
+            <h5 class="mb-4">Activity Details</h5>
+
+            {% if activity.description %}
+            <div class="mb-4">
+                <strong class="d-block mb-2">Description</strong>
+                {{ activity.description|linebreaks }}
+            </div>
+            {% endif %}
+
+            {% if activity.outcome %}
+            <div class="mb-4">
+                <strong class="d-block mb-2">Outcome</strong>
+                {{ activity.outcome|linebreaks }}
+            </div>
+            {% endif %}
+
+            {% if activity.next_steps %}
+            <div class="mb-4">
+                <strong class="d-block mb-2">Next Steps</strong>
+                {{ activity.next_steps|linebreaks }}
+            </div>
+            {% endif %}
+
+            {% if activity.location %}
+            <div>
+                <strong class="d-block mb-2">Location</strong>
+                {{ activity.location }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Related Items -->
+        <div class="info-card">
+            <h5 class="mb-4">Related Items</h5>
+
+            {% if activity.contact %}
+            <div class="related-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-muted d-block">Contact</small>
+                        <strong>{{ activity.contact.get_full_name }}</strong>
+                    </div>
+                    <a href="{% url 'crm:contact_detail' activity.contact.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Contact
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if activity.opportunity %}
+            <div class="related-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-muted d-block">Opportunity</small>
+                        <strong>{{ activity.opportunity.name }}</strong>
+                        <div class="small text-muted">
+                            {{ activity.opportunity.get_stage_display }} • 
+                            KES {{ activity.opportunity.value|floatformat:0 }}
+                        </div>
+                    </div>
+                    <a href="{% url 'crm:opportunity_detail' activity.opportunity.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Opportunity
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if activity.lead %}
+            <div class="related-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-muted d-block">Lead</small>
+                        <strong>{{ activity.lead.title }}</strong>
+                        <div class="small text-muted">
+                            {{ activity.lead.get_status_display }}
+                        </div>
+                    </div>
+                    <a href="{% url 'crm:lead_detail' activity.lead.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Lead
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="info-card">
+            <h5 class="mb-4">Quick Actions</h5>
+
+            <div class="quick-actions">
+                <a href="{% url 'crm:activity_update' activity.pk %}" class="btn btn-outline-primary">
+                    <i class="fas fa-edit"></i>Edit Activity
+                </a>
+
+                {% if activity.status != 'completed' %}
+                <button class="btn btn-outline-success" onclick="markCompleted()">
+                    <i class="fas fa-check"></i>Mark as Completed
+                </button>
+                {% endif %}
+
+                {% if activity.status == 'planned' %}
+                <button class="btn btn-outline-warning" onclick="reschedule()">
+                    <i class="fas fa-clock"></i>Reschedule
+                </button>
+                {% endif %}
+
+                <a href="{% url 'crm:activity_create' %}?contact={{ activity.contact.pk }}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus"></i>New Activity with Contact
+                </a>
+
+                {% if activity.activity_type == 'email' and activity.contact.email %}
+                <a href="mailto:{{ activity.contact.email }}" class="btn btn-outline-info">
+                    <i class="fas fa-envelope"></i>Send Email
+                </a>
+                {% endif %}
+
+                {% if activity.activity_type == 'call' and activity.contact.phone %}
+                <a href="tel:{{ activity.contact.phone }}" class="btn btn-outline-success">
+                    <i class="fas fa-phone"></i>Call Contact
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activity Information -->
+        <div class="info-card">
+            <h5 class="mb-4">Activity Information</h5>
+
+            <div class="mb-3">
+                <small class="text-muted d-block">Created By</small>
+                <strong>{{ activity.created_by.get_full_name }}</strong>
+            </div>
+
+            <div class="mb-3">
+                <small class="text-muted d-block">Created On</small>
+                <strong>{{ activity.created_at|date:"M d, Y H:i" }}</strong>
+            </div>
+
+            {% if activity.completed_datetime %}
+            <div class="mb-3">
+                <small class="text-muted d-block">Completed On</small>
+                <strong>{{ activity.completed_datetime|date:"M d, Y H:i" }}</strong>
+            </div>
+            {% endif %}
+
+            <div>
+                <small class="text-muted d-block">Last Updated</small>
+                <strong>{{ activity.updated_at|date:"M d, Y H:i" }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markCompleted() {
+    if (confirm('Mark this activity as completed?')) {
+        // Add AJAX call to update activity status
+        alert('Mark completed feature coming soon!');
+    }
+}
+
+function reschedule() {
+    // Add rescheduling functionality
+    alert('Reschedule feature coming soon!');
+}
+</script>
+{% endblock %}

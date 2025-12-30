@@ -1,0 +1,327 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Transactions - {{ block.super }}{% endblock %}
+
+{% block page_title %}Transaction Management{% endblock %}
+{% block page_subtitle %}View and manage all financial transactions{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Transactions</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .transaction-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .transaction-row {
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .transaction-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .transaction-row.income { border-left-color: #28a745; }
+    .transaction-row.expense { border-left-color: #dc3545; }
+    .transaction-row.transfer { border-left-color: #38b6ff; }
+    
+    .amount-income { color: #28a745; font-weight: 600; }
+    .amount-expense { color: #dc3545; font-weight: 600; }
+    .amount-transfer { color: #38b6ff; font-weight: 600; }
+    
+    .transaction-status {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+    .status-cancelled { background: #e2e3e5; color: #383d41; }
+    
+    .transaction-meta {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid transparent;
+    }
+    
+    .summary-income { border-left-color: #28a745; }
+    .summary-expense { border-left-color: #dc3545; }
+    .summary-transfer { border-left-color: #38b6ff; }
+    .summary-balance { border-left-color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-exchange-alt me-2"></i>Transactions
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="alert('Add Transaction feature coming soon!')">
+            <i class="fas fa-plus me-2"></i>Add Transaction
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-income">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="transaction-meta mb-1">Total Income</div>
+                    <div class="h4 mb-0 text-success">KES {{ total_income|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-arrow-up fa-2x text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-expense">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="transaction-meta mb-1">Total Expenses</div>
+                    <div class="h4 mb-0 text-danger">KES {{ total_expense|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-arrow-down fa-2x text-danger"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-transfer">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="transaction-meta mb-1">Transfers</div>
+                    <div class="h4 mb-0" style="color: #38b6ff;">KES {{ total_transfer|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-exchange-alt fa-2x" style="color: #38b6ff;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-balance">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="transaction-meta mb-1">Net Balance</div>
+                    <div class="h4 mb-0 {% if net_balance > 0 %}text-success{% elif net_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                        KES {{ net_balance|floatformat:2|default:"0.00" }}
+                    </div>
+                </div>
+                <i class="fas fa-balance-scale fa-2x text-muted"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Reference, description, amount...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="account" class="form-label">Account</label>
+            <select class="form-select" id="account" name="account">
+                <option value="">All Accounts</option>
+                {% for account in accounts %}
+                <option value="{{ account.id }}" {% if current_account == account.id|stringformat:"s" %}selected{% endif %}>
+                    {{ account.account_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="transaction_type" class="form-label">Type</label>
+            <select class="form-select" id="transaction_type" name="transaction_type">
+                <option value="">All Types</option>
+                <option value="income" {% if current_type == 'income' %}selected{% endif %}>Income</option>
+                <option value="expense" {% if current_type == 'expense' %}selected{% endif %}>Expense</option>
+                <option value="transfer" {% if current_type == 'transfer' %}selected{% endif %}>Transfer</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="failed" {% if current_status == 'failed' %}selected{% endif %}>Failed</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">Date From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" 
+                   value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Transactions Table -->
+<div class="transaction-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Description</th>
+                    <th>Account</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr class="transaction-row {{ transaction.transaction_type }}">
+                    <td>
+                        <div class="fw-bold">{{ transaction.transaction_date|date:"M d, Y" }}</div>
+                        <div class="transaction-meta">{{ transaction.transaction_date|date:"H:i" }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ transaction.reference_number }}</div>
+                        {% if transaction.external_reference %}
+                            <div class="transaction-meta">{{ transaction.external_reference }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ transaction.description }}</div>
+                        {% if transaction.category %}
+                            <div class="transaction-meta">{{ transaction.category.name }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ transaction.account.account_name }}</div>
+                        <div class="transaction-meta">{{ transaction.account.bank.name }}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-{{ transaction.transaction_type|slice:':1' }}{% if transaction.transaction_type == 'income' %}success{% elif transaction.transaction_type == 'expense' %}danger{% else %}primary{% endif %}">
+                            {{ transaction.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="amount-{{ transaction.transaction_type }}">
+                            {% if transaction.transaction_type == 'expense' %}-{% endif %}KES {{ transaction.amount|floatformat:2 }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="transaction-status status-{{ transaction.status }}">
+                            {{ transaction.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="alert('View details coming soon!')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="alert('Edit coming soon!')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No transactions found</h5>
+                        <p class="text-muted">
+                            {% if current_search or current_account or current_type or current_status %}
+                                Try adjusting your search criteria.
+                            {% else %}
+                                No transactions recorded yet.
+                            {% endif %}
+                        </p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Transactions pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_type %}&transaction_type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_type %}&transaction_type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_type %}&transaction_type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_type %}&transaction_type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

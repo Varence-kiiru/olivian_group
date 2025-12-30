@@ -1,0 +1,171 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Banner Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Banner Management{% endblock %}
+{% block page_subtitle %}Manage blog banners and homepage displays{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-image me-2"></i>
+                    Edit Banner
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.title.label_tag }}
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small">{{ form.title.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.subtitle.label_tag }}
+                            {{ form.subtitle }}
+                            {% if form.subtitle.errors %}
+                                <div class="text-danger small">{{ form.subtitle.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.background_image.label_tag }}
+                        {{ form.background_image }}
+                        <small class="text-muted">
+                            Recommended size: 1920x1080px. Supported formats: JPEG, PNG.
+                        </small>
+                        {% if form.background_image.errors %}
+                            <div class="text-danger small">{{ form.background_image.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if banner.background_image %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Banner Image:</label>
+                            <div>
+                                <img src="{{ banner.background_image.url }}" alt="Current Banner" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            Save Banner
+                        </button>
+                        <a href="{% url 'blog:management_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Banner Preview</h6>
+            </div>
+            <div class="card-body">
+                {% if banner.background_image %}
+                    <div class="banner-preview position-relative mb-3">
+                        <img src="{{ banner.background_image.url }}" alt="Banner Preview" class="img-fluid rounded">
+                        <div class="banner-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center text-white">
+                            <div class="text-center">
+                                <h2 class="fw-bold mb-2">{{ banner.title|default:"Banner Title" }}</h2>
+                                <p class="mb-0">{{ banner.subtitle|default:"Banner subtitle goes here" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <a href="{% url 'blog:toggle_banner_status' banner.pk %}" class="btn btn-sm {{ banner.is_active|yesno:'btn-success,btn-danger' }}">
+                            <i class="fas {{ banner.is_active|yesno:'fa-check,fa-times' }} me-1"></i>
+                            {{ banner.is_active|yesno:"Active,Inactive" }}
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-image fa-3x mb-3"></i>
+                        <p class="mb-0">No banner image uploaded yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- All Banners -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">All Banners</h6>
+            </div>
+            <div class="card-body">
+                {% if all_banners %}
+                    <div class="list-group">
+                        {% for b in all_banners %}
+                            <div class="list-group-item d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="fw-bold">{{ b.title }}</div>
+                                    <small class="text-muted">
+                                        {% if b.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            Inactive
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'blog:toggle_banner_status' b.pk %}" class="btn btn-sm {{ b.is_active|yesno:'btn-success,btn-outline-secondary' }}"
+                                       title="{{ b.is_active|yesno:'Deactivate,Activate' }}">
+                                        <i class="fas {{ b.is_active|yesno:'fa-check-circle,fa-circle-o' }}"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="confirmDelete({{ b.pk }}, '{{ b.title }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <p class="mb-0">No banners created yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(bannerId, title) {
+    if (confirm(`Are you sure you want to delete the banner "${title}"?`)) {
+        // For now, we'll just show a message that this functionality would be implemented
+        alert(`Delete functionality for banner "${title}" would be implemented. Please use the Django admin for now.`);
+        // TODO: Implement banner delete functionality with proper URL
+    }
+}
+</script>
+
+<style>
+.banner-preview {
+    min-height: 200px;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.banner-overlay {
+    background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+}
+</style>
+{% endblock %}

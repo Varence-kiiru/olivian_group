@@ -1,0 +1,407 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget Revisions - {{ block.super }}{% endblock %}
+
+{% block page_title %}Budget Revisions{% endblock %}
+{% block page_subtitle %}Track budget changes and amendments{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item active">Revisions</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .revision-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .revision-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .revision-card.type-increase { border-left-color: #28a745; }
+    .revision-card.type-decrease { border-left-color: #dc3545; }
+    .revision-card.type-reallocation { border-left-color: #17a2b8; }
+    .revision-card.type-extension { border-left-color: #ffc107; }
+    
+    .revision-card.approved { background: linear-gradient(to right, rgba(40, 167, 69, 0.05), white); }
+    .revision-card.pending { background: linear-gradient(to right, rgba(255, 193, 7, 0.05), white); }
+    .revision-card.rejected { background: linear-gradient(to right, rgba(220, 53, 69, 0.05), white); }
+    
+    .amount-change {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .amount-increase { color: #28a745; }
+    .amount-decrease { color: #dc3545; }
+    .amount-neutral { color: #6c757d; }
+    
+    .revision-timeline {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .timeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
+    
+    .timeline-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -50%;
+        top: 20px;
+        width: 100%;
+        height: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-step.completed::after {
+        background: #28a745;
+    }
+    
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-icon.completed {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-icon.current {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .step-icon.pending {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    
+    .comparison-table {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value text-primary">{{ revisions.count }}</div>
+        <div class="text-muted">Total Revisions</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-warning">{{ revisions|length|default:0 }}</div>
+        <div class="text-muted">Pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-success">{{ revisions|length|default:0 }}</div>
+        <div class="text-muted">Approved</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-danger">{{ revisions|length|default:0 }}</div>
+        <div class="text-muted">Rejected</div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Budget Revisions</h5>
+    <div class="btn-group">
+        <a href="{% url 'budget:revision_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Request Revision
+        </a>
+        <a href="{% url 'budget:list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Budgets
+        </a>
+    </div>
+</div>
+
+<!-- Revision Cards -->
+<div class="row">
+    {% for revision in revisions %}
+    <div class="col-12">
+        <div class="revision-card type-{{ revision.revision_type }} {% if revision.approved %}approved{% elif not revision.approved_by %}pending{% else %}rejected{% endif %}">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            {% if revision.revision_type == 'increase' %}
+                            <i class="fas fa-arrow-up fa-2x text-success"></i>
+                            {% elif revision.revision_type == 'decrease' %}
+                            <i class="fas fa-arrow-down fa-2x text-danger"></i>
+                            {% elif revision.revision_type == 'reallocation' %}
+                            <i class="fas fa-exchange-alt fa-2x text-info"></i>
+                            {% elif revision.revision_type == 'extension' %}
+                            <i class="fas fa-calendar-plus fa-2x text-warning"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'budget:detail' revision.budget.pk %}" class="text-decoration-none">
+                                    {{ revision.budget.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">{{ revision.get_revision_type_display }}</small>
+                        </div>
+                        <div class="ms-auto">
+                            {% if revision.approved %}
+                            <span class="badge bg-success">Approved</span>
+                            {% elif not revision.approved_by %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Revision Details -->
+                    <div class="comparison-table">
+                        <div class="row g-3">
+                            {% if revision.revision_type in 'increase,decrease,reallocation' %}
+                            <div class="col-md-6">
+                                <div class="text-muted small">Previous Amount</div>
+                                <div class="fw-semibold">KES {{ revision.previous_amount|floatformat:0 }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted small">New Amount</div>
+                                <div class="fw-semibold amount-change 
+                                    {% if revision.new_amount > revision.previous_amount %}amount-increase
+                                    {% elif revision.new_amount < revision.previous_amount %}amount-decrease
+                                    {% else %}amount-neutral{% endif %}">
+                                    KES {{ revision.new_amount|floatformat:0 }}
+                                    {% if revision.new_amount != revision.previous_amount %}
+                                    <small>(change amount)</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if revision.revision_type == 'extension' and revision.new_end_date %}
+                            <div class="col-md-6">
+                                <div class="text-muted small">Previous End Date</div>
+                                <div class="fw-semibold">{{ revision.previous_end_date|date:"M d, Y" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted small">New End Date</div>
+                                <div class="fw-semibold text-info">{{ revision.new_end_date|date:"M d, Y" }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Reason -->
+                    <div class="mb-3">
+                        <div class="text-muted small">Reason for Revision</div>
+                        <div>{{ revision.reason }}</div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="revision-timeline">
+                        <div class="timeline-step completed">
+                            <div class="step-icon completed">
+                                <i class="fas fa-pencil-alt"></i>
+                            </div>
+                            <small class="text-muted">Requested</small>
+                        </div>
+                        <div class="timeline-step {% if revision.approved_by %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if revision.approved_by %}completed{% else %}pending{% endif %}">
+                                <i class="fas fa-gavel"></i>
+                            </div>
+                            <small class="text-muted">Review</small>
+                        </div>
+                        <div class="timeline-step {% if revision.approved %}completed{% elif revision.approved_by and not revision.approved %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if revision.approved %}completed{% elif revision.approved_by and not revision.approved %}completed{% else %}pending{% endif %}">
+                                {% if revision.approved %}
+                                <i class="fas fa-check"></i>
+                                {% elif revision.approved_by and not revision.approved %}
+                                <i class="fas fa-times"></i>
+                                {% else %}
+                                <i class="fas fa-hourglass-half"></i>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Decision</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Request Info -->
+                    <div class="row g-2 small text-muted">
+                        <div class="col-auto">
+                            <i class="fas fa-user"></i> Requested by {{ revision.requested_by.get_full_name }}
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar"></i> {{ revision.created_at|date:"M d, Y H:i" }}
+                        </div>
+                        {% if revision.approved_by %}
+                        <div class="col-auto">
+                            <i class="fas fa-gavel"></i> {{ revision.approved_by.get_full_name }}
+                        </div>
+                        {% endif %}
+                        {% if revision.approved_date %}
+                        <div class="col-auto">
+                            <i class="fas fa-clock"></i> {{ revision.approved_date|date:"M d, Y H:i" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-end">
+                        <!-- Impact Summary -->
+                        {% if revision.revision_type in 'increase,decrease,reallocation' %}
+                        <div class="mb-3">
+                            <div class="text-muted small">Budget Impact</div>
+                            <div class="amount-change 
+                                {% if revision.new_amount > revision.previous_amount %}amount-increase
+                                {% elif revision.new_amount < revision.previous_amount %}amount-decrease
+                                {% else %}amount-neutral{% endif %}">
+                                {% if revision.new_amount > revision.previous_amount %}
+                                    <span class="text-success">Budget Increased</span>
+                                {% elif revision.new_amount < revision.previous_amount %}
+                                    <span class="text-danger">Budget Decreased</span>
+                                {% else %}
+                                    <span class="text-muted">No Change</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Action Buttons -->
+                        {% if not revision.approved_by and revision.requested_by != request.user %}
+                        <div class="d-grid gap-2 mb-3">
+                            <a href="{% url 'budget:revision_approve' revision.pk %}" class="btn btn-primary">
+                                <i class="fas fa-gavel"></i> Review
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Priority Badge -->
+                        {% if revision.new_amount > revision.previous_amount and revision.new_amount > 100000 %}
+                        <span class="badge bg-danger">High Impact</span>
+                        {% elif revision.new_amount > revision.previous_amount and revision.new_amount > 50000 %}
+                        <span class="badge bg-warning">Medium Impact</span>
+                        {% else %}
+                        <span class="badge bg-info">Standard</span>
+                        {% endif %}
+                        
+                        <!-- Time Info -->
+                        <div class="mt-3 small text-muted">
+                            <i class="fas fa-clock"></i>
+                            {{ revision.created_at|timesince }} ago
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-edit fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No budget revisions found</h5>
+            <p class="text-muted">Budget revision requests will appear here when submitted.</p>
+            <a href="{% url 'budget:revision_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Request Revision
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Revision pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Custom template filters for calculations
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any interactive features here
+    console.log('Budget revisions page loaded');
+    
+    // Highlight recent revisions
+    const recentRevisions = document.querySelectorAll('.revision-card');
+    recentRevisions.forEach(card => {
+        const timeText = card.querySelector('.fa-clock').parentElement.textContent;
+        if (timeText.includes('hour') || timeText.includes('minute')) {
+            card.style.border = '2px solid var(--primary-color)';
+        }
+    });
+});
+</script>
+{% endblock %}

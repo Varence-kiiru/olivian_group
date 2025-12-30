@@ -1,0 +1,88 @@
+/* Custom Order Admin Styles */
+
+.order-summary {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.order-summary h3 {
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.order-summary .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.order-summary .info-row .label {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.order-summary .info-row .value {
+    color: #495057;
+}
+
+.order-items-inline {
+    margin-top: 15px;
+}
+
+.order-items-inline .tabular {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.order-items-inline th {
+    background: #e9ecef;
+    font-weight: 600;
+    padding: 8px 10px;
+}
+
+.order-items-inline td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.order-status-actions {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.order-status-actions h3 {
+    color: #856404;
+    margin-bottom: 10px;
+}
+
+.order-total-summary {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.order-total-summary .total-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #155724;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .order-summary .info-row {
+        flex-direction: column;
+    }
+    
+    .order-summary .info-row .label {
+        margin-bottom: 2px;
+    }
+}

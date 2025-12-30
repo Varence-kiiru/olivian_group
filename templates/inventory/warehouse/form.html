@@ -1,0 +1,411 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Warehouse{% else %}Create Warehouse{% endif %} - Inventory Management
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .form-header {
+        border-bottom: 2px solid #38b6ff;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header h2 {
+        color: #2c3e50;
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 182, 255, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .form-actions {
+        border-top: 1px solid #e9ecef;
+        padding-top: 1.5rem;
+        margin-top: 2rem;
+        text-align: center;
+    }
+    
+    .info-card {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .capacity-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                {% if object %}
+                    <i class="fas fa-edit text-primary"></i>
+                    Edit Warehouse
+                {% else %}
+                    <i class="fas fa-plus text-primary"></i>
+                    Create Warehouse
+                {% endif %}
+            </h1>
+            <nav aria-label="breadcrumb" class="mt-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_list' %}">Warehouses</a></li>
+                    <li class="breadcrumb-item active">
+                        {% if object %}Edit Warehouse{% else %}Create Warehouse{% endif %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>
+                        {% if object %}
+                            Warehouse Information
+                        {% else %}
+                            New Warehouse Setup
+                        {% endif %}
+                    </h2>
+                    <p class="mb-0 text-muted">
+                        {% if object %}
+                            Update the warehouse information and settings below.
+                        {% else %}
+                            Create a new warehouse to manage inventory storage and organization.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Info Card for New Warehouses -->
+                {% if not object %}
+                <div class="info-card">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle fa-2x text-primary me-3"></i>
+                        <div>
+                            <h6 class="mb-1">Setting Up Your Warehouse</h6>
+                            <p class="mb-0 small">
+                                Configure your warehouse details to enable inventory tracking. 
+                                You can add inventory items and manage stock levels once the warehouse is created.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post" id="warehouseForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Warehouse Name -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_name" class="form-label">
+                                    Warehouse Name <span class="required">*</span>
+                                </label>
+                                <input type="text" name="name" id="id_name" class="form-control" 
+                                       value="{{ form.name.value|default:'' }}" required 
+                                       placeholder="e.g., Main Warehouse, Central Store">
+                                <div class="help-text">
+                                    A descriptive name for your warehouse or storage facility.
+                                </div>
+                                {% if form.name.errors %}
+                                    <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Warehouse Code -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_code" class="form-label">
+                                    Warehouse Code <span class="required">*</span>
+                                </label>
+                                <input type="text" name="code" id="id_code" class="form-control" 
+                                       value="{{ form.code.value|default:'' }}" required 
+                                       placeholder="e.g., WH001, MAIN, CEN" maxlength="20">
+                                <div class="help-text">
+                                    Unique identifier for the warehouse (used in reports and transactions).
+                                </div>
+                                {% if form.code.errors %}
+                                    <div class="text-danger small">{{ form.code.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="id_address" class="form-label">
+                                    Address <span class="required">*</span>
+                                </label>
+                                <textarea name="address" id="id_address" class="form-control" rows="3" required 
+                                         placeholder="Enter the complete address of the warehouse">{{ form.address.value|default:'' }}</textarea>
+                                <div class="help-text">
+                                    Complete physical address including street, city, and postal code.
+                                </div>
+                                {% if form.address.errors %}
+                                    <div class="text-danger small">{{ form.address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Manager -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_manager" class="form-label">
+                                    Warehouse Manager
+                                </label>
+                                <select name="manager" id="id_manager" class="form-select">
+                                    <option value="">Select manager...</option>
+                                    {% for value, text in form.manager.field.choices %}
+                                        {% if value %}
+                                        <option value="{{ value }}" {% if form.manager.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="help-text">
+                                    Person responsible for managing this warehouse (optional).
+                                </div>
+                                {% if form.manager.errors %}
+                                    <div class="text-danger small">{{ form.manager.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" name="is_active" id="id_is_active" class="form-check-input"
+                                           {% if form.is_active.value %}checked{% endif %}>
+                                    <label for="id_is_active" class="form-check-label">
+                                        Active Warehouse
+                                    </label>
+                                </div>
+                                <div class="help-text">
+                                    Inactive warehouses won't be available for new inventory transactions.
+                                </div>
+                                {% if form.is_active.errors %}
+                                    <div class="text-danger small">{{ form.is_active.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Capacity Information -->
+                    <div class="capacity-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-chart-area text-primary"></i>
+                            Capacity Management
+                        </h6>
+                        
+                        <div class="row">
+                            <!-- Total Capacity -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_total_capacity" class="form-label">
+                                        Total Capacity (m²) <span class="required">*</span>
+                                    </label>
+                                    <input type="number" name="total_capacity" id="id_total_capacity" 
+                                           class="form-control" step="0.01" min="0" required
+                                           value="{{ form.total_capacity.value|default:'' }}" 
+                                           placeholder="e.g., 1000.00">
+                                    <div class="help-text">
+                                        Total storage space available in square meters.
+                                    </div>
+                                    {% if form.total_capacity.errors %}
+                                        <div class="text-danger small">{{ form.total_capacity.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if object %}
+                            <!-- Used Capacity (for existing warehouses) -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_used_capacity" class="form-label">
+                                        Used Capacity (m²)
+                                    </label>
+                                    <input type="number" name="used_capacity" id="id_used_capacity" 
+                                           class="form-control" step="0.01" min="0"
+                                           value="{{ form.used_capacity.value|default:0 }}" 
+                                           placeholder="0.00">
+                                    <div class="help-text">
+                                        Currently utilized storage space (usually auto-calculated).
+                                    </div>
+                                    {% if form.used_capacity.errors %}
+                                        <div class="text-danger small">{{ form.used_capacity.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if object %}
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <small class="text-muted">
+                                <strong>Capacity Utilization:</strong> {{ object.capacity_utilization|floatformat:1 }}%
+                                ({{ object.used_capacity }} / {{ object.total_capacity }} m²)
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-save"></i>
+                            {% if object %}Update Warehouse{% else %}Create Warehouse{% endif %}
+                        </button>
+                        <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.getElementById('warehouseForm');
+    const codeInput = document.getElementById('id_code');
+    const totalCapacityInput = document.getElementById('id_total_capacity');
+    const usedCapacityInput = document.getElementById('id_used_capacity');
+    
+    // Code formatting (uppercase)
+    if (codeInput) {
+        codeInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+    }
+    
+    // Capacity validation
+    if (totalCapacityInput && usedCapacityInput) {
+        function validateCapacity() {
+            const total = parseFloat(totalCapacityInput.value) || 0;
+            const used = parseFloat(usedCapacityInput.value) || 0;
+            
+            if (used > total) {
+                usedCapacityInput.setCustomValidity('Used capacity cannot exceed total capacity.');
+            } else {
+                usedCapacityInput.setCustomValidity('');
+            }
+        }
+        
+        totalCapacityInput.addEventListener('input', validateCapacity);
+        usedCapacityInput.addEventListener('input', validateCapacity);
+    }
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Auto-focus first input
+    const firstInput = form.querySelector('input:not([type="hidden"])');
+    if (firstInput) {
+        firstInput.focus();
+    }
+});
+</script>
+{% endblock %}

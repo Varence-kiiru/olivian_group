@@ -1,0 +1,568 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Transaction - {{ object.transaction_id }}{% else %}Add Transaction{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Transaction{% else %}Add Transaction{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    {% if object %}Update transaction details{% else %}Create a new financial transaction{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:transaction_list' %}">Transactions</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit {{ object.transaction_id }}{% else %}Add Transaction{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .transaction-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .transaction-type-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .transaction-type-card:hover {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.05);
+    }
+    
+    .transaction-type-card.selected {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.1);
+    }
+    
+    .transaction-type-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .type-deposit { color: #28a745; }
+    .type-withdrawal { color: #dc3545; }
+    .type-transfer { color: var(--primary-color); }
+    .type-payment { color: #ffc107; }
+    .type-receipt { color: #28a745; }
+    .type-fee { color: #6c757d; }
+    .type-interest { color: #17a2b8; }
+    .type-adjustment { color: #6f42c1; }
+    
+    .amount-input-group {
+        position: relative;
+    }
+    
+    .currency-prefix {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-weight: 600;
+        z-index: 5;
+    }
+    
+    .currency-input {
+        padding-left: 3rem;
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .btn-action {
+        min-width: 120px;
+    }
+    
+    .transaction-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+    
+    <div class="form-card">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i>
+                Basic Information
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label required">Transaction Type</label>
+                <div class="transaction-type-selector">
+                    <div class="transaction-type-card" data-type="deposit">
+                        <div class="transaction-type-icon type-deposit">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="small fw-bold">Deposit</div>
+                        <div class="small text-muted">Money in</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="withdrawal">
+                        <div class="transaction-type-icon type-withdrawal">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="small fw-bold">Withdrawal</div>
+                        <div class="small text-muted">Money out</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="transfer">
+                        <div class="transaction-type-icon type-transfer">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="small fw-bold">Transfer</div>
+                        <div class="small text-muted">Between accounts</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="payment">
+                        <div class="transaction-type-icon type-payment">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div class="small fw-bold">Payment</div>
+                        <div class="small text-muted">Bill payment</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="receipt">
+                        <div class="transaction-type-icon type-receipt">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="small fw-bold">Receipt</div>
+                        <div class="small text-muted">Payment received</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="fee">
+                        <div class="transaction-type-icon type-fee">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="small fw-bold">Fee</div>
+                        <div class="small text-muted">Bank charges</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="interest">
+                        <div class="transaction-type-icon type-interest">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="small fw-bold">Interest</div>
+                        <div class="small text-muted">Interest earned</div>
+                    </div>
+                    
+                    <div class="transaction-type-card" data-type="adjustment">
+                        <div class="transaction-type-icon type-adjustment">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="small fw-bold">Adjustment</div>
+                        <div class="small text-muted">Balance correction</div>
+                    </div>
+                </div>
+                {{ form.transaction_type }}
+                {% if form.transaction_type.errors %}
+                    <div class="text-danger small">{{ form.transaction_type.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.bank_account.id_for_label }}" class="form-label required">Bank Account</label>
+                        {{ form.bank_account }}
+                        {% if form.bank_account.errors %}
+                            <div class="text-danger small">{{ form.bank_account.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.currency.id_for_label }}" class="form-label required">Currency</label>
+                        {{ form.currency }}
+                        {% if form.currency.errors %}
+                            <div class="text-danger small">{{ form.currency.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.amount.id_for_label }}" class="form-label required">Amount</label>
+                        <div class="amount-input-group">
+                            <span class="currency-prefix" id="amount-currency">KES</span>
+                            {{ form.amount }}
+                        </div>
+                        {% if form.amount.errors %}
+                            <div class="text-danger small">{{ form.amount.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.description.id_for_label }}" class="form-label required">Description</label>
+                {{ form.description }}
+                <div class="form-help">Provide a clear description of the transaction</div>
+                {% if form.description.errors %}
+                    <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Reference Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-hashtag"></i>
+                Reference Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reference_number.id_for_label }}" class="form-label">Reference Number</label>
+                        {{ form.reference_number }}
+                        {% if form.reference_number.help_text %}
+                            <div class="form-help">{{ form.reference_number.help_text }}</div>
+                        {% endif %}
+                        {% if form.reference_number.errors %}
+                            <div class="text-danger small">{{ form.reference_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.external_reference.id_for_label }}" class="form-label">External Reference</label>
+                        {{ form.external_reference }}
+                        {% if form.external_reference.help_text %}
+                            <div class="form-help">{{ form.external_reference.help_text }}</div>
+                        {% endif %}
+                        {% if form.external_reference.errors %}
+                            <div class="text-danger small">{{ form.external_reference.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Counterparty Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-users"></i>
+                Counterparty Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.counterparty_name.id_for_label }}" class="form-label">Counterparty Name</label>
+                        {{ form.counterparty_name }}
+                        <div class="form-help">Name of the other party in the transaction</div>
+                        {% if form.counterparty_name.errors %}
+                            <div class="text-danger small">{{ form.counterparty_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.counterparty_account.id_for_label }}" class="form-label">Counterparty Account</label>
+                        {{ form.counterparty_account }}
+                        <div class="form-help">Account number of the counterparty</div>
+                        {% if form.counterparty_account.errors %}
+                            <div class="text-danger small">{{ form.counterparty_account.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Date Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-calendar"></i>
+                Date Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.transaction_date.id_for_label }}" class="form-label required">Transaction Date</label>
+                        {{ form.transaction_date }}
+                        <div class="form-help">Date when the transaction occurred</div>
+                        {% if form.transaction_date.errors %}
+                            <div class="text-danger small">{{ form.transaction_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.value_date.id_for_label }}" class="form-label required">Value Date</label>
+                        {{ form.value_date }}
+                        {% if form.value_date.help_text %}
+                            <div class="form-help">{{ form.value_date.help_text }}</div>
+                        {% endif %}
+                        {% if form.value_date.errors %}
+                            <div class="text-danger small">{{ form.value_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Preview Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-eye"></i>
+                Preview
+            </div>
+            
+            <div class="transaction-preview">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-1">
+                            <span id="preview-type">Transaction Type</span>
+                            <span class="badge bg-secondary ms-2" id="preview-status">Status</span>
+                        </h6>
+                        <div class="text-muted small mb-2" id="preview-description">Transaction description</div>
+                        <div class="small">
+                            <span id="preview-account">Bank Account</span> • 
+                            <span id="preview-date">Transaction Date</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="h4 mb-1" id="preview-amount">
+                            <span id="preview-currency-symbol">KES</span> 0.00
+                        </div>
+                        <div class="small text-muted" id="preview-counterparty">Counterparty</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'financial:transaction_list' %}" class="btn btn-outline-secondary btn-action">
+            <i class="fas fa-arrow-left me-2"></i>Cancel
+        </a>
+        
+        <div class="d-flex gap-2">
+            {% if object %}
+                <a href="{% url 'financial:transaction_detail' object.pk %}" class="btn btn-outline-info btn-action">
+                    <i class="fas fa-eye me-2"></i>View
+                </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="fas fa-save me-2"></i>
+                {% if object %}Update{% else %}Create{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form fields
+    const typeField = document.getElementById('{{ form.transaction_type.id_for_label }}');
+    const accountField = document.getElementById('{{ form.bank_account.id_for_label }}');
+    const currencyField = document.getElementById('{{ form.currency.id_for_label }}');
+    const amountField = document.getElementById('{{ form.amount.id_for_label }}');
+    const statusField = document.getElementById('{{ form.status.id_for_label }}');
+    const descriptionField = document.getElementById('{{ form.description.id_for_label }}');
+    const dateField = document.getElementById('{{ form.transaction_date.id_for_label }}');
+    const counterpartyField = document.getElementById('{{ form.counterparty_name.id_for_label }}');
+    
+    // Transaction type cards
+    const typeCards = document.querySelectorAll('.transaction-type-card');
+    
+    // Amount input styling
+    if (amountField) {
+        amountField.classList.add('form-control', 'currency-input');
+    }
+    
+    // Transaction type selection
+    typeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            typeField.value = type;
+            
+            // Update visual selection
+            typeCards.forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            updatePreview();
+        });
+    });
+    
+    // Set initial selected type
+    const currentType = typeField.value;
+    if (currentType) {
+        const selectedCard = document.querySelector(`[data-type="${currentType}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+    }
+    
+    function updatePreview() {
+        // Get values
+        const type = typeField.options[typeField.selectedIndex]?.text || 'Transaction Type';
+        const account = accountField.options[accountField.selectedIndex]?.text || 'Bank Account';
+        const currency = currencyField.options[currencyField.selectedIndex]?.text || 'Currency';
+        const amount = amountField.value || '0.00';
+        const status = statusField.options[statusField.selectedIndex]?.text || 'Status';
+        const description = descriptionField.value || 'Transaction description';
+        const date = dateField.value || 'Transaction Date';
+        const counterparty = counterpartyField.value || 'Counterparty not specified';
+        
+        // Update currency symbol
+        const currencySymbol = getCurrencySymbol(currency);
+        document.getElementById('amount-currency').textContent = currencySymbol;
+        
+        // Update preview
+        document.getElementById('preview-type').textContent = type;
+        document.getElementById('preview-status').textContent = status;
+        document.getElementById('preview-description').textContent = description;
+        document.getElementById('preview-account').textContent = account.split(' ')[0] || 'Account';
+        document.getElementById('preview-date').textContent = date;
+        document.getElementById('preview-amount').innerHTML = `${currencySymbol} ${parseFloat(amount || 0).toFixed(2)}`;
+        document.getElementById('preview-currency-symbol').textContent = currencySymbol;
+        document.getElementById('preview-counterparty').textContent = counterparty;
+        
+        // Update status badge color
+        const statusBadge = document.getElementById('preview-status');
+        statusBadge.className = 'badge ms-2';
+        
+        switch (statusField.value) {
+            case 'completed':
+                statusBadge.classList.add('bg-success');
+                break;
+            case 'pending':
+                statusBadge.classList.add('bg-warning');
+                break;
+            case 'cancelled':
+            case 'failed':
+                statusBadge.classList.add('bg-danger');
+                break;
+            default:
+                statusBadge.classList.add('bg-secondary');
+        }
+        
+        // Update amount color based on transaction type
+        const amountElement = document.getElementById('preview-amount');
+        const typeValue = typeField.value;
+        
+        if (typeValue === 'deposit' || typeValue === 'receipt' || typeValue === 'interest') {
+            amountElement.className = 'h4 mb-1 text-success';
+        } else if (typeValue === 'withdrawal' || typeValue === 'payment' || typeValue === 'fee') {
+            amountElement.className = 'h4 mb-1 text-danger';
+        } else {
+            amountElement.className = 'h4 mb-1 text-primary';
+        }
+    }
+    
+    function getCurrencySymbol(currencyText) {
+        if (currencyText.includes('KES')) return 'KES';
+        if (currencyText.includes('USD')) return '$';
+        if (currencyText.includes('EUR')) return '€';
+        if (currencyText.includes('GBP')) return '£';
+        return 'KES'; // Default
+    }
+    
+    // Add event listeners
+    [typeField, accountField, currencyField, amountField, statusField, descriptionField, dateField, counterpartyField].forEach(field => {
+        if (field) {
+            field.addEventListener('input', updatePreview);
+            field.addEventListener('change', updatePreview);
+        }
+    });
+    
+    // Set default date to today
+    if (dateField && !dateField.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateField.value = today;
+        
+        // Also set value date
+        const valueDateField = document.getElementById('{{ form.value_date.id_for_label }}');
+        if (valueDateField && !valueDateField.value) {
+            valueDateField.value = today;
+        }
+    }
+    
+    // Initial update
+    updatePreview();
+});
+</script>
+{% endblock %}

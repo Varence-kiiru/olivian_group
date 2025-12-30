@@ -1,0 +1,300 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sales History - {{ block.super }}{% endblock %}
+
+{% block page_title %}Sales History{% endblock %}
+{% block page_subtitle %}View and manage all POS sales transactions{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Sales History</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .sale-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+        transition: transform 0.2s ease;
+    }
+
+    .sale-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .sale-amount {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .sale-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-refunded { background: #f8d7da; color: #721c24; }
+
+    .sale-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .stats-card {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with New Sale Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-cash-register me-2"></i>Sales History
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'pos:terminal' 1 %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Sale
+        </a>
+    </div>
+</div>
+
+<!-- Sales Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3 class="mb-1">{{ total_sales|default:0 }}</h3>
+            <small>Total Sales</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3 class="mb-1">KES {{ today_revenue|floatformat:2|default:"0.00" }}</h3>
+            <small>Today's Revenue</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3 class="mb-1">{{ pending_sales|default:0 }}</h3>
+            <small>Pending Sales</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3 class="mb-1">KES {{ month_revenue|floatformat:2|default:"0.00" }}</h3>
+            <small>This Month</small>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Sale ID, customer name...">
+        </div>
+
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="refunded" {% if current_status == 'refunded' %}selected{% endif %}>Refunded</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">From Date</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_to" class="form-label">To Date</label>
+            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ current_date_to }}">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="cashier" class="form-label">Cashier</label>
+            <select class="form-select" id="cashier" name="cashier">
+                <option value="">All Cashiers</option>
+                {% for user in cashiers %}
+                <option value="{{ user.id }}" {% if current_cashier == user.id|stringformat:"s" %}selected{% endif %}>
+                    {{ user.get_full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Sales Grid -->
+<div class="row">
+    {% for sale in sales %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="sale-card">
+            <!-- Sale Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="#" class="text-decoration-none">
+                            Sale #{{ sale.sale_number|default:sale.id }}
+                        </a>
+                    </h6>
+                    <div class="sale-meta">
+                        {{ sale.created_at|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="sale-status status-{{ sale.status|default:'completed' }}">
+                        {{ sale.get_status_display|default:'Completed' }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Sale Amount -->
+            <div class="mb-3">
+                <div class="sale-meta mb-1">Total Amount</div>
+                <div class="sale-amount">
+                    KES {{ sale.grand_total|floatformat:2|default:"0.00" }}
+                </div>
+                <div class="small text-muted">{{ sale.items.count }} item{{ sale.items.count|pluralize }}</div>
+            </div>
+            
+            <!-- Sale Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="sale-meta mb-1">Customer</div>
+                    <div class="small">{{ sale.customer.name|default:"Walk-in Customer" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="sale-meta mb-1">Payment Method</div>
+                    <div class="small">{{ sale.payment_method|default:"Cash" }}</div>
+                </div>
+            </div>
+            
+            <!-- Cashier Info -->
+            <div class="mb-3">
+                <div class="sale-meta mb-1">Cashier</div>
+                <div class="small">{{ sale.cashier.get_full_name|default:"Unknown" }}</div>
+                {% if sale.session %}
+                    <div class="small text-muted">Session: {{ sale.session.session_number }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="btn btn-outline-primary btn-sm flex-fill" onclick="alert('View receipt feature coming soon!')">
+                    <i class="fas fa-receipt me-1"></i>Receipt
+                </button>
+                {% if sale.status == 'completed' %}
+                <button class="btn btn-outline-warning btn-sm" onclick="alert('Refund feature coming soon!')">
+                    <i class="fas fa-undo me-1"></i>Refund
+                </button>
+                {% endif %}
+                <button class="btn btn-outline-secondary btn-sm" onclick="alert('Print feature coming soon!')">
+                    <i class="fas fa-print me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-cash-register fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No sales found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_date_from or current_date_to or current_cashier %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start making sales to see them here.
+                {% endif %}
+            </p>
+            <a href="{% url 'pos:terminal' 1 %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Make First Sale
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Sales pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}{% if current_cashier %}&cashier={{ current_cashier }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}{% if current_cashier %}&cashier={{ current_cashier }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}{% if current_cashier %}&cashier={{ current_cashier }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}{% if current_cashier %}&cashier={{ current_cashier }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

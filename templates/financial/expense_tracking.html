@@ -1,0 +1,976 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Expense Tracking & Approval - Financial Management{% endblock %}
+
+{% block page_title %}Expense Tracking & Approval{% endblock %}
+{% block page_subtitle %}Submit, track, and manage expense claims with approval workflow{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial</a></li>
+<li class="breadcrumb-item active">Expense Tracking</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .expense-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .expense-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .expense-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .expense-card.draft { border-left-color: #6c757d; }
+    .expense-card.submitted { border-left-color: #17a2b8; }
+    .expense-card.approved { border-left-color: #28a745; }
+    .expense-card.rejected { border-left-color: #dc3545; }
+    .expense-card.paid { border-left-color: #20c997; }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-draft { background: #f8f9fa; color: #6c757d; }
+    .status-submitted { background: #d1ecf1; color: #0c5460; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    .status-paid { background: #d1ecf1; color: #0c5460; }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        border-bottom: 3px solid var(--primary-color);
+    }
+    
+    .expense-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .receipt-preview {
+        width: 60px;
+        height: 60px;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .receipt-preview:hover {
+        border-color: var(--primary-color);
+        background: #e3f2fd;
+    }
+    
+    .expense-summary {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .approval-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .approval-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 0.5rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #dee2e6;
+    }
+    
+    .timeline-item.completed::before {
+        background: #28a745;
+        border-color: #28a745;
+    }
+    
+    .timeline-item.current::before {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.3);
+    }
+    
+    .filters-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .quick-actions {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .category-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+        color: white;
+    }
+    
+    .category-travel { background: #17a2b8; }
+    .category-meals { background: #28a745; }
+    .category-office { background: #ffc107; }
+    .category-transport { background: #dc3545; }
+    .category-communication { background: #6f42c1; }
+    .category-other { background: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Expense Header -->
+<div class="expense-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-receipt fa-3x me-3"></i>
+                <div>
+                    <h1 class="mb-1">Expense Tracking & Approval</h1>
+                    <p class="mb-0 opacity-75">Submit and manage expense claims with automated approval workflow</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button class="btn btn-light btn-lg" onclick="createExpenseReport()">
+                <i class="fas fa-plus me-2"></i>New Expense Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Metrics -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="h4 mb-1 text-primary">12</div>
+            <div class="text-muted">Pending Approval</div>
+            <div class="small text-info mt-2">
+                <i class="fas fa-clock me-1"></i>Avg 2.3 days
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="h4 mb-1 text-success">KES 85K</div>
+            <div class="text-muted">This Month</div>
+            <div class="small text-success mt-2">
+                <i class="fas fa-arrow-up me-1"></i>15% vs last month
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="h4 mb-1 text-warning">KES 23K</div>
+            <div class="text-muted">Awaiting Payment</div>
+            <div class="small text-warning mt-2">
+                <i class="fas fa-credit-card me-1"></i>8 reports
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="h4 mb-1 text-info">KES 320K</div>
+            <div class="text-muted">YTD Total</div>
+            <div class="small text-info mt-2">
+                <i class="fas fa-chart-line me-1"></i>Budget 85% used
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Quick Actions -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="filters-panel">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">Status</label>
+                    <select class="form-select" id="statusFilter" onchange="filterExpenses()">
+                        <option value="">All Status</option>
+                        <option value="draft">Draft</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="categoryFilter" class="form-label">Category</label>
+                    <select class="form-select" id="categoryFilter" onchange="filterExpenses()">
+                        <option value="">All Categories</option>
+                        <option value="travel">Travel</option>
+                        <option value="meals">Meals & Entertainment</option>
+                        <option value="office">Office Supplies</option>
+                        <option value="transport">Transportation</option>
+                        <option value="communication">Communication</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="employeeFilter" class="form-label">Employee</label>
+                    <select class="form-select" id="employeeFilter" onchange="filterExpenses()">
+                        <option value="">All Employees</option>
+                        <option value="1">John Doe</option>
+                        <option value="2">Jane Smith</option>
+                        <option value="3">Mike Johnson</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="dateRange" class="form-label">Date Range</label>
+                    <select class="form-select" id="dateRange" onchange="filterExpenses()">
+                        <option value="this_month">This Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="this_quarter">This Quarter</option>
+                        <option value="this_year">This Year</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="quick-actions">
+            <h6 class="mb-3">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </h6>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="createExpenseReport()">
+                    <i class="fas fa-plus me-2"></i>New Expense Report
+                </button>
+                <button class="btn btn-success" onclick="bulkApprove()">
+                    <i class="fas fa-check me-2"></i>Bulk Approve
+                </button>
+                <button class="btn btn-info" onclick="exportExpenses()">
+                    <i class="fas fa-download me-2"></i>Export Report
+                </button>
+                <button class="btn btn-warning" onclick="expenseAnalytics()">
+                    <i class="fas fa-chart-bar me-2"></i>Analytics
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Reports List -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Expense Reports
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="viewMode" id="listView" checked>
+                <label class="btn btn-outline-primary" for="listView">
+                    <i class="fas fa-list"></i>
+                </label>
+                
+                <input type="radio" class="btn-check" name="viewMode" id="gridView">
+                <label class="btn btn-outline-primary" for="gridView">
+                    <i class="fas fa-th"></i>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Sample Expense Reports -->
+        <div class="expense-card submitted" onclick="viewExpenseReport('EXP-2024-001')">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <div class="category-icon category-travel">
+                        <i class="fas fa-plane"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Business Travel - Nairobi</div>
+                    <div class="small text-muted">EXP-2024-001 • John Doe</div>
+                    <div class="small text-muted">Submitted: Jan 15, 2024</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-primary">KES 45,000</div>
+                    <div class="small text-muted">5 items</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-submitted">Submitted</span>
+                </div>
+                <div class="col-md-2 text-end" onclick="event.stopPropagation()">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-success" onclick="approveExpense('EXP-2024-001')" title="Approve">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="rejectExpense('EXP-2024-001')" title="Reject">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="viewExpenseReport('EXP-2024-001')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="expense-card approved" onclick="viewExpenseReport('EXP-2024-002')">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <div class="category-icon category-office">
+                        <i class="fas fa-clipboard"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Office Supplies</div>
+                    <div class="small text-muted">EXP-2024-002 • Jane Smith</div>
+                    <div class="small text-muted">Approved: Jan 18, 2024</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-success">KES 12,500</div>
+                    <div class="small text-muted">3 items</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-approved">Approved</span>
+                </div>
+                <div class="col-md-2 text-end" onclick="event.stopPropagation()">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-success" onclick="processPayment('EXP-2024-002')" title="Process Payment">
+                            <i class="fas fa-credit-card"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="viewExpenseReport('EXP-2024-002')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="expense-card draft" onclick="viewExpenseReport('EXP-2024-003')">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <div class="category-icon category-meals">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Client Entertainment</div>
+                    <div class="small text-muted">EXP-2024-003 • Mike Johnson</div>
+                    <div class="small text-muted">Draft • Created: Jan 20, 2024</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-secondary">KES 8,750</div>
+                    <div class="small text-muted">2 items</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-draft">Draft</span>
+                </div>
+                <div class="col-md-2 text-end" onclick="event.stopPropagation()">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editExpense('EXP-2024-003')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-success" onclick="submitExpense('EXP-2024-003')" title="Submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="expense-card rejected" onclick="viewExpenseReport('EXP-2024-004')">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <div class="category-icon category-transport">
+                        <i class="fas fa-car"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Transportation</div>
+                    <div class="small text-muted">EXP-2024-004 • John Doe</div>
+                    <div class="small text-muted">Rejected: Jan 22, 2024</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-danger">KES 15,000</div>
+                    <div class="small text-muted">4 items</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-rejected">Rejected</span>
+                </div>
+                <div class="col-md-2 text-end" onclick="event.stopPropagation()">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-warning" onclick="reviseExpense('EXP-2024-004')" title="Revise">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="viewExpenseReport('EXP-2024-004')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Expense pagination">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">1</span>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Approval Timeline -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-route me-2"></i>Approval Workflow
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="approval-timeline">
+                    <div class="timeline-item completed">
+                        <div class="fw-bold">Employee Submission</div>
+                        <div class="small text-muted">Expense report created and submitted</div>
+                        <div class="small text-success">Completed</div>
+                    </div>
+                    
+                    <div class="timeline-item current">
+                        <div class="fw-bold">Manager Review</div>
+                        <div class="small text-muted">Department manager approval required</div>
+                        <div class="small text-primary">Current Step</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="fw-bold">Finance Approval</div>
+                        <div class="small text-muted">Finance team final approval</div>
+                        <div class="small text-muted">Pending</div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="fw-bold">Payment Processing</div>
+                        <div class="small text-muted">Payment to employee account</div>
+                        <div class="small text-muted">Pending</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expense Categories -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tags me-2"></i>Expense Categories
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="category-icon category-travel me-2" style="width: 20px; height: 20px; font-size: 0.8rem;">
+                                <i class="fas fa-plane"></i>
+                            </div>
+                            <span>Travel</span>
+                        </div>
+                        <span class="fw-bold">KES 125K</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="category-icon category-meals me-2" style="width: 20px; height: 20px; font-size: 0.8rem;">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <span>Meals</span>
+                        </div>
+                        <span class="fw-bold">KES 45K</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="category-icon category-office me-2" style="width: 20px; height: 20px; font-size: 0.8rem;">
+                                <i class="fas fa-clipboard"></i>
+                            </div>
+                            <span>Office</span>
+                        </div>
+                        <span class="fw-bold">KES 32K</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="category-icon category-transport me-2" style="width: 20px; height: 20px; font-size: 0.8rem;">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <span>Transport</span>
+                        </div>
+                        <span class="fw-bold">KES 28K</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="category-icon category-other me-2" style="width: 20px; height: 20px; font-size: 0.8rem;">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </div>
+                            <span>Other</span>
+                        </div>
+                        <span class="fw-bold">KES 15K</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>EXP-2024-001 approved</span>
+                        <span class="text-muted">2h ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>EXP-2024-002 submitted</span>
+                        <span class="text-muted">5h ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>EXP-2024-003 payment processed</span>
+                        <span class="text-muted">1d ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>EXP-2024-004 rejected</span>
+                        <span class="text-muted">2d ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Report Creation Modal -->
+<div class="modal fade" id="expenseModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Expense Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="expenseForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reportTitle" class="form-label">Report Title</label>
+                                <input type="text" class="form-control" id="reportTitle" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reportPurpose" class="form-label">Business Purpose</label>
+                                <textarea class="form-control" id="reportPurpose" rows="3" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reportDepartment" class="form-label">Department</label>
+                                <select class="form-select" id="reportDepartment" required>
+                                    <option value="">Select Department</option>
+                                    <option value="sales">Sales & Marketing</option>
+                                    <option value="operations">Operations</option>
+                                    <option value="admin">Administration</option>
+                                    <option value="finance">Finance</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reportPeriod" class="form-label">Expense Period</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="periodStart" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="periodEnd" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reportCurrency" class="form-label">Currency</label>
+                                <select class="form-select" id="reportCurrency">
+                                    <option value="KES" selected>Kenyan Shilling (KES)</option>
+                                    <option value="USD">US Dollar (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="advanceAmount" class="form-label">Advance Received</label>
+                                <input type="number" class="form-control" id="advanceAmount" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expense Items -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Expense Items</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExpenseItem()">
+                                <i class="fas fa-plus me-1"></i>Add Item
+                            </button>
+                        </div>
+                        
+                        <div id="expenseItems">
+                            <div class="expense-item" data-item="1">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <label class="form-label">Date</label>
+                                        <input type="date" class="form-control form-control-sm" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Category</label>
+                                        <select class="form-select form-select-sm" required>
+                                            <option value="">Select...</option>
+                                            <option value="travel">Travel</option>
+                                            <option value="meals">Meals</option>
+                                            <option value="office">Office</option>
+                                            <option value="transport">Transport</option>
+                                            <option value="communication">Communication</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control form-control-sm" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Amount</label>
+                                        <input type="number" class="form-control form-control-sm" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Receipt</label>
+                                        <div class="receipt-preview" onclick="uploadReceipt(1)">
+                                            <i class="fas fa-upload text-muted"></i>
+                                        </div>
+                                        <input type="file" id="receipt1" accept="image/*,.pdf" style="display: none;">
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExpenseItem(1)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expense Summary -->
+                        <div class="expense-summary mt-3">
+                            <div class="row">
+                                <div class="col-md-6"></div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td>Subtotal:</td>
+                                            <td class="text-end" id="expenseSubtotal">KES 0.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>VAT (16%):</td>
+                                            <td class="text-end" id="expenseVAT">KES 0.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Advance Received:</td>
+                                            <td class="text-end" id="expenseAdvance">KES 0.00</td>
+                                        </tr>
+                                        <tr class="fw-bold">
+                                            <td>Amount Due:</td>
+                                            <td class="text-end" id="expenseTotal">KES 0.00</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="saveAsDraft()">Save as Draft</button>
+                <button type="button" class="btn btn-primary" onclick="submitExpenseReport()">Submit for Approval</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let expenseItemCounter = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    document.getElementById('periodStart').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('periodEnd').value = today.toISOString().split('T')[0];
+    
+    // Calculate totals when amounts change
+    document.addEventListener('input', function(e) {
+        if (e.target.closest('#expenseItems')) {
+            calculateExpenseTotal();
+        }
+    });
+});
+
+function createExpenseReport() {
+    const modal = new bootstrap.Modal(document.getElementById('expenseModal'));
+    modal.show();
+}
+
+function addExpenseItem() {
+    expenseItemCounter++;
+    const container = document.getElementById('expenseItems');
+    const newItem = document.querySelector('.expense-item').cloneNode(true);
+    
+    // Update item counter and clear values
+    newItem.setAttribute('data-item', expenseItemCounter);
+    newItem.querySelectorAll('input, select').forEach(input => {
+        if (input.type !== 'date') {
+            input.value = '';
+        }
+    });
+    
+    // Update receipt upload functionality
+    const receiptPreview = newItem.querySelector('.receipt-preview');
+    const receiptInput = newItem.querySelector('input[type="file"]');
+    receiptInput.id = `receipt${expenseItemCounter}`;
+    receiptPreview.setAttribute('onclick', `uploadReceipt(${expenseItemCounter})`);
+    
+    // Update remove button
+    const removeBtn = newItem.querySelector('.btn-outline-danger');
+    removeBtn.setAttribute('onclick', `removeExpenseItem(${expenseItemCounter})`);
+    
+    container.appendChild(newItem);
+    calculateExpenseTotal();
+}
+
+function removeExpenseItem(itemId) {
+    const items = document.querySelectorAll('.expense-item');
+    if (items.length > 1) {
+        document.querySelector(`[data-item="${itemId}"]`).remove();
+        calculateExpenseTotal();
+    }
+}
+
+function uploadReceipt(itemId) {
+    document.getElementById(`receipt${itemId}`).click();
+}
+
+function calculateExpenseTotal() {
+    const items = document.querySelectorAll('.expense-item');
+    let subtotal = 0;
+    
+    items.forEach(item => {
+        const amountInput = item.querySelector('input[type="number"]');
+        const amount = parseFloat(amountInput.value) || 0;
+        subtotal += amount;
+    });
+    
+    const vatRate = 0.16; // 16% VAT
+    const vatAmount = subtotal * vatRate;
+    const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
+    const total = subtotal + vatAmount - advance;
+    
+    document.getElementById('expenseSubtotal').textContent = `KES ${subtotal.toFixed(2)}`;
+    document.getElementById('expenseVAT').textContent = `KES ${vatAmount.toFixed(2)}`;
+    document.getElementById('expenseAdvance').textContent = `KES ${advance.toFixed(2)}`;
+    document.getElementById('expenseTotal').textContent = `KES ${total.toFixed(2)}`;
+}
+
+function saveAsDraft() {
+    // TODO: Implement save as draft functionality
+    alert('Expense report saved as draft!');
+    bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+}
+
+function submitExpenseReport() {
+    if (validateExpenseForm()) {
+        // TODO: Implement submit functionality
+        alert('Expense report submitted for approval!');
+        bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+    }
+}
+
+function validateExpenseForm() {
+    const title = document.getElementById('reportTitle').value;
+    const purpose = document.getElementById('reportPurpose').value;
+    const department = document.getElementById('reportDepartment').value;
+    
+    if (!title || !purpose || !department) {
+        alert('Please fill in all required fields');
+        return false;
+    }
+    
+    // Check if there are expense items
+    const items = document.querySelectorAll('.expense-item');
+    let hasValidItem = false;
+    
+    items.forEach(item => {
+        const description = item.querySelector('input[type="text"]').value;
+        const amount = item.querySelector('input[type="number"]').value;
+        const category = item.querySelector('select').value;
+        
+        if (description && amount && category) {
+            hasValidItem = true;
+        }
+    });
+    
+    if (!hasValidItem) {
+        alert('Please add at least one valid expense item');
+        return false;
+    }
+    
+    return true;
+}
+
+function viewExpenseReport(expenseId) {
+    window.location.href = `/financial/expenses/${expenseId}/`;
+}
+
+function editExpense(expenseId) {
+    window.location.href = `/financial/expenses/${expenseId}/edit/`;
+}
+
+function submitExpense(expenseId) {
+    if (confirm('Submit this expense report for approval?')) {
+        // TODO: Implement submit functionality
+        alert('Expense report submitted!');
+        location.reload();
+    }
+}
+
+function approveExpense(expenseId) {
+    if (confirm('Approve this expense report?')) {
+        // TODO: Implement approve functionality
+        alert('Expense report approved!');
+        location.reload();
+    }
+}
+
+function rejectExpense(expenseId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+        // TODO: Implement reject functionality
+        alert('Expense report rejected!');
+        location.reload();
+    }
+}
+
+function reviseExpense(expenseId) {
+    window.location.href = `/financial/expenses/${expenseId}/revise/`;
+}
+
+function processPayment(expenseId) {
+    if (confirm('Process payment for this expense report?')) {
+        // TODO: Implement payment processing
+        alert('Payment processing initiated!');
+        location.reload();
+    }
+}
+
+function filterExpenses() {
+    // TODO: Implement filtering functionality
+    console.log('Filtering expenses...');
+}
+
+function bulkApprove() {
+    // TODO: Implement bulk approve functionality
+    alert('Bulk approve functionality coming soon!');
+}
+
+function exportExpenses() {
+    // TODO: Implement export functionality
+    alert('Export functionality coming soon!');
+}
+
+function expenseAnalytics() {
+    // TODO: Navigate to analytics page
+    window.location.href = '/financial/expense-analytics/';
+}
+</script>
+{% endblock %}

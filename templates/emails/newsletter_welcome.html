@@ -1,0 +1,118 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="padding: 30px 0;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #333; margin: 0 0 10px 0; font-size: 28px;">Welcome to Our Newsletter!</h1>
+        <p style="color: #666; font-size: 16px; margin: 0;">You're now part of the {{ company_name }} community</p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 20px;">
+        Hello {{ subscriber_name|default:"Solar Enthusiast" }},
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 20px;">
+        Thank you for subscribing to the {{ company_name }} newsletter! We're excited to have you join our community of solar energy enthusiasts across Kenya.
+    </p>
+    
+    <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38b6ff;">
+        <h3 style="color: #333; margin-bottom: 15px;">🌟 What to Expect</h3>
+        <ul style="color: #555; margin: 0; padding-left: 20px; line-height: 1.8;">
+            <li><strong>Weekly Solar Tips:</strong> Practical advice to maximize your solar investment</li>
+            <li><strong>Industry Insights:</strong> Latest trends and innovations in solar technology</li>
+            <li><strong>Exclusive Offers:</strong> Special discounts and early access to new products</li>
+            <li><strong>Project Showcases:</strong> Real installations and success stories from Kenya</li>
+            <li><strong>Expert Advice:</strong> Professional guidance from our solar specialists</li>
+        </ul>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">🚀 Get Started Today</h3>
+        <p style="color: #666; margin-bottom: 15px;">
+            While you wait for your first newsletter, explore what {{ company_name }} can do for you:
+        </p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="{{ company_website }}/products/" 
+               style="background-color: #38b6ff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; margin: 5px;">
+                Browse Solar Products
+            </a>
+            <a href="{{ company_website }}/quotations/calculator/" 
+               style="background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; margin: 5px;">
+                Get Free Quote
+            </a>
+        </div>
+    </div>
+    
+    <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+        <h4 style="color: #333; margin-bottom: 15px;">💡 Your First Solar Tip</h4>
+        <p style="color: #555; margin: 0; line-height: 1.6;">
+            <strong>Did you know?</strong> Solar panels work even on cloudy days! While direct sunlight is ideal, 
+            modern solar panels can still generate 10-25% of their normal power output on overcast days. 
+            This makes solar a reliable energy source year-round in Kenya's climate.
+        </p>
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">📞 Need Help Getting Started?</h3>
+        <p style="color: #666; margin-bottom: 15px;">
+            Our solar experts are here to help you every step of the way:
+        </p>
+        <ul style="color: #666; margin: 0; padding-left: 20px; line-height: 1.8;">
+            <li><strong>Free Consultation:</strong> Call us at {{ company_phone }} for personalized advice</li>
+            <li><strong>Site Assessment:</strong> Book a free site visit to determine your solar potential</li>
+            <li><strong>Custom Quotes:</strong> Get a detailed proposal tailored to your energy needs</li>
+            <li><strong>Professional Installation:</strong> Our certified technicians ensure quality work</li>
+        </ul>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <h4 style="color: #333; margin-bottom: 15px;">Stay Connected</h4>
+        <p style="color: #666; margin-bottom: 15px;">Follow us for daily solar insights and updates:</p>
+        <div style="margin: 0;">
+            {% if social_media.facebook %}
+            <a href="{{ social_media.facebook }}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiMxODc3RjIiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTguNSA1SDE2VjEzSDguNVY5SDExVjdIOC41VjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+Cjwvc3ZnPgo=" alt="Facebook" style="width: 32px; height: 32px;">
+            </a>
+            {% endif %}
+            {% if social_media.linkedin %}
+            <a href="{{ social_media.linkedin }}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiMwMDc3QjUiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQgNkg2VjEzSDRWNlpNNSAzQzUuNTUgMyA2IDMuNDUgNiA0QzYgNC41NSA1LjU1IDUgNSA1QzQuNDUgNSA0IDQuNTUgNCA0QzQgMy40NSA0LjQ1IDMgNSAzWk04IDZINTBWMTNIOFY5LjVDOCA4LjY3IDguNjcgOCA5LjUgOEM10LjMzIDggMTEgOC42NyAxMSA5LjVWMTNIMTNWOS41QzEzIDcuNTcgMTEuNDMgNiA5LjUgNkM4LjY3IDYgOCA2LjQ1IDggN1Y2WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPgo8L3N2Zz4K" alt="LinkedIn" style="width: 32px; height: 32px;">
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-top: 30px;">
+        Welcome aboard, and thank you for choosing {{ company_name }} as your solar energy partner!
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666;">
+        Best regards,<br>
+        <strong>The {{ company_name }} Team</strong>
+    </p>
+    
+    <!-- Unsubscribe Notice -->
+    {% if unsubscribe_url %}
+    <div style="text-align: center; margin: 30px 0; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+        <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
+            Changed your mind about our newsletter?
+        </p>
+        <a href="{{ unsubscribe_url }}" style="background-color: #6c757d; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; font-size: 12px; font-weight: 500;">
+            Unsubscribe
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; text-align: center;">
+        <p style="color: #999; font-size: 12px; margin: 0;">
+            You're receiving this welcome email because you subscribed to {{ company_name }} newsletter.<br>
+            Don't worry - we'll only send you valuable content, no spam!
+        </p>
+        <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
+            {{ company_name }} | {{ company_address }}
+        </p>
+    </div>
+</div>
+{% endblock %}

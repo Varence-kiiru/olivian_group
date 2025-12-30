@@ -1,0 +1,140 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}
+Posts tagged with "{{ tag.name }}" - {{ company.name }}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'blog:blog' %}">Blog</a></li>
+<li class="breadcrumb-item active">Tag: {{ tag.name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/blog.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Tag Hero Section -->
+<section class="hero-section-blog">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="mb-3">
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        <i class="fas fa-tag me-2"></i>Tag
+                    </span>
+                </div>
+                <h1 class="hero-title">{{ tag.name }}</h1>
+                <p class="hero-subtitle">Explore articles tagged with "{{ tag.name }}" - discover insights and expertise on this topic</p>
+                <div class="mt-3">
+                    <span class="badge bg-secondary fs-6 px-3 py-2">{{ posts.paginator.count }} Article{{ posts.paginator.count|pluralize }}</span>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                {% if banner and banner.background_image %}
+                <img src="{{ banner.background_image.url }}" 
+                     alt="{{ tag.name }}" class="img-fluid rounded shadow-lg">
+                {% else %}
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" 
+                     alt="{{ tag.name }}" class="img-fluid rounded shadow-lg">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tag Posts -->
+<section class="tag-posts py-5">
+    <div class="container">
+        <div class="row">
+            {% if posts %}
+            {% for post in posts %}
+            <div class="col-md-4 mb-4">
+                <div class="blog-card h-100">
+                    <div class="blog-image">
+                        <a href="{% url 'blog:post_detail' post.slug %}">
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="img-fluid">
+                        </a>
+                    </div>
+                    <div class="blog-content">
+                        <div class="post-meta">
+                            <span class="post-category">
+                                <a href="{% url 'blog:category_posts' post.category.slug %}">{{ post.category.name }}</a>
+                            </span>
+                            <span class="post-date">{{ post.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <h3><a href="{% url 'blog:post_detail' post.slug %}">{{ post.title }}</a></h3>
+                        <p>{{ post.excerpt|truncatewords:20 }}</p>
+                        <div class="post-footer">
+                            <div class="post-author">
+                                <span>By {{ post.author.get_full_name|default:post.author.username }}</span>
+                            </div>
+                            <a href="{% url 'blog:post_detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if posts.has_other_pages %}
+            <div class="col-12">
+                <div class="pagination-container mt-4">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if posts.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ posts.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">«</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link" aria-hidden="true">«</span>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in posts.paginator.page_range %}
+                                {% if posts.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if posts.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ posts.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">»</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link" aria-hidden="true">»</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="col-12">
+                <div class="no-posts-found text-center py-5">
+                    <i class="fas fa-tag fa-3x mb-3 text-muted"></i>
+                    <h3>No Posts Found</h3>
+                    <p class="text-muted">There are no posts with this tag yet.</p>
+                    <a href="{% url 'blog:blog' %}" class="btn btn-primary mt-3">View All Posts</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

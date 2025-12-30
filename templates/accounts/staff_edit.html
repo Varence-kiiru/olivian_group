@@ -1,0 +1,274 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Edit Staff Member{% endblock %}
+{% block page_subtitle %}{{ staff_user.get_full_name }} ({{ staff_user.username }}){% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .section-title {
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .required-field::after {
+        content: ' *';
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'accounts:staff_management' %}">Staff Management</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'accounts:staff_detail' staff_user.pk %}">{{ staff_user.get_full_name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post" class="needs-validation" novalidate>
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-user me-2"></i>Basic Information
+        </h4>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_username" class="form-label required-field">Username</label>
+                {{ form.username }}
+                {% if form.username.help_text %}
+                    <div class="form-text">{{ form.username.help_text }}</div>
+                {% endif %}
+                {% if form.username.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.username.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="id_email" class="form-label required-field">Email Address</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.email.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_first_name" class="form-label required-field">First Name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.first_name.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="id_last_name" class="form-label required-field">Last Name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.last_name.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_phone" class="form-label">Phone Number</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.phone.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="id_role" class="form-label required-field">Role</label>
+                {% if form.role %}
+                    {{ form.role }}
+                    {% if form.role.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.role.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <input type="text" class="form-control" value="{{ staff_user.get_role_display }}" readonly>
+                    <div class="form-text">Role cannot be changed for this user.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Employment Information -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="fas fa-briefcase me-2"></i>Employment Information
+        </h4>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_employee_id" class="form-label">Employee ID</label>
+                {{ form.employee_id }}
+                {% if form.employee_id.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.employee_id.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="id_department" class="form-label">Department</label>
+                {{ form.department }}
+                {% if form.department.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.department.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="id_hire_date" class="form-label">Hire Date</label>
+                {{ form.hire_date }}
+                {% if form.hire_date.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.hire_date.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="id_salary" class="form-label">Salary (KES)</label>
+                {{ form.salary }}
+                <div class="form-text">Leave blank if not applicable</div>
+                {% if form.salary.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.salary.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    {{ form.is_active_employee }}
+                    <label for="id_is_active_employee" class="form-check-label">
+                        Active Employee
+                    </label>
+                </div>
+                <div class="form-text">Uncheck to deactivate employee access</div>
+                {% if form.is_active_employee.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.is_active_employee.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    {{ form.is_staff }}
+                    <label for="id_is_staff" class="form-check-label">
+                        <i class="fas fa-shield-alt me-1"></i>Django Admin Access
+                    </label>
+                </div>
+                <div class="form-text">Grant access to Django administration interface</div>
+                {% if form.is_staff.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.is_staff.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="form-section">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{% url 'accounts:staff_detail' staff_user.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                </a>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Security Warning -->
+{% if staff_user.role == 'super_admin' %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Security Notice:</strong> You are editing a Super Admin account. Changes should be made carefully and may affect system administration capabilities.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Confirm role changes for super admin
+document.getElementById('id_role').addEventListener('change', function() {
+    if (this.value === 'super_admin' && '{{ staff_user.role }}' !== 'super_admin') {
+        if (!confirm('Are you sure you want to grant Super Admin privileges to this user? This will give them full system access.')) {
+            this.value = '{{ staff_user.role }}';
+        }
+    }
+});
+</script>
+{% endblock %}

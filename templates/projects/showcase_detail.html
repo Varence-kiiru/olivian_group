@@ -1,0 +1,565 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}{{ project.name }} - Solar Project - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'projects:showcase' %}">Projects</a></li>
+<li class="breadcrumb-item active">{{ project.name }}</li>
+{% endblock %}
+
+{% block meta_description %}{{ project.description|truncatewords:30|default:"Professional solar installation project by Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-hero {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 120px 0 80px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .project-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        animation: float 20s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(2deg); }
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .project-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .project-main-image {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .specs-section {
+        background: #f8f9fa;
+        padding: 80px 0;
+        margin: 80px 0;
+    }
+
+    .spec-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        height: 100%;
+    }
+
+    .spec-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .spec-label {
+        font-size: 1rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .impact-section {
+        background: linear-gradient(135deg, var(--dark-color) 0%, #34495e 100%);
+        color: white;
+        padding: 80px 0;
+    }
+
+    .impact-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .impact-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--primary-light);
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .impact-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .gallery-section {
+        padding: 80px 0;
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .gallery-item {
+        position: relative;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .gallery-item:hover {
+        transform: scale(1.05);
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+    }
+
+    .similar-projects {
+        background: #f8f9fa;
+        padding: 80px 0;
+    }
+
+    .project-card-small {
+        background: white;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        height: 100%;
+    }
+
+    .project-card-small:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 80px 0;
+        text-align: center;
+    }
+
+    .testimonial-section {
+        padding: 80px 0;
+        background: #f8f9fa;
+    }
+
+    .testimonial-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        position: relative;
+    }
+
+    .testimonial-quote {
+        font-size: 1.1rem;
+        font-style: italic;
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .testimonial-author {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .testimonial-company {
+        color: var(--primary-color);
+        font-size: 0.9rem;
+    }
+
+    .testimonial-card::before {
+        content: '"';
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 4rem;
+        color: var(--primary-color);
+        opacity: 0.3;
+        font-family: serif;
+    }
+
+    @media (max-width: 768px) {
+        .project-hero {
+            padding: 80px 0 60px;
+        }
+
+        .spec-value {
+            font-size: 2rem;
+        }
+
+        .impact-number {
+            font-size: 2.5rem;
+        }
+
+        .gallery-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="project-hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <span class="project-badge">{{ project.get_project_type_display }}</span>
+                    <h1 class="display-4 mb-4">{{ project.name }}</h1>
+                    {% if project.city %}
+                    <p class="lead mb-4">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ project.city }}{% if project.county %}, {{ project.county }}{% endif %}
+                    </p>
+                    {% endif %}
+                    {% if project.description %}
+                    <p class="mb-4">{{ project.description|truncatewords:50 }}</p>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'quotations:calculator' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-calculator me-2"></i>Get Your Free Quote
+                        </a>
+                        <a href="{% url 'core:contact' %}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-phone me-2"></i>Contact Our Experts
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                {% if project.featured_image %}
+                    <img src="{{ project.featured_image.url }}" alt="{{ project.name }}" class="project-main-image">
+                {% else %}
+                    <img src="{% static 'images/solar-project-default.jpg' %}" alt="{{ project.name }}" class="project-main-image">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Project Specs Section -->
+<section class="specs-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Project Specifications</h2>
+            <p class="section-subtitle">Technical details and system capabilities</p>
+        </div>
+
+        <div class="row">
+            {% if project.system_capacity %}
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ project.system_capacity }} kW</span>
+                    <div class="spec-label">System Size</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if project.estimated_generation %}
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ project.estimated_generation|floatformat:0 }} kWh</span>
+                    <div class="spec-label">Monthly Generation</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if project.completion_percentage %}
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ project.completion_percentage }}%</span>
+                    <div class="spec-label">Completion Rate</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if project.actual_completion %}
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ project.actual_completion|date:"M Y" }}</span>
+                    <div class="spec-label">Completed</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if project.system_type or project.contract_value %}
+        <div class="row mt-4">
+            {% if project.system_type %}
+            <div class="col-lg-4 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ project.get_system_type_display }}</span>
+                    <div class="spec-label">System Type</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if project.contract_value %}
+            <div class="col-lg-4 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">KES {{ project.contract_value }}</span>
+                    <div class="spec-label">Project Value</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if estimated_payback_years %}
+            <div class="col-lg-4 mb-4">
+                <div class="spec-card">
+                    <span class="spec-value">{{ estimated_payback_years }} Years</span>
+                    <div class="spec-label">Estimated Payback</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Environmental Impact Section -->
+{% if annual_co2_saved or total_co2_saved %}
+<section class="impact-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Environmental Impact</h2>
+            <p class="section-subtitle">Making a difference in Kenya's clean energy transition</p>
+        </div>
+
+        <div class="row">
+            {% if annual_co2_saved %}
+            <div class="col-lg-4 mb-4">
+                <div class="impact-card">
+                    <span class="impact-number">{{ annual_co2_saved }} tons</span>
+                    <div class="impact-label">CO₂ Saved Annually</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if total_co2_saved %}
+            <div class="col-lg-4 mb-4">
+                <div class="impact-card">
+                    <span class="impact-number">{{ total_co2_saved }} tons</span>
+                    <div class="impact-label">CO₂ Saved Over 25 Years</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="col-lg-4 mb-4">
+                <div class="impact-card">
+                    <span class="impact-number">25+ Years</span>
+                    <div class="impact-label">System Lifespan</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Project Description Section -->
+{% if project.description %}
+<section class="section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="section-title text-center mb-4">About This Project</h2>
+                <div class="content-text">
+                    {{ project.description|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Project Gallery Section -->
+{% if project.documents.exists %}
+<section class="gallery-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Project Gallery</h2>
+            <p class="section-subtitle">Visual documentation of our work</p>
+        </div>
+
+        <div class="gallery-grid">
+            {% for document in project_photos %}
+            <div class="gallery-item" onclick="openGallery('{{ document.file.url }}', '{{ document.title }}')">
+                <img src="{{ document.file.url }}" alt="{{ document.title }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Similar Projects Section -->
+{% if similar_projects %}
+<section class="similar-projects">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Similar Projects</h2>
+            <p class="section-subtitle">Explore more {{ project.get_project_type_display|lower }} solar installations</p>
+        </div>
+
+        <div class="row">
+            {% for similar_project in similar_projects %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="project-card-small">
+                    <div class="project-image">
+                        {% if similar_project.featured_image %}
+                            <img src="{{ similar_project.featured_image.url }}" alt="{{ similar_project.name }}"
+                                 style="width: 100%; height: 200px; object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'images/solar-project-default.jpg' %}" alt="{{ similar_project.name }}"
+                                 style="width: 100%; height: 200px; object-fit: cover;">
+                        {% endif %}
+                    </div>
+                    <div class="p-3">
+                        <h6 class="mb-2">{{ similar_project.name }}</h6>
+                        {% if similar_project.city %}
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-map-marker-alt me-1"></i>{{ similar_project.city }}
+                        </p>
+                        {% endif %}
+                        <a href="{% url 'projects:showcase_detail' project_number=similar_project.project_number %}"
+                           class="btn btn-outline-primary btn-sm">View Project</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Testimonials Section -->
+{% if testimonials %}
+<section class="testimonial-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Client Testimonials</h2>
+            <p class="section-subtitle">What our customers say about working with us</p>
+        </div>
+
+        <div class="row">
+            {% for testimonial in testimonials %}
+            <div class="col-lg-4 col-md-6">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">{{ testimonial.quote }}</p>
+                    <div class="testimonial-author">{{ testimonial.client_name }}</div>
+                    <div class="testimonial-company">{{ testimonial.company|default:testimonial.location }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Call to Action -->
+<section class="cta-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="mb-4">Ready to Start Your Solar Journey?</h2>
+                <p class="lead mb-4">
+                    Inspired by projects like {{ project.name }}? Let's discuss your solar installation needs
+                    and create a customized solution for your home or business.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{% url 'quotations:calculator' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-calculator me-2"></i>Calculate Your Savings
+                    </a>
+                    <a href="{% url 'core:contact' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-envelope me-2"></i>Contact Us Today
+                    </a>
+                </div>
+                <div class="mt-4">
+                    <small class="text-light opacity-75">
+                        <i class="fas fa-phone me-1"></i>{{ company.phone|default:"+254-719-728-666" }} |
+                        <i class="fas fa-envelope me-1"></i>{{ company.email|default:"info@olivian.co.ke" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Modal -->
+<div class="modal fade" id="galleryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="galleryModalLabel">Project Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="galleryImage" src="" class="img-fluid" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Open gallery modal
+function openGallery(imageSrc, title) {
+    document.getElementById('galleryImage').src = imageSrc;
+    document.getElementById('galleryModalLabel').textContent = title;
+    new bootstrap.Modal(document.getElementById('galleryModal')).show();
+}
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

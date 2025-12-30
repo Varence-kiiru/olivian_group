@@ -1,0 +1,700 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Contact - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Contact{% else %}New Contact{% endif %}{% endblock %}
+{% block page_subtitle %}{% if form.instance.pk %}Update contact information{% else %}Add a new contact to your CRM{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:contact_list' %}">Contacts</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}New{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .section-header {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+
+    .required {
+        color: #dc3545;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .btn-secondary {
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .contact-type-indicator {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contact-type-tabs {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .contact-type-tab {
+        flex: 1;
+        padding: 0.75rem;
+        text-align: center;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .contact-type-tab.active {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .address-section {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        background: #f8f9fa;
+    }
+    
+    .social-media-inputs {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .social-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .social-linkedin { background: #0077b5; }
+    .social-twitter { background: #1da1f2; }
+    .social-facebook { background: #1877f2; }
+
+    .contact-preview {
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .preview-card {
+        background: white;
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .preview-avatar {
+        width: 80px;
+        height: 80px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" enctype="multipart/form-data" id="contactForm">
+            {% csrf_token %}
+            
+            <!-- Contact Type Selection -->
+            <div class="form-card">
+                <div class="contact-type-indicator">
+                    <label class="form-label mb-3">Contact Type</label>
+                    <div class="contact-type-tabs">
+                        <div class="contact-type-tab" data-type="individual" onclick="setContactType('individual')">
+                            <i class="fas fa-user fa-2x mb-2"></i><br>
+                            <strong>Individual</strong><br>
+                            <small>Personal contact</small>
+                        </div>
+                        <div class="contact-type-tab" data-type="company" onclick="setContactType('company')">
+                            <i class="fas fa-building fa-2x mb-2"></i><br>
+                            <strong>Company</strong><br>
+                            <small>Business contact</small>
+                        </div>
+                    </div>
+                    {{ form.contact_type }}
+                </div>
+            </div>
+            
+            <!-- Basic Information -->
+            <div class="form-card">
+                <h5 class="section-header">
+                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                Title
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4" id="firstNameGroup">
+                        <div class="form-group">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                First Name <span class="required">*</span>
+                            </label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-5" id="lastNameGroup">
+                        <div class="form-group">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                Last Name <span class="required">*</span>
+                            </label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6" id="companyNameGroup" style="display: none;">
+                        <div class="form-group">
+                            <label for="{{ form.company.id_for_label }}" class="form-label">
+                                Company Name <span class="required">*</span>
+                            </label>
+                            {{ form.company }}
+                            {% if form.company.errors %}
+                                <div class="text-danger small mt-1">{{ form.company.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6" id="jobTitleGroup">
+                        <div class="form-group">
+                            <label for="{{ form.position.id_for_label }}" class="form-label">Job Title</label>
+                            {{ form.position }}
+                            {% if form.position.errors %}
+                                <div class="text-danger small mt-1">{{ form.position.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.department.id_for_label }}" class="form-label">Department</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                                <div class="text-danger small mt-1">{{ form.department.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add this after the Department field in the Basic Information section -->
+                <div class="col-md-6" id="companyGroup">
+                    <div class="form-group">
+                        <label for="{{ form.company.id_for_label }}" class="form-label">
+                            Company
+                            {% if form.company.field.required %}<span class="required">*</span>{% endif %}
+                        </label>
+                        {{ form.company }}
+                        {% if form.company.errors %}
+                            <div class="text-danger small mt-1">{{ form.company.errors }}</div>
+                        {% endif %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Can't find the company? 
+                                <a href="{% url 'crm:company_create' %}" target="_blank">
+                                    Add new company
+                                </a>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="form-card">
+                <h5 class="section-header">
+                    <i class="fas fa-phone me-2"></i>Contact Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                Email <span class="required">*</span>
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                Phone <span class="required">*</span>
+                            </label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.mobile.id_for_label }}" class="form-label">Mobile</label>
+                            {{ form.mobile }}
+                            {% if form.mobile.errors %}
+                                <div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+                            {{ form.website }}
+                            {% if form.website.errors %}
+                                <div class="text-danger small mt-1">{{ form.website.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Address Information -->
+            <div class="form-card">
+                <h5 class="section-header">
+                    <i class="fas fa-map-marker-alt me-2"></i>Address Information
+                </h5>
+                
+                <div class="address-section">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.address.id_for_label }}" class="form-label">Street Address</label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="{{ form.county.id_for_label }}" class="form-label">County</label>
+                                {{ form.county }}
+                                {% if form.county.errors %}
+                                    <div class="text-danger small mt-1">{{ form.county.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="{{ form.postal_code.id_for_label }}" class="form-label">Postal Code</label>
+                                {{ form.postal_code }}
+                                {% if form.postal_code.errors %}
+                                    <div class="text-danger small mt-1">{{ form.postal_code.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.country.id_for_label }}" class="form-label">Country</label>
+                                {{ form.country }}
+                                {% if form.country.errors %}
+                                    <div class="text-danger small mt-1">{{ form.country.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Social Media & Additional Info -->
+            <div class="form-card">
+                <h5 class="section-header">
+                    <i class="fas fa-share-alt me-2"></i>Social Media & Additional Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.linkedin_url.id_for_label }}" class="form-label">LinkedIn</label>
+                            <div class="social-media-inputs">
+                                <div class="social-icon social-linkedin">
+                                    <i class="fab fa-linkedin-in"></i>
+                                </div>
+                                {{ form.linkedin_url }}
+                            </div>
+                            {% if form.linkedin_url.errors %}
+                                <div class="text-danger small mt-1">{{ form.linkedin_url.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.source.id_for_label }}" class="form-label">Lead Source</label>
+                            {{ form.source }}
+                            {% if form.source.errors %}
+                                <div class="text-danger small mt-1">{{ form.source.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-card">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'crm:contact_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    
+                    <div class="d-flex gap-2">
+                        {% if form.instance.pk %}
+                            <button type="submit" name="action" value="save" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Contact
+                            </button>
+                            <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                                <i class="fas fa-save me-2"></i>Save & Continue Editing
+                            </button>
+                        {% else %}
+                            <button type="submit" name="action" value="save" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Contact
+                            </button>
+                            <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                                <i class="fas fa-plus me-2"></i>Save & Add Another
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Contact Preview -->
+    <div class="col-lg-4">
+        <div class="contact-preview">
+            <div class="preview-card">
+                <div class="preview-avatar" id="previewAvatar">
+                    {% if contact.first_name and contact.last_name %}
+                        {{ contact.first_name.0|add:contact.last_name.0|upper }}
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
+                </div>
+                
+                <h6 id="previewName">{{ contact.get_full_name|default:"Contact Name" }}</h6>
+                <p class="text-muted mb-2" id="previewTitle">{{ contact.position|default:"Job Title" }}</p>
+                <p class="small text-muted" id="previewCompany">
+                    {% if contact.companies.exists %}
+                        {{ contact.companies.first.name }}
+                    {% else %}
+                        Company
+                    {% endif %}
+                </p>
+                
+                <hr>
+                
+                <div class="text-start">
+                    <div class="mb-2" id="previewEmail">
+                        <i class="fas fa-envelope text-muted me-2"></i>
+                        <span class="small">{{ contact.email|default:"Email not provided" }}</span>
+                    </div>
+                    <div class="mb-2" id="previewPhone">
+                        <i class="fas fa-phone text-muted me-2"></i>
+                        <span class="small">{{ contact.phone|default:"Phone not provided" }}</span>
+                    </div>
+                    <div class="mb-2" id="previewLocation">
+                        <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                        <span class="small">
+                            {% if contact.city or contact.county %}
+                                {{ contact.city }}{% if contact.county %}, {{ contact.county }}{% endif %}
+                            {% else %}
+                                Location not provided
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setContactType(type) {
+    // Update visual tabs
+    document.querySelectorAll('.contact-type-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    // Update hidden field
+    document.getElementById('{{ form.contact_type.id_for_label }}').value = type;
+    
+    // Show/hide relevant fields
+    if (type === 'company') {
+        document.getElementById('firstNameGroup').style.display = 'none';
+        document.getElementById('lastNameGroup').style.display = 'none';
+        document.getElementById('companyNameGroup').style.display = 'block';
+        document.getElementById('jobTitleGroup').querySelector('label').innerHTML = 'Contact Person Title';
+    } else {
+        document.getElementById('firstNameGroup').style.display = 'block';
+        document.getElementById('lastNameGroup').style.display = 'block';
+        document.getElementById('companyNameGroup').style.display = 'none';
+        document.getElementById('jobTitleGroup').querySelector('label').innerHTML = 'Job Title';
+    }
+    
+    updatePreview();
+}
+
+function updatePreview() {
+    const firstName = document.getElementById('{{ form.first_name.id_for_label }}').value;
+    const lastName = document.getElementById('{{ form.last_name.id_for_label }}').value;
+    const company = document.getElementById('{{ form.company.id_for_label }}').value;
+    const jobTitle = document.getElementById('{{ form.job_title.id_for_label }}').value;
+    const email = document.getElementById('{{ form.email.id_for_label }}').value;
+    const phone = document.getElementById('{{ form.phone.id_for_label }}').value;
+    const city = document.getElementById('{{ form.city.id_for_label }}').value;
+    const country = document.getElementById('{{ form.country.id_for_label }}').value;
+    const contactType = document.getElementById('{{ form.contact_type.id_for_label }}').value;
+    
+    // Update name
+    let displayName = contactType === 'company' ? company : `${firstName} ${lastName}`.trim();
+    document.getElementById('previewName').textContent = displayName || 'Contact Name';
+    
+    // Update avatar
+    const avatar = document.getElementById('previewAvatar');
+    if (displayName) {
+        const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        avatar.innerHTML = initials;
+    } else {
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
+    }
+    
+    // Update job title
+    document.getElementById('previewTitle').textContent = jobTitle || 'Job Title';
+    
+    // Update company
+    if (contactType === 'individual') {
+        document.getElementById('previewCompany').textContent = company || 'Company';
+    } else {
+        document.getElementById('previewCompany').textContent = '';
+    }
+    
+    // Update contact info
+    document.getElementById('previewEmail').innerHTML = email 
+        ? `<i class="fas fa-envelope text-muted me-2"></i><span class="small">${email}</span>`
+        : '<i class="fas fa-envelope text-muted me-2"></i><span class="small">Email not provided</span>';
+    
+    document.getElementById('previewPhone').innerHTML = phone 
+        ? `<i class="fas fa-phone text-muted me-2"></i><span class="small">${phone}</span>`
+        : '<i class="fas fa-phone text-muted me-2"></i><span class="small">Phone not provided</span>';
+    
+    const location = [city, country].filter(Boolean).join(', ');
+    document.getElementById('previewLocation').innerHTML = location 
+        ? `<i class="fas fa-map-marker-alt text-muted me-2"></i><span class="small">${location}</span>`
+        : '<i class="fas fa-map-marker-alt text-muted me-2"></i><span class="small">Location not provided</span>';
+}
+
+// Set initial contact type and preview
+document.addEventListener('DOMContentLoaded', function() {
+    const currentType = document.getElementById('{{ form.contact_type.id_for_label }}').value || 'individual';
+    setContactType(currentType);
+    
+    // Add event listeners for live preview updates
+    document.querySelectorAll('#contactForm input, #contactForm select, #contactForm textarea').forEach(input => {
+        input.addEventListener('input', updatePreview);
+        input.addEventListener('change', updatePreview);
+    });
+    
+    updatePreview();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('contactForm');
+    
+    // Update preview on form field changes
+    form.querySelectorAll('input, select, textarea').forEach(input => {
+        input.addEventListener('input', updatePreview);
+        input.addEventListener('change', updatePreview);
+    });
+    
+    function updatePreview() {
+        const firstName = document.getElementById('id_first_name').value;
+        const lastName = document.getElementById('id_last_name').value;
+        const jobTitle = document.getElementById('id_position').value;
+        const company = document.getElementById('id_company').value;
+        const email = document.getElementById('id_email').value;
+        const phone = document.getElementById('id_phone').value;
+        const city = document.getElementById('id_city').value;
+        const county = document.getElementById('id_county').value;
+        
+        // Update name and avatar
+        const fullName = [firstName, lastName].filter(Boolean).join(' ');
+        document.getElementById('previewName').textContent = fullName || 'Contact Name';
+        
+        const avatar = document.getElementById('previewAvatar');
+        if (firstName && lastName) {
+            avatar.textContent = (firstName[0] + lastName[0]).toUpperCase();
+        } else {
+            avatar.innerHTML = '<i class="fas fa-user"></i>';
+        }
+        
+        // Update other fields
+        document.getElementById('previewTitle').textContent = jobTitle || 'Job Title';
+        document.getElementById('previewCompany').textContent = company || 'Company';
+        
+        document.getElementById('previewEmail').innerHTML = email
+            ? `<i class="fas fa-envelope text-muted me-2"></i><span class="small">${email}</span>`
+            : '<i class="fas fa-envelope text-muted me-2"></i><span class="small">Email not provided</span>';
+            
+        document.getElementById('previewPhone').innerHTML = phone
+            ? `<i class="fas fa-phone text-muted me-2"></i><span class="small">${phone}</span>`
+            : '<i class="fas fa-phone text-muted me-2"></i><span class="small">Phone not provided</span>';
+            
+        const location = [city, county].filter(Boolean).join(', ');
+        document.getElementById('previewLocation').innerHTML = location
+            ? `<i class="fas fa-map-marker-alt text-muted me-2"></i><span class="small">${location}</span>`
+            : '<i class="fas fa-map-marker-alt text-muted me-2"></i><span class="small">Location not provided</span>';
+    }
+    
+    // Initial preview update
+    updatePreview();
+});
+</script>
+<!-- Add this to the extra_js block -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const companySelect = document.getElementById('{{ form.company.id_for_label }}');
+    
+    // When company is selected
+    companySelect.addEventListener('change', function() {
+        const companyId = this.value;
+        if (companyId) {
+            // Fetch company details
+            fetch(`{% url 'crm:company_detail' 0 %}`.replace('0', companyId) + '?format=json')
+                .then(response => response.json())
+                .then(company => {
+                    // Auto-fill address fields
+                    if (company.address_line_1) document.getElementById('id_address_line_1').value = company.address_line_1;
+                    if (company.address_line_2) document.getElementById('id_address_line_2').value = company.address_line_2;
+                    if (company.city) document.getElementById('id_city').value = company.city;
+                    if (company.county) document.getElementById('id_county').value = company.county;
+                    if (company.postal_code) document.getElementById('id_postal_code').value = company.postal_code;
+                });
+        }
+    });
+});
+</script>
+{% endblock %}

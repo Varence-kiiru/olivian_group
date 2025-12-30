@@ -1,0 +1,310 @@
+{% extends "dashboard/base.html" %}
+
+{% block page_title %}
+    {% if object %}Edit Campaign{% else %}Create Campaign{% endif %}
+{% endblock %}
+{% block page_subtitle %}
+    {% if object %}Update campaign details{% else %}Set up a new email campaign{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_dashboard' %}">Newsletter</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_campaign_list' %}">Campaigns</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit{% else %}Create{% endif %}
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if object %}
+                        <i class="fas fa-edit me-2"></i>Edit Campaign: {{ object.title }}
+                    {% else %}
+                        <i class="fas fa-plus me-2"></i>Create New Campaign
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Campaign Basic Info -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Campaign Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.title.id_for_label }}" class="form-label">
+                                                    Campaign Title <span class="text-danger">*</span>
+                                                </label>
+                                                {{ form.title }}
+                                                {% if form.title.errors %}
+                                                    <div class="text-danger small">{{ form.title.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="form-text">Internal name for this campaign</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                                {{ form.status }}
+                                                {% if form.status.errors %}
+                                                    <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.subject.id_for_label }}" class="form-label">
+                                            Email Subject Line <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.subject }}
+                                        {% if form.subject.errors %}
+                                            <div class="text-danger small">{{ form.subject.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Appears in recipient's inbox</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.preview_text.id_for_label }}" class="form-label">
+                                            Preview Text
+                                        </label>
+                                        {{ form.preview_text }}
+                                        {% if form.preview_text.errors %}
+                                            <div class="text-danger small">{{ form.preview_text.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Short preview shown in email clients</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Content -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Email Content</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="{{ form.template_type.id_for_label }}" class="form-label">
+                                            Template Type
+                                        </label>
+                                        {{ form.template_type }}
+                                        {% if form.template_type.errors %}
+                                            <div class="text-danger small">{{ form.template_type.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Choose the email template style</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.content.id_for_label }}" class="form-label">
+                                            Email Content <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.content }}
+                                        {% if form.content.errors %}
+                                            <div class="text-danger small">{{ form.content.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">HTML content for your email. Use {% verbatim %}{{ subscriber_name }}{% endverbatim %} for personalization.</div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.call_to_action_text.id_for_label }}" class="form-label">
+                                                    Call-to-Action Text
+                                                </label>
+                                                {{ form.call_to_action_text }}
+                                                {% if form.call_to_action_text.errors %}
+                                                    <div class="text-danger small">{{ form.call_to_action_text.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="form-text">Text for the call-to-action button (optional)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.call_to_action_url.id_for_label }}" class="form-label">
+                                                    Call-to-Action URL
+                                                </label>
+                                                {{ form.call_to_action_url }}
+                                                {% if form.call_to_action_url.errors %}
+                                                    <div class="text-danger small">{{ form.call_to_action_url.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="form-text">Main link for your campaign (optional)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <!-- Campaign Info & Actions -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Campaign Info</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if object %}
+                                        <div class="mb-3">
+                                            <strong>Created:</strong><br>
+                                            <small class="text-muted">{{ object.created_at|date:"M d, Y g:i A" }}</small>
+                                        </div>
+
+                                        {% if object.sent_at %}
+                                        <div class="mb-3">
+                                            <strong>Sent:</strong><br>
+                                            <small class="text-muted">{{ object.sent_at|date:"M d, Y g:i A" }}</small>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if object.total_sent %}
+                                        <div class="mb-3">
+                                            <strong>Recipients:</strong><br>
+                                            <small class="text-muted">{{ object.total_sent }} emails sent</small>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if object.created_by %}
+                                        <div class="mb-3">
+                                            <strong>Created by:</strong><br>
+                                            <small class="text-muted">{{ object.created_by.get_full_name|default:object.created_by.username }}</small>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Getting Started</strong><br>
+                                            <small>Fill out the campaign details and content, then save as draft or send immediately.</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Actions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>
+                                            {% if object %}Update Campaign{% else %}Create Campaign{% endif %}
+                                        </button>
+
+                                        {% if object %}
+                                        <a href="{% url 'core:newsletter_campaign_detail' object.pk %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye me-2"></i>View Campaign
+                                        </a>
+
+                                        {% if object.can_send %}
+                                        <form method="post" action="{% url 'core:newsletter_campaign_send' object.pk %}"
+                                              onsubmit="return sendCampaignNowConfirm(event)">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-paper-plane me-2"></i>Send Now
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        {% endif %}
+
+                                        <a href="{% url 'core:newsletter_campaign_list' %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to Campaigns
+                                        </a>
+                                    </div>
+
+                                    {% if object and not object.sent_at %}
+                                    <hr>
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <small><strong>Warning:</strong> Once sent, campaigns cannot be edited or resent.</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Preview Modal -->
+<div class="modal fade" id="contentPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Content Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Preview shows how your content will appear. Personalization variables like {% verbatim %}{{ subscriber_name }}{% endverbatim %} will be replaced with actual values when sent.
+                </div>
+                <div id="contentPreview" class="border p-3 bg-light" style="min-height: 300px;">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Live preview functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const contentTextarea = document.getElementById('id_content');
+    const previewBtn = document.createElement('button');
+    previewBtn.type = 'button';
+    previewBtn.className = 'btn btn-outline-info btn-sm ms-2';
+    previewBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Preview';
+    previewBtn.onclick = function() {
+        const content = contentTextarea.value;
+        const previewDiv = document.getElementById('contentPreview');
+        previewDiv.innerHTML = content || '<em class="text-muted">No content to preview</em>';
+
+        const modal = new bootstrap.Modal(document.getElementById('contentPreviewModal'));
+        modal.show();
+    };
+
+    // Add preview button next to content label
+    const contentLabel = document.querySelector('label[for="id_content"]');
+    if (contentLabel && contentTextarea) {
+        contentLabel.appendChild(previewBtn);
+    }
+});
+
+function sendCampaignNowConfirm(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    Swal.fire({
+        title: 'Send Campaign Now?',
+        text: 'Are you sure you want to send this campaign now? This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, send it now!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+
+    return false;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,530 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Service Areas Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-map-marked-alt mr-2"></i>
+                        Service Areas Management
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:service_area_create' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add Service Area
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="card-body border-bottom">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-2">
+                            <label for="area_type" class="form-label">Area Type</label>
+                            <select name="area_type" id="area_type" class="form-select form-select-sm">
+                                <option value="">All Types</option>
+                                {% for choice_value, choice_label in area_types %}
+                                    <option value="{{ choice_value }}" {% if request.GET.area_type == choice_value %}selected{% endif %}>
+                                        {{ choice_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="coverage_type" class="form-label">Coverage Type</label>
+                            <select name="coverage_type" id="coverage_type" class="form-select form-select-sm">
+                                <option value="">All Coverage</option>
+                                {% for choice_value, choice_label in coverage_types %}
+                                    <option value="{{ choice_value }}" {% if request.GET.coverage_type == choice_value %}selected{% endif %}>
+                                        {{ choice_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="county" class="form-label">County</label>
+                            <input type="text" name="county" id="county" class="form-control form-control-sm"
+                                   value="{{ request.GET.county }}" placeholder="Search county">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select form-select-sm">
+                                <option value="">All Status</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" name="q" id="search" class="form-control form-control-sm"
+                                   value="{{ request.GET.q }}" placeholder="Search name/contact">
+                        </div>
+
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <a href="{% url 'core:service_area_list' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Bulk Actions Form -->
+                <form id="bulk-form" method="post" action="{% url 'core:service_area_bulk_update' %}">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        <!-- Bulk Actions -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="btn-group" role="group">
+                                    <input type="checkbox" id="select-all" class="me-2">
+                                    <label for="select-all" class="me-3">Select All</label>
+                                    <button type="button" class="btn btn-success btn-sm" id="bulk-activate">
+                                        <i class="fas fa-play"></i> Activate
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm" id="bulk-deactivate">
+                                        <i class="fas fa-pause"></i> Deactivate
+                                    </button>
+                                    <button type="button" class="btn btn-info btn-sm" id="bulk-update-coordinates">
+                                        <i class="fas fa-map-marker-alt"></i> Update Coordinates
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" id="bulk-clear-contacts">
+                                        <i class="fas fa-user-times"></i> Clear Contacts
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coverage Type Updates -->
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-info btn-sm" id="bulk-coverage-primary">
+                                        <i class="fas fa-star"></i> Set Primary
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm" id="bulk-coverage-extended">
+                                        <i class="fas fa-plus-circle"></i> Set Extended
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="bulk-coverage-planned">
+                                        <i class="fas fa-clock"></i> Set Planned
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>{{ service_areas.count }} service areas</strong>
+                            </div>
+                        </div>
+
+                        <!-- Service Areas Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th width="30"></th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>County</th>
+                                        <th>Coverage</th>
+                                        <th>Contact</th>
+                                        <th>Coordinates</th>
+                                        <th>Status</th>
+                                        <th width="120">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for area in service_areas %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="area_ids" value="{{ area.id }}"
+                                                   class="area-checkbox">
+                                        </td>
+                                        <td>
+                                            <strong>{{ area.name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ area.area_type|default:'secondary' }}">
+                                                {{ area.get_area_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if area.area_type == 'county' %}
+                                                <strong>{{ area.county|default:area.name }}</strong>
+                                            {% else %}
+                                                <span style="margin-left: 20px;">↳ {{ area.county|default:'Unknown' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ area.coverage_type|default:'primary' }}">
+                                                {{ area.get_coverage_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if area.contact_person %}
+                                                <strong>{{ area.contact_person }}</strong><br>
+                                                <small class="text-muted">{{ area.contact_phone }}</small>
+                                            {% else %}
+                                                <em class="text-muted">No contact info</em>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if area.latitude and area.longitude %}
+                                                <a href="https://www.google.com/maps?q={{ area.latitude }},{{ area.longitude }}"
+                                                   target="_blank" class="text-primary">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                    {{ area.latitude|floatformat:4 }}, {{ area.longitude|floatformat:4 }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> No coordinates
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if area.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'core:service_area_detail' area.pk %}"
+                                                   class="btn btn-info btn-sm" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'core:service_area_edit' area.pk %}"
+                                                   class="btn btn-warning btn-sm" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted">
+                                            <i class="fas fa-map-marked-alt fa-2x mb-2"></i><br>
+                                            No service areas found matching your criteria.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="card-footer">
+                    <nav aria-label="Service areas pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in paginator.page_range %}
+                                {% if page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
+                                    <li class="page-item {% if page_obj.number == page_num %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ page_num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Select all checkbox functionality
+document.getElementById('select-all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.area-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Bulk actions with SweetAlert
+document.getElementById('bulk-activate').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to activate.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Activate Service Areas?',
+        text: `Are you sure you want to activate ${checkedBoxes.length} selected service area(s)?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, activate!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'activate';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+document.getElementById('bulk-deactivate').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to deactivate.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Deactivate Service Areas?',
+        text: `Are you sure you want to deactivate ${checkedBoxes.length} selected service area(s)?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, deactivate!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'deactivate';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+document.getElementById('bulk-update-coordinates').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to update coordinates.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Update Coordinates?',
+        text: `Are you sure you want to update coordinates for ${checkedBoxes.length} selected service area(s)?`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#17a2b8',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, update!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'update_coordinates';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+document.getElementById('bulk-clear-contacts').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to clear contact information.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Clear Contact Information?',
+        text: `Are you sure you want to clear contact information for ${checkedBoxes.length} selected service area(s)? This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, clear contacts!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'clear_contacts';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+// Coverage type bulk actions
+document.getElementById('bulk-coverage-primary').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to update coverage type.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Set Primary Coverage?',
+        text: `Are you sure you want to set ${checkedBoxes.length} selected service area(s) to Primary coverage?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#17a2b8',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, set primary!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'update_coverage_primary';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+document.getElementById('bulk-coverage-extended').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to update coverage type.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Set Extended Coverage?',
+        text: `Are you sure you want to set ${checkedBoxes.length} selected service area(s) to Extended coverage?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, set extended!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'update_coverage_extended';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+
+document.getElementById('bulk-coverage-planned').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.area-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            title: 'No Selection',
+            text: 'Please select at least one service area to update coverage type.',
+            icon: 'warning',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Set Planned Coverage?',
+        text: `Are you sure you want to set ${checkedBoxes.length} selected service area(s) to Planned coverage?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, set planned!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.getElementById('bulk-form');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'update_coverage_planned';
+            form.appendChild(actionInput);
+            form.submit();
+        }
+    });
+});
+</script>
+
+<style>
+.badge {
+    font-size: 0.75em;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,33 @@
+{{ campaign.subject }}
+
+Hello {{ subscriber_name }},
+
+{{ campaign.content|striptags }}
+
+{% if campaign.call_to_action_text and campaign.call_to_action_url %}
+
+{{ campaign.call_to_action_text }}: {{ campaign.call_to_action_url }}
+
+{% endif %}
+
+---
+
+About {{ company_name }}
+We're Kenya's trusted partner for comprehensive solar energy solutions, combining cutting-edge technology with unparalleled expertise.
+
+Contact us:
+Email: {{ company_email }}
+Phone: {{ company_phone }}
+Website: {{ company_website }}
+
+Solar Energy Tip:
+Regular cleaning of your solar panels can increase energy production by up to 25%. Clean panels early morning or late evening when they're cool to avoid thermal shock.
+
+---
+
+You're receiving this email because you subscribed to {{ company_name }} newsletter.
+Unsubscribe: {{ unsubscribe_url }}
+Visit Website: {{ company_website }}
+
+{{ company_name }}
+{{ company_address }}

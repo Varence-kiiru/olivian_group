@@ -1,0 +1,556 @@
+{% load static %}
+{% load core_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ company.name }}{% if company.tagline %} - {{ company.tagline }}{% endif %}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ company.meta_description|default:company.about_description|default:"Professional solar solutions for homes and businesses in Kenya." }}{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}{{ company.meta_keywords|default:"solar panels Kenya, solar installation, solar energy, renewable energy, solar power" }}{% endblock %}">
+
+        <!-- Facebook Open Graph tags -->
+    <meta property="og:title" content="{% block og_title %}{{ company.name }}{% if company.tagline %} - {{ company.tagline }}{% endif %}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ company.meta_description|default:company.about_description|default:"Professional solar solutions for homes and businesses in Kenya." }}{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url|default:'/static/images/default-logo.png' }}{% endblock %}">
+    <meta property="og:image:alt" content="{% block og_image_alt %}{{ company.name }} Logo{% endblock %}">
+    <meta property="og:image:width" content="{% block og_image_width %}400{% endblock %}">
+    <meta property="og:image:height" content="{% block og_image_height %}400{% endblock %}">
+    <meta property="og:site_name" content="{{ company.name }}">
+    <meta property="og:locale" content="en_KE">
+    <meta property="fb:app_id" content="544914051459824">
+    <meta property="fb:pages" content="104597858941800">
+
+    <!-- Favicon -->
+    {% if company.favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ company.favicon.url }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ company.favicon.url }}">
+    {% endif %}
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ company.name|default:'Olivian Solar' }}">
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#38b6ff">
+    <meta name="msapplication-TileColor" content="#38b6ff">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <link href="{% static 'css/website.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg fixed-top navbar-website" id="mainNavbar">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'core:home' %}">
+                {% if company.logo %}
+                    <img src="{{ company.logo.url }}" alt="{{ company.name }}">
+                {% endif %}
+                <span>{{ company.name|default:"Olivian Group" }}</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:about' %}">About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Products
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'products:list' %}">All Products</a></li>
+                            <li><a class="dropdown-item" href="{% url 'products:category' 'solar-panels' %}">Solar Panels</a></li>
+                            <li><a class="dropdown-item" href="{% url 'products:category' 'inverters' %}">Inverters</a></li>
+                            <li><a class="dropdown-item" href="{% url 'products:category' 'batteries' %}">Batteries</a></li>
+                            <li><a class="dropdown-item" href="{% url 'products:category' 'accessories' %}">Accessories</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Services
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'core:services' %}">Our Services</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:services' %}#solar-installation">Solar Installation</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:services' %}#system-design">System Design</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:services' %}#maintenance">Maintenance</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:services' %}#monitoring-support">Monitoring & Support</a></li>
+                            <li><a class="dropdown-item" href="{% url 'quotations:request_form' %}">Request Quotation</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'projects:showcase' %}">Projects</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:contact' %}">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'blog:blog' %}">Blog</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i> {{ user.get_full_name|default:user.username }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link position-relative" href="{% url 'ecommerce:cart' %}" id="cart-link">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span class="badge bg-primary cart-count" id="cart-count-badge" style="{% if not cart_count or cart_count == 0 %}display: none;{% endif %}">{{ cart_count|default:0 }}</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:login' %}">
+                                Sign In
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary ms-2" href="{% url 'accounts:register' %}">Get Started</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- System Messages -->
+    <div class="system-messages">
+        {% if messages %}
+            {% for message in messages|filter_messages:user %}
+                <div class="alert message-alert alert-{% firstof message.tags 'info' %} alert-dismissible fade show" role="alert">
+                    {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle alert-icon"></i>
+                    {% elif message.tags == 'error' or message.tags == 'danger' %}
+                        <i class="fas fa-exclamation-triangle alert-icon"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="fas fa-exclamation-circle alert-icon"></i>
+                    {% elif message.tags == 'info' %}
+                        <i class="fas fa-info-circle alert-icon"></i>
+                    {% else %}
+                        <i class="fas fa-bell alert-icon"></i>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <!-- Main Content -->
+    <main>
+        <!-- Breadcrumbs -->
+        <nav aria-label="breadcrumb" class="py-3 mt-4">
+            <div class="container">
+                <ol class="breadcrumb mb-0">
+                    {% block breadcrumb %}
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                    {% endblock %}
+                </ol>
+            </div>
+        </nav>
+
+        {% block content %}
+        <!-- Page content goes here -->
+        {% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer-website">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="footer-brand">{{ company.name }}</div>
+                    <p class="mb-4">{{ company.about_description }}</p>
+                    {% if has_social_media %}
+                    <div class="social-links">
+                        {% if social_media.facebook %}<a href="{{ social_media.facebook }}" target="_blank"><i class="fab fa-facebook-f"></i></a>{% endif %}
+                        {% if social_media.twitter %}<a href="{{ social_media.twitter }}" target="_blank"><i class="fab fa-twitter"></i></a>{% endif %}
+                        {% if social_media.linkedin %}<a href="{{ social_media.linkedin }}" target="_blank"><i class="fab fa-linkedin-in"></i></a>{% endif %}
+                        {% if social_media.instagram %}<a href="{{ social_media.instagram }}" target="_blank"><i class="fab fa-instagram"></i></a>{% endif %}
+                        {% if social_media.youtube %}<a href="{{ social_media.youtube }}" target="_blank"><i class="fab fa-youtube"></i></a>{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="mb-3">Products</h5>
+                    <div class="footer-links">
+                        <a href="{% url 'products:category' 'solar-panels' %}">Solar Panels</a>
+                        <a href="{% url 'products:category' 'inverters' %}">Inverters</a>
+                        <a href="{% url 'products:category' 'batteries' %}">Batteries</a>
+                        <a href="{% url 'products:category' 'accessories' %}">Accessories</a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="mb-3">Services</h5>
+                    <div class="footer-links">
+                        <a href="{% url 'core:services' %}#system-design">Solar Design</a>
+                        <a href="{% url 'core:services' %}#solar-installation">Solar Installation</a>
+                        <a href="{% url 'core:services' %}#maintenance">Maintenance</a>
+                        <a href="{% url 'core:services' %}#monitoring-support">Monitoring & Support</a>
+                        <a href="{% url 'quotations:request_form' %}">Request Quotation</a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="mb-3">Company</h5>
+                    <div class="footer-links">
+                        <a href="{% url 'core:about' %}">About Us</a>
+                        <a href="{% url 'projects:showcase' %}">Projects</a>
+                        <a href="{% url 'core:contact' %}">Support</a>
+                        <a href="{% url 'blog:blog' %}">Our Blog</a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="mb-3">Contact</h5>
+                    <div class="footer-links">
+                        <a href="tel:{{ company.phone }}">
+                            <i class="fas fa-phone me-2"></i>{{ company.phone }}
+                        </a>
+                        <a href="mailto:{{ company.email }}">
+                            <i class="fas fa-envelope me-2"></i>{{ company.email }}
+                        </a>
+                        {% if company.google_maps_url %}
+                        <a href="{{ company.google_maps_url }}" target="_blank">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ company.address|truncatechars:20 }}
+                        </a>
+                        {% else %}
+                        <span class="text-light">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ company.address|truncatechars:20 }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Newsletter Signup -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    {% include 'website/includes/newsletter_signup.html' %}
+                </div>
+            </div>
+            
+            <hr class="my-4" style="border-color: rgba(255,255,255,0.1);">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; {{ "now"|date:"Y" }} {{ company.name }}. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="d-inline">
+                        <a href="{% url 'core:privacy_policy' %}" class="text-light me-3">Privacy Policy</a>
+                        <a href="{% url 'core:terms_of_service' %}" class="text-light me-3">Terms of Service</a><br>
+                        <a href="{% url 'core:data_deletion' %}" class="text-light me-2">Data Deletion</a>
+                        <span class="text-light me-2">•</span>
+                        <a href="{% url 'core:disclaimer' %}" class="text-light me-2">Disclaimer</a>
+                        <span class="text-light me-2">•</span>
+                        <a href="{% url 'core:refund_policy' %}" class="text-light">Refund Policy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to top button -->
+    <button class="scroll-top" id="scrollTop">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('mainNavbar');
+            const scrollTop = document.getElementById('scrollTop');
+
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+                scrollTop.classList.add('show');
+            } else {
+                navbar.classList.remove('scrolled');
+                scrollTop.classList.remove('show');
+            }
+        });
+
+        // Scroll to top functionality
+        document.getElementById('scrollTop').addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Add fade-in animation to elements on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+        
+        // Observe elements with animation classes
+        document.querySelectorAll('.card, .feature-box, .stat-card').forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Enhanced cart functionality
+        function updateCartCount(count) {
+            const cartBadge = document.getElementById('cart-count-badge');
+            if (cartBadge) {
+                cartBadge.textContent = count;
+                cartBadge.style.display = count > 0 ? 'inline' : 'none';
+                
+                // Add bounce animation when cart count changes
+                if (count > 0) {
+                    cartBadge.style.animation = 'none';
+                    cartBadge.offsetHeight; // Trigger reflow
+                    cartBadge.style.animation = 'bounceIn 0.6s ease';
+                }
+            }
+        }
+        
+        // Add global cart update function
+        window.updateGlobalCartCount = updateCartCount;
+        
+        // Enhanced System Messages
+        function showSystemMessage(message, type = 'info', duration = 5000) {
+            const messageContainer = document.querySelector('.system-messages');
+            if (!messageContainer) return;
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert message-alert alert-${type} alert-dismissible fade show`;
+            alertDiv.setAttribute('role', 'alert');
+            
+            const icons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-triangle',
+                'danger': 'fa-exclamation-triangle',
+                'warning': 'fa-exclamation-circle',
+                'info': 'fa-info-circle'
+            };
+            
+            alertDiv.innerHTML = `
+                <i class="fas ${icons[type] || 'fa-bell'} alert-icon"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            messageContainer.appendChild(alertDiv);
+            
+            // Auto remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.classList.remove('show');
+                        setTimeout(() => alertDiv.remove(), 300);
+                    }
+                }, duration);
+            }
+        }
+        
+        // Toast Notification Function
+        function showToast(message, type = 'info', duration = 4000) {
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast custom-toast toast-${type} show`;
+            toast.setAttribute('role', 'alert');
+            
+            const icons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle',
+                'warning': 'fa-exclamation-circle'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-body d-flex align-items-center">
+                    <i class="fas ${icons[type] || 'fa-bell'} me-2"></i>
+                    <span class="flex-grow-1">${message}</span>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto remove
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // Loading Overlay Functions
+        function showLoading(message = 'Loading...') {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.id = 'global-loading';
+            overlay.innerHTML = `
+                <div class="text-center">
+                    <div class="loading-spinner"></div>
+                    <div class="mt-3 text-muted">${message}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
+        function hideLoading() {
+            const overlay = document.getElementById('global-loading');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+        
+        // Make functions globally available
+        window.showSystemMessage = showSystemMessage;
+        window.showToast = showToast;
+        window.showLoading = showLoading;
+        window.hideLoading = hideLoading;
+        
+        // Initialize cart count from server if user is authenticated
+        {% if user.is_authenticated %}
+        if (typeof API !== 'undefined') {
+            API.get('/api/cart/count/')
+                .then(response => {
+                    if (response.count !== undefined) {
+                        updateCartCount(response.count);
+                    }
+                })
+                .catch(error => {
+                    console.log('Cart count sync failed:', error);
+                });
+        }
+        {% endif %}
+    </script>
+    
+    {% if not DEBUG %}
+    <!-- PWA Manager -->
+    <script src="{% static 'js/pwa-manager.js' %}"></script>
+    {% endif %}
+
+    <!-- SweetAlert2 for beautiful alerts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/api.js' %}"></script>
+    <script src="{% static 'js/system-messages.js' %}"></script>
+
+    <!-- Cookie Management System -->
+    {% include "components/cookie_banner.html" %}
+
+    <!-- Debug Script -->
+    <script>
+        console.log('=== COOKIE DEBUG START ===');
+        console.log('Banner element:', document.getElementById('cookie-banner'));
+        console.log('Settings button:', document.getElementById('cookie-settings-btn'));
+        console.log('Modal element:', document.getElementById('cookiePreferencesModal'));
+        console.log('=== COOKIE DEBUG END ===');
+    </script>
+
+    <script src="{% static 'js/cookie_manager.js' %}?v=31"></script>
+
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6932a34999e2d3197bad3af3/1jbmsrmrb';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <!--End of Tawk.to Script-->
+
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Initialize cookie manager after page load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Listen for cookie consent changes
+            document.addEventListener('cookieConsentChanged', function(e) {
+                console.log('Cookie consent changed:', e.detail);
+                
+                // Refresh analytics or other tracking based on new consent
+                if (e.detail.consent.analytics === 'granted') {
+                    // Initialize or re-enable analytics
+                    console.log('Analytics enabled');
+                } else {
+                    console.log('Analytics disabled');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

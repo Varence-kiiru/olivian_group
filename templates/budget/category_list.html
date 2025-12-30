@@ -1,0 +1,290 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget Categories - {{ block.super }}{% endblock %}
+
+{% block page_title %}Budget Categories{% endblock %}
+{% block page_subtitle %}Manage budget allocation categories{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+{% if budget %}
+<li class="breadcrumb-item"><a href="{% url 'budget:detail' budget.pk %}">{{ budget.name }}</a></li>
+{% endif %}
+<li class="breadcrumb-item active">Categories</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .category-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .category-card.type-materials { border-left-color: #007bff; }
+    .category-card.type-labor { border-left-color: #28a745; }
+    .category-card.type-equipment { border-left-color: #ffc107; }
+    .category-card.type-transportation { border-left-color: #17a2b8; }
+    .category-card.type-overhead { border-left-color: #6f42c1; }
+    .category-card.type-marketing { border-left-color: #e83e8c; }
+    .category-card.type-administrative { border-left-color: #fd7e14; }
+    .category-card.type-utilities { border-left-color: #20c997; }
+    .category-card.type-insurance { border-left-color: #6c757d; }
+    .category-card.type-permits { border-left-color: #dc3545; }
+    .category-card.type-professional_services { border-left-color: #0d6efd; }
+    .category-card.type-training { border-left-color: #198754; }
+    .category-card.type-maintenance { border-left-color: #fd7e14; }
+    .category-card.type-other { border-left-color: #adb5bd; }
+    
+    .progress-thin {
+        height: 6px;
+        border-radius: 3px;
+    }
+    
+    .amount-display {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .budget-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if budget %}
+<!-- Budget Header -->
+<div class="budget-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">{{ budget.name }}</h3>
+            <p class="mb-0 opacity-75">{{ budget.description }}</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="amount-display mb-2">KES {{ budget.total_amount|floatformat:0 }}</div>
+            <small class="opacity-75">{{ budget.period_start }} - {{ budget.period_end }}</small>
+        </div>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-item">
+            <div class="stat-value">{{ categories.count }}</div>
+            <small>Categories</small>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">KES {{ budget.allocated_amount|floatformat:0 }}</div>
+            <small>Allocated</small>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">KES {{ budget.spent_amount|floatformat:0 }}</div>
+            <small>Spent</small>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ budget.utilization_percentage|floatformat:1 }}%</div>
+            <small>Utilized</small>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+        {% if budget %}Categories for {{ budget.name }}{% else %}All Budget Categories{% endif %}
+    </h5>
+    <div class="btn-group">
+        {% if budget %}
+        <a href="{% url 'budget:category_create' budget_id=budget.pk %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Category
+        </a>
+        {% else %}
+        <a href="{% url 'budget:category_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Category
+        </a>
+        {% endif %}
+        <a href="{% url 'budget:list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Budgets
+        </a>
+    </div>
+</div>
+
+<!-- Categories -->
+<div class="row">
+    {% for category in categories %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="category-card type-{{ category.category_type }}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">{{ category.name }}</h6>
+                    <small class="text-muted">{{ category.get_category_type_display }}</small>
+                </div>
+                {% if not category.is_active %}
+                <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+            </div>
+            
+            {% if category.description %}
+            <p class="text-muted small mb-3">{{ category.description|truncatewords:15 }}</p>
+            {% endif %}
+            
+            <!-- Budget Progress -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Utilization</span>
+                    <span>{{ category.utilization_percentage|floatformat:1 }}%</span>
+                </div>
+                <div class="progress progress-thin">
+                    <div class="progress-bar {% if category.is_over_budget %}bg-danger{% elif category.utilization_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                         style="width: {{ category.utilization_percentage|floatformat:0 }}%"></div>
+                </div>
+            </div>
+            
+            <!-- Financial Summary -->
+            <div class="row g-2 small mb-3">
+                <div class="col-6">
+                    <div class="text-muted">Allocated</div>
+                    <div class="fw-semibold">KES {{ category.allocated_amount|floatformat:0 }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Spent</div>
+                    <div class="fw-semibold">KES {{ category.spent_amount|floatformat:0 }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Available</div>
+                    <div class="fw-semibold {% if category.available_amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                        KES {{ category.available_amount|floatformat:0 }}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Committed</div>
+                    <div class="fw-semibold">KES {{ category.committed_amount|floatformat:0 }}</div>
+                </div>
+            </div>
+            
+            <!-- Approval Info -->
+            {% if category.requires_approval %}
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-shield-alt text-warning me-1"></i>
+                <small class="text-muted">
+                    Requires approval over KES {{ category.approval_threshold|floatformat:0 }}
+                </small>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="btn-group w-100">
+                <a href="{% url 'budget:category_edit' category.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'budget:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No categories found</h5>
+            <p class="text-muted">
+                {% if budget %}
+                Create categories to organize your budget allocation for {{ budget.name }}.
+                {% else %}
+                Create budget categories to organize financial allocations.
+                {% endif %}
+            </p>
+            {% if budget %}
+            <a href="{% url 'budget:category_create' budget_id=budget.pk %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Category
+            </a>
+            {% else %}
+            <a href="{% url 'budget:category_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Category
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Category pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirmation for delete actions
+    document.querySelectorAll('a[href*="delete"]').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

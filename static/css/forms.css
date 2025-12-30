@@ -1,0 +1,691 @@
+/* Olivian Solar - Form Styles */
+/* Customer Requirements Form Styles */
+
+/* Form container */
+.requirements-form {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Form sections */
+.form-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 5px solid #38b6ff;
+}
+
+/* Section headers */
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-icon {
+    width: 50px;
+    height: 50px;
+    background: #38b6ff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.section-subtitle {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Form elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #38b6ff;
+    box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+}
+
+/* Input groups */
+.input-group-text {
+    background: #38b6ff;
+    color: white;
+    border: 2px solid #38b6ff;
+    border-radius: 10px 0 0 10px;
+}
+
+/* Radio and checkbox groups */
+.radio-group, .checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.radio-option, .checkbox-option {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.radio-option:hover, .checkbox-option:hover {
+    border-color: #38b6ff;
+    background: #e3f2fd;
+}
+
+.radio-option input, .checkbox-option input {
+    display: none;
+}
+
+.radio-option input:checked + label,
+.checkbox-option input:checked + label {
+    color: #38b6ff;
+    font-weight: 600;
+}
+
+.option-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #38b6ff;
+}
+
+.option-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.option-description {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Progress indicator */
+.progress-indicator {
+    background: white;
+    border-radius: 15px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #38b6ff, #20c997);
+    height: 8px;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.progress-step.active {
+    color: #38b6ff;
+    font-weight: 600;
+}
+
+.step-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e9ecef;
+    margin-right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.progress-step.active .step-circle {
+    background: #38b6ff;
+    color: white;
+}
+
+/* Energy calculator */
+.energy-calculator {
+    background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-left: 5px solid #28a745;
+}
+
+/* Appliance list */
+.appliance-list {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.appliance-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.appliance-item:last-child {
+    border-bottom: none;
+}
+
+.appliance-info {
+    flex: 1;
+}
+
+.appliance-name {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.appliance-power {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.appliance-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.quantity-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 5px;
+    background: #38b6ff;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.quantity-input {
+    width: 60px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 0.25rem;
+}
+
+.hours-input {
+    width: 80px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 0.25rem;
+}
+
+/* Site assessment */
+.site-assessment {
+    background: #fff3e0;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-left: 5px solid #f57c00;
+}
+
+/* File uploads */
+.upload-area {
+    border: 3px dashed #dee2e6;
+    border-radius: 15px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.upload-area:hover {
+    border-color: #38b6ff;
+    background: #e3f2fd;
+}
+
+.upload-area.dragover {
+    border-color: #38b6ff;
+    background: #e3f2fd;
+}
+
+.uploaded-files {
+    margin-top: 1rem;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-radius: 10px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    background: #38b6ff;
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+}
+
+/* Financial preferences */
+.financial-preferences {
+    background: linear-gradient(135deg, #f3e5f5, #fce4ec);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-left: 5px solid #7b1fa2;
+}
+
+/* Budget slider */
+.budget-slider {
+    margin: 1.5rem 0;
+}
+
+.slider-container {
+    position: relative;
+    margin: 1rem 0;
+}
+
+.range-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #ddd;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.range-slider:hover {
+    opacity: 1;
+}
+
+.range-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #38b6ff;
+    cursor: pointer;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Summary panel */
+.summary-panel {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 20px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #38b6ff;
+}
+
+/* Action buttons */
+.action-buttons {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.btn-action {
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    margin: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Selected radio options */
+.radio-option.selected {
+    border-color: #38b6ff;
+    background: #e3f2fd;
+}
+
+.radio-option.selected label {
+    color: #38b6ff;
+}
+
+.radio-option.selected .option-icon {
+    color: #38b6ff;
+}
+
+.radio-option {
+    cursor: pointer;
+    user-select: none;
+}
+
+.radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.radio-option label {
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    margin: 0;
+}
+
+/* ===========================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   =========================================== */
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+    .requirements-form {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .form-section {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .section-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-right: 0.75rem;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+    }
+
+    .section-subtitle {
+        font-size: 0.8rem;
+    }
+
+    /* Mobile form grids */
+    .radio-group, .checkbox-group {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .radio-option, .checkbox-option {
+        padding: 0.875rem;
+        border-radius: 8px;
+    }
+
+    .option-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .option-title {
+        font-size: 0.9rem;
+    }
+
+    .option-description {
+        font-size: 0.8rem;
+    }
+
+    /* Mobile appliance controls */
+    .appliance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem 0;
+    }
+
+    .appliance-info {
+        width: 100%;
+    }
+
+    .appliance-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .quantity-control {
+        gap: 0.75rem;
+    }
+
+    .quantity-input,
+    .hours-input {
+        flex: 1;
+        max-width: 80px;
+    }
+
+    /* Mobile file uploads */
+    .upload-area {
+        padding: 1.5rem 1rem;
+        margin: 0.5rem 0;
+    }
+
+    .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .file-info {
+        width: 100%;
+    }
+
+    .file-icon {
+        width: 35px;
+        height: 35px;
+        margin-right: 0.5rem;
+    }
+
+    /* Mobile progress steps */
+    .progress-steps {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .progress-step {
+        font-size: 0.8rem;
+    }
+
+    .step-circle {
+        width: 18px;
+        height: 18px;
+        font-size: 0.65rem;
+    }
+
+    /* Mobile summary */
+    .summary-panel {
+        position: static;
+        margin-top: 1rem;
+    }
+
+    .summary-item {
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+
+    /* Mobile buttons */
+    .action-buttons {
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-action {
+        display: block;
+        width: 100%;
+        margin: 0.5rem 0;
+        padding: 0.875rem 1.5rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .requirements-form {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-section {
+        padding: 0.875rem;
+    }
+
+    .section-header {
+        margin-bottom: 1rem;
+    }
+
+    .section-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.375rem;
+    }
+
+    .form-control, .form-select {
+        padding: 0.5rem 0.75rem;
+        font-size: 1rem;
+        border-radius: 8px;
+    }
+
+    .radio-option, .checkbox-option {
+        padding: 0.75rem;
+    }
+
+    .energy-calculator,
+    .site-assessment,
+    .financial-preferences {
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .upload-area {
+        padding: 1.25rem 0.75rem;
+    }
+
+    .progress-indicator {
+        padding: 0.75rem;
+    }
+
+    .progress-bar {
+        height: 6px;
+    }
+
+    .action-buttons {
+        padding: 0.875rem;
+    }
+
+    .btn-action {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.925rem;
+    }
+
+    /* Stack appliance controls horizontally on very small screens */
+    .appliance-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .quantity-control {
+        justify-content: center;
+    }
+}

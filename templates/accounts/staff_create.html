@@ -1,0 +1,255 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Add New Staff Member{% endblock %}
+{% block page_subtitle %}Create a new staff account and assign role{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-plus me-2"></i>New Staff Member
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>Personal Information
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_first_name" class="form-label">First Name *</label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_last_name" class="form-label">Last Name *</label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_email" class="form-label">Email Address *</label>
+                                    {{ form.email }}
+                                    <div class="form-text">Welcome email will be sent to this address</div>
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_phone" class="form-label">Phone Number</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Account Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-key me-2"></i>Account Information
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_username" class="form-label">Username *</label>
+                                    {{ form.username }}
+                                    <div class="form-text">Used for login. Must be unique.</div>
+                                    {% if form.username.errors %}
+                                        <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_role" class="form-label">Role *</label>
+                                    {{ form.role }}
+                                    <div class="form-text">Determines access level and permissions</div>
+                                    {% if form.role.errors %}
+                                        <div class="text-danger small">{{ form.role.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Password:</strong> A temporary password will be automatically generated and sent to the staff member's email. They must change it on first login.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Work Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-briefcase me-2"></i>Work Information
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_employee_id" class="form-label">Employee ID</label>
+                                    {{ form.employee_id }}
+                                    <div class="form-text text-info">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Auto-generated and read-only (preview shows expected format)
+                                    </div>
+                                    {% if form.employee_id.errors %}
+                                        <div class="text-danger small">{{ form.employee_id.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_department" class="form-label">Department</label>
+                                    {{ form.department }}
+                                    <div class="form-text">e.g., Sales, Technical, Administration</div>
+                                    {% if form.department.errors %}
+                                        <div class="text-danger small">{{ form.department.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_hire_date" class="form-label">Hire Date</label>
+                                    {{ form.hire_date }}
+                                    {% if form.hire_date.errors %}
+                                        <div class="text-danger small">{{ form.hire_date.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Role Permissions Info -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>Role Permissions
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Management Roles:</h6>
+                                    <ul class="small">
+                                        <li><strong>Manager:</strong> Full system access, reports, staff management</li>
+                                        <li><strong>Sales Manager:</strong> Sales oversight, customer management, quotations</li>
+                                        <li><strong>Project Manager:</strong> Project management, budgets, tasks</li>
+                                        <li><strong>Inventory Manager:</strong> Stock management, purchase orders</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Staff Roles:</h6>
+                                    <ul class="small">
+                                        <li><strong>Sales Person:</strong> Customer interactions, quotations, leads</li>
+                                        <li><strong>Cashier:</strong> POS operations, customer service</li>
+                                        <li><strong>Technician:</strong> Project tasks, installation support</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'accounts:staff_management' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Create Staff Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Preview employee ID generation pattern based on role
+    const roleField = document.getElementById('id_role');
+    const employeeIdField = document.getElementById('id_employee_id');
+
+    // Role abbreviation mapping (matches our backend)
+    const roleAbbreviations = {
+        'super_admin': 'ADM',
+        'director': 'DIR',
+        'manager': 'MGR',
+        'sales_manager': 'SMG',
+        'sales_person': 'SPN',
+        'project_manager': 'PMG',
+        'inventory_manager': 'IMG',
+        'cashier': 'CSR',
+        'technician': 'TEC'
+    };
+
+    function previewEmployeeIdPattern() {
+        const role = roleField.value;
+
+        if (role && roleAbbreviations[role]) {
+            // Make AJAX call to get the actual next employee ID
+            fetch(`?role=${role}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.employee_id) {
+                    employeeIdField.value = data.employee_id;
+                    employeeIdField.placeholder = `Auto-generated: ${data.employee_id}`;
+                } else {
+                    employeeIdField.value = 'Error generating ID';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching employee ID:', error);
+                const abbr = roleAbbreviations[role];
+                employeeIdField.value = `OG/${abbr}/XXX`;
+                employeeIdField.placeholder = 'Auto-generated (preview unavailable)';
+            });
+        } else {
+            employeeIdField.value = '';
+            employeeIdField.placeholder = 'Auto-generated based on role';
+        }
+    }
+
+    // Update preview when role changes
+    roleField.addEventListener('change', previewEmployeeIdPattern);
+
+    // Show initial preview if role is pre-selected
+    previewEmployeeIdPattern();
+});
+</script>
+{% endblock %}

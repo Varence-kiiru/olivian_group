@@ -1,0 +1,64 @@
+# Production Requirements for Olivian Group Solar Platform
+# Optimized for shared hosting deployment
+
+# Core Django Framework
+Django==5.1.5
+djangorestframework==3.15.2
+channels==4.1.0
+
+# Database
+mysqlclient==2.2.6
+
+# Static Files & Media
+whitenoise==6.8.2
+Pillow==11.0.0
+
+# Configuration & Environment
+python-decouple==3.8
+
+# Authentication & Security
+django-cors-headers==4.6.0
+django-csp==4.0
+
+# Forms & UI
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.10
+django-widget-tweaks==1.5.0
+django-formtools==2.5.1
+django-ckeditor==6.7.1
+
+# Data Management
+django-filter==24.3
+django-import-export==4.2.0
+django-mptt==0.16.0
+django-taggit==6.1.0
+
+# PDF & Document Generation
+reportlab==4.2.5
+WeasyPrint==63.1
+qrcode==8.0
+openpyxl==3.1.5
+
+# HTTP & API
+requests==2.32.3
+
+# Email Services
+sendgrid-django==4.2.0
+django-mail-templated==2.6.5
+
+# File Upload & Cloud Storage
+boto3==1.34.162
+django-storages==1.14.4
+google-cloud-storage==2.18.2
+
+# Background Tasks (Optional for shared hosting)
+# celery==5.4.0
+# redis==5.2.1
+
+# Web Server (Not needed for shared hosting)
+# gunicorn==23.0.0
+
+# Additional Production Dependencies
+django-extensions==3.2.3
+python-dateutil==2.9.0
+pytz==2024.2

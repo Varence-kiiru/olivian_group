@@ -1,0 +1,73 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}New Solar Quotation #{{ quotation_number }}{% endblock %}
+
+{% block content %}
+<h2>Your Solar Quotation is Ready!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Thank you for your interest in our solar solutions! We've prepared a detailed quotation based on your requirements.</p>
+
+<div class="highlight-box">
+    <h3>Quotation Summary:</h3>
+    <p><strong>Quotation Number:</strong> {{ quotation_number }}</p>
+    <p><strong>Date:</strong> {{ quotation.created_at|date:"F d, Y" }}</p>
+    <p><strong>Total Amount:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Valid Until:</strong> {{ quotation.valid_until|date:"F d, Y" }}</p>
+</div>
+
+<h3>What's Included:</h3>
+<ul>
+    {% for item in quotation.items.all %}
+    <li>{{ item.quantity }} x {{ item.product_name }} - KES {{ item.total_price|floatformat:2|add:","|cut:" " }}</li>
+    {% endfor %}
+</ul>
+
+<div class="highlight-box">
+    <h3>Why Choose Olivian Group?</h3>
+    <ul>
+        <li>✓ Premium quality solar products from trusted manufacturers</li>
+        <li>✓ Professional installation by certified technicians</li>
+        <li>✓ Comprehensive warranty coverage</li>
+        <li>✓ 24/7 customer support and maintenance</li>
+        <li>✓ Competitive pricing with flexible payment options</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ quotation_view_url }}" class="button">View Full Quotation</a>
+</div>
+
+<div class="highlight-box" style="background: #e8f5e8; border-left: 4px solid #28a745;">
+    <h3>📎 PDF Quotation Attached</h3>
+    <p>Your detailed quotation is attached to this email as a PDF document. You can also view it online using the link above.</p>
+    <p><strong>Attachment:</strong> Quotation-{{ quotation_number }}.pdf</p>
+</div>
+
+<h3>Next Steps:</h3>
+<ol>
+    <li>Review the detailed quotation document</li>
+    <li>Contact us if you have any questions or need modifications</li>
+    <li>Approve the quotation to proceed with your solar project</li>
+    <li>Our team will schedule a site survey and installation</li>
+</ol>
+
+<p><strong>Note:</strong> This quotation is valid until {{ quotation.valid_until|date:"F d, Y" }}. Prices are subject to change after this date.</p>
+
+<p>Our sales team is available to discuss this quotation and answer any questions you may have. We look forward to helping you harness the power of solar energy!</p>
+
+<p>Best regards,<br>
+<strong>{{ quotation.salesperson.get_full_name|default:"The Sales Team" }}</strong><br>
+Sales Department<br>
+{{ company_name }}</p>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+<p style="font-size: 12px; color: #666;">
+    <strong>Contact Information:</strong><br>
+    Sales Team: {{ "sales@olivian.co.ke" }}<br>
+    Phone: {{ company_phone }}<br>
+    WhatsApp: {{ company_phone }}
+</p>
+{% endblock %}

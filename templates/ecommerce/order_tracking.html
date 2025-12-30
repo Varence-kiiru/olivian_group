@@ -1,0 +1,560 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Track Your Order - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Track Order</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tracking-header {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c5aa0 100%);
+        color: white;
+        padding: 60px 0;
+        margin-top: 80px;
+    }
+
+    .tracking-form {
+        background: white;
+        border-radius: 10px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-top: -30px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .progress-bar-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 30px;
+        margin: 30px 0;
+    }
+
+    .progress-timeline {
+        position: relative;
+        margin: 40px 0;
+    }
+
+    .progress-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .progress-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 45px;
+        width: 2px;
+        height: 30px;
+        background: #dee2e6;
+    }
+
+    .progress-step.completed::after {
+        background: #28a745;
+    }
+
+    .progress-step.active::after {
+        background: #38b6ff;
+    }
+
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .step-icon.completed {
+        background: #28a745;
+        color: white;
+    }
+
+    .step-icon.active {
+        background: #38b6ff;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+
+    .step-icon.pending {
+        background: #dee2e6;
+        color: #6c757d;
+    }
+
+    .step-content h6 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .step-content small {
+        color: #6c757d;
+    }
+
+    .order-summary {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+
+    .status-received { background: #e3f2fd; color: #1976d2; }
+    .status-pending_payment { background: #fff3e0; color: #f57c00; }
+    .status-pay_on_delivery { background: #fff3e0; color: #f57c00; }
+    .status-paid { background: #e8f5e8; color: #2e7d32; }
+    .status-processing { background: #e3f2fd; color: #1976d2; }
+    .status-packed_ready { background: #e8f5e8; color: #2e7d32; }
+    .status-shipped { background: #e3f2fd; color: #1976d2; }
+    .status-out_for_delivery { background: #fff3e0; color: #f57c00; }
+    .status-delivered { background: #e8f5e8; color: #2e7d32; }
+    .status-completed { background: #e8f5e8; color: #2e7d32; }
+    .status-cancelled { background: #ffebee; color: #c62828; }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 15px 20px;
+    }
+
+    .btn-track {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c5aa0 100%);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-track:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(56, 182, 255, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Tracking Header -->
+<section class="tracking-header">
+    <div class="container text-center">
+        <h1 class="mb-3">Track Your Order</h1>
+        <p class="lead">{% if not is_tracking_result %}Enter your order details to track your solar equipment delivery{% else %}{{ order.order_number }} - Track Order Status{% endif %}</p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        {% if not is_tracking_result %}
+        <!-- Tracking Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="tracking-form">
+                    <h3 class="text-center mb-4">Enter Order Details</h3>
+
+                    {% if error %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="order_number" class="form-label">Order Number *</label>
+                            <input type="text" class="form-control" id="order_number" name="order_number"
+                                   value="{{ order_number|default:'' }}"
+                                   placeholder="e.g., OG-ORD-2025-0001" required>
+                            <small class="form-text text-muted">You can find this in your order confirmation email</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Email Address (Optional)</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ email|default:'' }}"
+                                   placeholder="your@email.com">
+                            <small class="form-text text-muted">For additional security verification</small>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-track">
+                                <i class="fas fa-search me-2"></i>Track Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Tracking Results -->
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Order Progress -->
+                <div class="progress-bar-container">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0">Order Progress</h4>
+                        <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+                    </div>
+
+                    <!-- Progress Timeline -->
+                    <div class="progress-timeline">
+                        <!-- Order Received -->
+                        <div class="progress-step {% if order.status == 'received' %}active{% elif order.status in 'pending_payment,pay_on_delivery,paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'received' %}active{% elif order.status in 'pending_payment,pay_on_delivery,paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'received' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'pending_payment,pay_on_delivery,paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    1
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Order Received</h6>
+                                {% if order.status == 'received' %}
+                                    <small>Current Status - {{ order.status_updated_at|date:"M d, Y g:i A" }}</small>
+                                {% elif order.status in 'pending_payment,pay_on_delivery,paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <small>Completed</small>
+                                {% else %}
+                                    <small>Pending</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Payment/Pay on Delivery -->
+                        {% if order.payment_method == 'cash_on_delivery' %}
+                        <div class="progress-step {% if order.status == 'pay_on_delivery' %}active{% elif order.status in 'processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'pay_on_delivery' %}active{% elif order.status in 'processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'pay_on_delivery' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    2
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Pay on Delivery</h6>
+                                {% if order.status == 'pay_on_delivery' %}
+                                    <small>Current Status - Payment on delivery</small>
+                                {% elif order.status in 'processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <small>Confirmed</small>
+                                {% else %}
+                                    <small>Pending</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="progress-step {% if order.status in 'pending_payment' %}active{% elif order.status in 'paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status in 'pending_payment' %}active{% elif order.status in 'paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status in 'pending_payment' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    2
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Payment Confirmed</h6>
+                                {% if order.status in 'pending_payment' %}
+                                    <small>Current Status - Waiting for payment</small>
+                                {% elif order.status in 'paid,processing,packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <small>Payment Received</small>
+                                {% else %}
+                                    <small>Pending</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Processing -->
+                        <div class="progress-step {% if order.status == 'processing' %}active{% elif order.status in 'packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'processing' %}active{% elif order.status in 'packed_ready,shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'processing' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    3
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Processing</h6>
+                                {% if order.status == 'processing' %}
+                                    <small>Current Status - Preparing your items</small>
+                                {% elif order.status in 'packed_ready,shipped,out_for_delivery,delivered,completed' %}
+                                    <small>Items Prepared</small>
+                                {% else %}
+                                    <small>Estimated: 1-2 business days</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Packed & Ready -->
+                        <div class="progress-step {% if order.status == 'packed_ready' %}active{% elif order.status in 'shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'packed_ready' %}active{% elif order.status in 'shipped,out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'packed_ready' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'shipped,out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    4
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Packed & Ready</h6>
+                                {% if order.status == 'packed_ready' %}
+                                    <small>Current Status - Ready for dispatch</small>
+                                {% elif order.status in 'shipped,out_for_delivery,delivered,completed' %}
+                                    <small>Dispatched</small>
+                                {% else %}
+                                    <small>Pending</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Shipped -->
+                        <div class="progress-step {% if order.status == 'shipped' %}active{% elif order.status in 'out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'shipped' %}active{% elif order.status in 'out_for_delivery,delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'shipped' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'out_for_delivery,delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    5
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Shipped</h6>
+                                {% if order.status == 'shipped' %}
+                                    <small>Current Status - In transit</small>
+                                {% elif order.status in 'out_for_delivery,delivered,completed' %}
+                                    <small>In Transit</small>
+                                {% else %}
+                                    <small>Estimated: 2-3 business days</small>
+                                {% endif %}
+                                {% if order.status == 'shipped' and not order.tracking_number %}
+                                <div class="alert alert-warning mt-2" style="border-radius: 5px; font-size: 12px; padding: 8px 12px;">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Tracking information is not yet available for this order. Please check back later.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Out for Delivery -->
+                        <div class="progress-step {% if order.status == 'out_for_delivery' %}active{% elif order.status in 'delivered,completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'out_for_delivery' %}active{% elif order.status in 'delivered,completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'out_for_delivery' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status in 'delivered,completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    6
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Out for Delivery</h6>
+                                {% if order.status == 'out_for_delivery' %}
+                                    <small>Current Status - Almost there!</small>
+                                {% elif order.status in 'delivered,completed' %}
+                                    <small>Delivered</small>
+                                {% else %}
+                                    <small>Pending</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Delivered -->
+                        <div class="progress-step {% if order.status == 'delivered' %}active{% elif order.status == 'completed' %}completed{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'delivered' %}active{% elif order.status == 'completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'delivered' %}
+                                    <i class="fas fa-clock"></i>
+                                {% elif order.status == 'completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    7
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Delivered</h6>
+                                {% if order.status == 'delivered' %}
+                                    <small>Current Status - Delivered successfully</small>
+                                {% elif order.status == 'completed' %}
+                                    <small>Delivery Complete</small>
+                                {% else %}
+                                    <small>Estimated: 3-5 business days</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Completed -->
+                        <div class="progress-step {% if order.status == 'completed' %}active{% else %}pending{% endif %}">
+                            <div class="step-icon {% if order.status == 'completed' %}completed{% else %}pending{% endif %}">
+                                {% if order.status == 'completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    8
+                                {% endif %}
+                            </div>
+                            <div class="step-content">
+                                <h6>Completed</h6>
+                                {% if order.status == 'completed' %}
+                                    <small>Order Complete - Thank you!</small>
+                                {% else %}
+                                    <small>Final completion</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if estimated_delivery %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-truck me-2"></i>
+                        <strong>Estimated Delivery:</strong> {{ estimated_delivery|date:"F d, Y" }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Status History -->
+                {% if status_history %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>Order History
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for history in status_history %}
+                        <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
+                            <div>
+                                <h6 class="mb-1">{{ history.get_new_status_display }}</h6>
+                                {% if history.notes %}
+                                <p class="mb-1 text-muted">{{ history.notes }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ history.created_at|date:"F d, Y g:i A" }}
+                                    {% if history.changed_by %}
+                                        by {{ history.changed_by.get_full_name }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <span class="status-badge status-{{ history.new_status }}">
+                                {{ history.get_new_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Order Summary -->
+                <div class="order-summary">
+                    <h5 class="mb-4">
+                        <i class="fas fa-box me-2"></i>Order Summary
+                    </h5>
+
+                    <div class="mb-3">
+                        <strong>Order Number:</strong><br>
+                        <span class="text-primary">{{ order.order_number }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Order Date:</strong><br>
+                        {{ order.created_at|date:"F d, Y" }}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Total Amount:</strong><br>
+                        <span class="h5 text-success">KES {{ order.total_amount|floatformat:2 }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Payment Method:</strong><br>
+                        {{ order.get_payment_method_display }}
+                    </div>
+
+                    {% if order.shipping_company %}
+                    <div class="mb-3">
+                        <strong>Shipping Company:</strong><br>
+                        {{ order.get_shipping_company_display }}
+                    </div>
+                    {% endif %}
+
+                    {% if order.tracking_number %}
+                    <div class="mb-3">
+                        <strong>Tracking Number:</strong><br>
+                        <code>{{ order.tracking_number }}</code>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <strong>Delivery Address:</strong><br>
+                        <small>{{ order.shipping_address|linebreaks }}</small>
+                    </div>
+
+                    <!-- Contact Support -->
+                    <div class="text-center">
+                        <h6>Need Help?</h6>
+                        <a href="tel:{{ company_phone }}" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-phone me-1"></i>Call Us
+                        </a>
+                        <a href="mailto:{{ company_email }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-envelope me-1"></i>Email
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Track Another Order -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'ecommerce:track_order' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-search me-2"></i>Track Another Order
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Format order number input to uppercase
+document.addEventListener('DOMContentLoaded', function() {
+    const orderInput = document.getElementById('order_number');
+    if (orderInput) {
+        orderInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    }
+});
+</script>
+{% endblock %}

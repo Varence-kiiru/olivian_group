@@ -1,0 +1,79 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Delivered #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[DELIVERED] Your Order Has Been Delivered!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Congratulations! Your solar equipment has been successfully delivered. We hope you're excited to start your journey toward sustainable energy.</p>
+
+<div class="highlight-box">
+    <h3>Delivery Confirmation:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Delivery Status:</strong> {{ status_display }}</p>
+    <p><strong>Delivered On:</strong> {{ order.status_updated_at|date:"F d, Y \a\t g:i A" }}</p>
+    <p><strong>Total Value:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+</div>
+
+{% if order.payment_method == 'cash_on_delivery' and order.payment_status == 'pending' %}
+<div class="status-box" style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #856404; margin: 0 0 10px 0;">[PAYMENT] Payment Status</h4>
+    <p style="margin: 0; color: #856404;">
+        If you haven't completed payment yet, please ensure payment is made to our delivery team.
+        Once payment is confirmed, we'll send you a receipt.
+    </p>
+</div>
+{% endif %}
+
+{% if installation_required %}
+<h3>Next Steps:</h3>
+<div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #155724; margin: 0 0 15px 0;">[INSTALLATION] Professional Installation</h4>
+    <p style="margin: 0; color: #155724;">
+        Our certified installation team will contact you within <strong>24-48 hours</strong> to schedule your solar system installation.
+        Please ensure someone is available at the installation site during the scheduled time.
+    </p>
+</div>
+{% endif %}
+
+<h3>Important Reminders:</h3>
+<ul>
+    <li><strong>Warranty:</strong> Keep all product documentation for warranty claims</li>
+    {% if installation_required %}
+    <li><strong>Installation:</strong> Only use Olivian Group certified technicians</li>
+    {% endif %}
+    <li><strong>Maintenance:</strong> Schedule regular maintenance for optimal performance</li>
+    <li><strong>Support:</strong> Contact us for any technical assistance</li>
+</ul>
+
+<h3>Items Delivered:</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Product</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Quantity</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.product_name }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.quantity }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd; color: #28a745;">[DELIVERED]</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="cta-box">
+    <p><strong>Need Support?</strong></p>
+    <a href="tel:{{ company_phone }}" class="btn-primary">Call Support: {{ company_phone }}</a>
+    <a href="mailto:{{ company_email }}" class="btn-secondary">Email: {{ company_email }}</a>
+</div>
+
+<p>Thank you for choosing Olivian Group. Welcome to the future of clean, renewable energy!</p>
+
+{% endblock %}

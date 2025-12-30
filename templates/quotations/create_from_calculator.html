@@ -1,0 +1,281 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Create Quotation from Calculator - {{ block.super }}{% endblock %}
+
+{% block page_title %}Create Quotation{% endblock %}
+{% block page_subtitle %}Generate professional quotation from calculator results{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'accounts:dashboard' %}">Dashboard</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'quotations:list' %}">Quotations</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'quotations:calculator' %}">Calculator</a>
+</li>
+<li class="breadcrumb-item active">Create Quotation</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-file-invoice me-2"></i>Create Quotation from Calculator
+        </h5>
+      </div>
+      <div class="card-body">
+        
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                {{ form.customer.label_tag }}
+                {{ form.customer }}
+                {% if form.customer.help_text %}
+                  <div class="form-text">{{ form.customer.help_text }}</div>
+                {% endif %}
+                {% if form.customer.errors %}
+                  <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                {{ form.quotation_type.label_tag }}
+                {{ form.quotation_type }}
+                {% if form.quotation_type.help_text %}
+                  <div class="form-text">{{ form.quotation_type.help_text }}</div>
+                {% endif %}
+                {% if form.quotation_type.errors %}
+                  <div class="text-danger">{{ form.quotation_type.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                {{ form.system_type.label_tag }}
+                {{ form.system_type }}
+                {% if form.system_type.help_text %}
+                  <div class="form-text">{{ form.system_type.help_text }}</div>
+                {% endif %}
+                {% if form.system_type.errors %}
+                  <div class="text-danger">{{ form.system_type.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                {{ form.system_capacity.label_tag }}
+                {{ form.system_capacity }}
+                {% if form.system_capacity.help_text %}
+                  <div class="form-text">{{ form.system_capacity.help_text }}</div>
+                {% endif %}
+                {% if form.system_capacity.errors %}
+                  <div class="text-danger">{{ form.system_capacity.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-2"></i>Create Quotation
+                </button>
+                <a href="{% url 'quotations:calculator' %}" class="btn btn-secondary ms-2">
+                  <i class="fas fa-arrow-left me-2"></i>Back to Calculator
+                </a>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Calculator Summary -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h6 class="mb-0">
+          <i class="fas fa-calculator me-2"></i>Calculator Summary
+        </h6>
+      </div>
+      <div class="card-body">
+        {% if monthly_bill %}
+          <div class="mb-3">
+            <small class="text-muted">Monthly Bill</small>
+            <div class="fw-bold">KES {{ monthly_bill }}</div>
+          </div>
+        {% endif %}
+
+        {% if roof_area %}
+          <div class="mb-3">
+            <small class="text-muted">Roof Area</small>
+            <div class="fw-bold">{{ roof_area }} m²</div>
+          </div>
+        {% endif %}
+
+        {% if system_capacity %}
+          <div class="mb-3">
+            <small class="text-muted">Recommended Capacity</small>
+            <div class="fw-bold">{{ system_capacity }} kW</div>
+          </div>
+        {% endif %}
+
+        {% if estimated_cost %}
+          <div class="mb-3">
+            <small class="text-muted">Estimated Cost</small>
+            <div class="fw-bold text-primary">KES {{ estimated_cost }}</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Professional Notes -->
+    <div class="card shadow-sm mt-3">
+      <div class="card-header bg-info text-white">
+        <h6 class="mb-0">
+          <i class="fas fa-info-circle me-2"></i>Important Notes
+        </h6>
+      </div>
+      <div class="card-body">
+        <ul class="small mb-0">
+          <li>This quotation is based on calculator estimates</li>
+          <li>Professional site assessment required for final pricing</li>
+          <li>All calculations include Kenya-specific standards</li>
+          <li>VAT (16%) will be added to final quotation</li>
+          <li>Installation and commissioning included</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="card shadow-sm mt-3">
+      <div class="card-header bg-warning text-dark">
+        <h6 class="mb-0">
+          <i class="fas fa-tasks me-2"></i>Next Steps
+        </h6>
+      </div>
+      <div class="card-body">
+        <ol class="small mb-0">
+          <li>Create quotation from calculator data</li>
+          <li>Schedule site assessment</li>
+          <li>Finalize system design</li>
+          <li>Provide detailed quotation</li>
+          <li>Begin installation process</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Ensure form fields have proper Bootstrap styling */
+form select,
+form input[type="text"],
+form input[type="number"],
+form input[type="email"],
+form textarea {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+form select:focus,
+form input:focus {
+    color: #212529;
+    background-color: #fff;
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+form label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+form select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Pre-fill form with calculator data if available
+document.addEventListener('DOMContentLoaded', function() {
+    // Get calculator data from URL parameters or local storage
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Pre-fill system capacity if available
+    const systemCapacity = urlParams.get('capacity') || localStorage.getItem('calculatorCapacity');
+    if (systemCapacity) {
+        const capacityField = document.getElementById('id_system_capacity');
+        if (capacityField) {
+            capacityField.value = systemCapacity;
+        }
+    }
+    
+    // Pre-fill system type if available
+    const systemType = urlParams.get('systemType') || localStorage.getItem('calculatorSystemType');
+    if (systemType) {
+        const typeField = document.getElementById('id_system_type');
+        if (typeField) {
+            typeField.value = systemType;
+        }
+    }
+    
+    // Pre-fill quotation type based on property type
+    const propertyType = urlParams.get('propertyType') || localStorage.getItem('calculatorPropertyType');
+    if (propertyType) {
+        const quotationTypeField = document.getElementById('id_quotation_type');
+        if (quotationTypeField) {
+            if (propertyType === 'residential') {
+                quotationTypeField.value = 'custom_solution';
+            } else if (propertyType === 'commercial') {
+                quotationTypeField.value = 'custom_solution';
+            } else {
+                quotationTypeField.value = 'custom_solution';
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

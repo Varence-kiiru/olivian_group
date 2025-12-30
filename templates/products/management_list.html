@@ -1,0 +1,789 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Product Management - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Enhanced product management styling */
+.page-title-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.page-title-box .page-title {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.page-title-box .breadcrumb-item + .breadcrumb-item::before {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.page-title-box .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.page-title-box .breadcrumb-item.active {
+    color: white;
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.stats-card .card-title {
+    color: white;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.stats-card .card-value {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.add-product-card {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.add-product-card:hover {
+    background: linear-gradient(135deg, #218838 0%, #1aa085 100%);
+    color: white;
+}
+
+.add-product-card .btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.add-product-card .btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: #28a745;
+    transform: translateY(-1px);
+}
+
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    border: none;
+    font-weight: 600;
+    color: #495057;
+    padding: 1rem 0.75rem;
+}
+
+.table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border: none;
+}
+
+.table tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.filter-card .card-title {
+    color: white;
+    font-weight: 600;
+}
+
+.filter-card .form-control,
+.filter-card .form-select {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #495057;
+}
+
+.filter-card .btn-primary {
+    background: white;
+    color: #667eea;
+    border: none;
+    font-weight: 600;
+}
+
+.filter-card .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: #5a67d8;
+    transform: translateY(-1px);
+}
+
+/* Responsive table improvements */
+@media (max-width: 767.98px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+
+    .table-responsive th:nth-child(4),
+    .table-responsive td:nth-child(4),
+    .table-responsive th:nth-child(5),
+    .table-responsive td:nth-child(5),
+    .table-responsive th:nth-child(6),
+    .table-responsive td:nth-child(6) {
+        display: none;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Enhanced action buttons */
+.btn-action {
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0.1rem;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.alert-custom {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.alert-custom .alert-icon {
+    font-size: 1.25rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Browser-agnostic Facebook sharing system
+let fbSdkAvailable = false;
+let fbSdkChecked = false;
+let sharingMethod = 'detecting'; // 'sdk', 'url', or 'detecting'
+
+// Smart Facebook integration detection
+function initializeFacebookSharing() {
+    const statusDiv = document.getElementById('fb-sdk-status');
+
+    // Show initial status
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                Checking Facebook integration compatibility...
+            </div>
+        `;
+    }
+
+    // Try to load Facebook SDK (works in some browsers)
+    loadFacebookSDK();
+
+    // Set a timeout to determine final method
+    setTimeout(function() {
+        determineSharingMethod();
+    }, 8000); // 8 second timeout for SDK detection
+}
+
+function loadFacebookSDK() {
+    // Clear any existing SDK
+    const existingScript = document.querySelector('script[src*="connect.facebook.net"]');
+    if (existingScript) {
+        existingScript.remove();
+    }
+
+    // Remove any existing FB global
+    if (window.FB) {
+        delete window.FB;
+    }
+
+    // Create and load the Facebook SDK
+    const script = document.createElement('script');
+    script.async = true;
+    script.defer = true;
+    script.crossOrigin = 'anonymous';
+    script.src = 'https://connect.facebook.net/en_US/sdk.js';
+
+    script.onload = function() {
+        console.log('Facebook SDK script loaded, waiting for initialization...');
+        // Give SDK time to initialize FB object
+        setTimeout(function() {
+            if (window.FB && typeof window.FB.init === 'function') {
+                window.fbAsyncInit();
+            } else {
+                console.log('Facebook SDK loaded but FB object not available');
+                fbSdkAvailable = false;
+                fbSdkChecked = true;
+            }
+        }, 2000);
+    };
+
+    script.onerror = function() {
+        console.log('Facebook SDK failed to load - will use URL-based sharing');
+        fbSdkAvailable = false;
+        fbSdkChecked = true;
+    };
+
+    document.head.appendChild(script);
+}
+
+// Facebook SDK initialization
+window.fbAsyncInit = function() {
+    console.log('Facebook SDK initializing...');
+    try {
+        FB.init({
+            appId: null, // No app ID required for basic sharing
+            xfbml: true,
+            version: 'v18.0'
+        });
+        fbSdkAvailable = true;
+        console.log('Facebook SDK initialized successfully');
+    } catch (error) {
+        console.error('Facebook SDK initialization failed:', error);
+        fbSdkAvailable = false;
+    }
+    fbSdkChecked = true;
+};
+
+// Determine which sharing method to use
+function determineSharingMethod() {
+    const statusDiv = document.getElementById('fb-sdk-status');
+
+    if (fbSdkAvailable && fbSdkChecked) {
+        // SDK works - use enhanced sharing
+        sharingMethod = 'sdk';
+        console.log('Using Facebook SDK sharing (Enhanced mode)');
+
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fab fa-facebook me-2"></i>
+                    Facebook enhanced sharing active
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    } else {
+        // SDK failed - use URL-based sharing
+        sharingMethod = 'url';
+        console.log('Using URL-based Facebook sharing (Compatible mode)');
+
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <div class="alert alert-info alert-dismissible fade show">
+                    <i class="fas fa-link me-2"></i>
+                    Facebook sharing ready (compatible mode)
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    }
+
+    // Hide status after 4 seconds
+    setTimeout(function() {
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
+    }, 4000);
+}
+
+// Build Facebook Share Dialog URL
+function buildFacebookShareUrl(productUrl, shareText) {
+    let shareUrl = 'https://www.facebook.com/dialog/share?';
+
+    // Add Facebook App ID if available
+    if (window.FACEBOOK_APP_ID) {
+        shareUrl += `app_id=${window.FACEBOOK_APP_ID}&`;
+    }
+
+    shareUrl += 'display=popup&';
+    shareUrl += `href=${encodeURIComponent(productUrl)}`;
+
+    if (shareText) {
+        shareUrl += `&quote=${encodeURIComponent(shareText)}`;
+    }
+
+    return shareUrl;
+}
+
+// Enhanced Facebook sharing (SDK when available)
+function shareProductToFacebook(productSlug, productName, productUrl, productImage, shareText) {
+    if (sharingMethod === 'detecting') {
+        alert('Facebook sharing is still initializing. Please wait a moment and try again.');
+        return false;
+    }
+
+    if (sharingMethod === 'sdk' && typeof FB !== 'undefined') {
+        // Use Facebook SDK (enhanced experience)
+        console.log('Using Facebook SDK for sharing');
+
+        FB.ui({
+            method: 'share',
+            href: productUrl,
+            quote: shareText,
+            picture: productImage || undefined,
+            title: productName,
+            description: shareText
+        }, function(response) {
+            if (response && !response.error_message) {
+                alert('Product shared successfully to Facebook!');
+            } else {
+                console.log('Facebook SDK share failed, falling back to URL method');
+                // Fallback to URL method
+                useUrlBasedSharing(productUrl, shareText, 'SDK sharing failed, using compatible method instead.');
+            }
+        });
+        return true;
+    } else {
+        // Use URL-based sharing (compatible with all browsers)
+        console.log('Using URL-based sharing');
+        return useUrlBasedSharing(productUrl, shareText);
+    }
+}
+
+// URL-based sharing (works in all browsers)
+function useUrlBasedSharing(productUrl, shareText, message) {
+    const shareUrl = buildFacebookShareUrl(productUrl, shareText);
+
+    // Open Facebook share dialog
+    const popup = window.open(shareUrl, 'facebook-share', 'width=600,height=400,scrollbars=yes,resizable=yes');
+
+    if (popup) {
+        alert(message || 'Facebook sharing dialog opened! Select your page and share the product.');
+        return true;
+    } else {
+        alert('Popup blocked! Please allow popups for this site and try again.');
+        return false;
+    }
+}
+
+// Main sharing function called from buttons
+function shareProductFromTable(button, productSlug) {
+    // Show loading state on button
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    try {
+        // Get product data from the table row
+        const row = button.closest('tr');
+        const productLink = row.querySelector('a[href*="detail"]');
+        const productNameElement = row.querySelector('h6');
+        const productName = productNameElement ? productNameElement.textContent.trim() : 'Product';
+        const productImage = row.querySelector('img') ? row.querySelector('img').src : null;
+
+        // Build share URLs and text
+        const productUrl = productLink ? productLink.href : window.location.origin + '/products/' + productSlug + '/';
+        const shareText = `Check out our ${productName}!\n\nLearn more: ${productUrl}`;
+
+        if (confirm(`Share "${productName}" to Facebook?\n\nThis will open Facebook's sharing dialog where you can choose which page to post to.`)) {
+            const success = shareProductToFacebook(productSlug, productName, productUrl, productImage, shareText);
+            if (!success) {
+                // Reset button if sharing failed
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }
+        } else {
+            // User cancelled, reset button
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error in shareProductFromTable:', error);
+        alert('An error occurred. Please try again.');
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+    }
+}
+
+// Initialize sharing system when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Start Facebook integration detection
+    setTimeout(initializeFacebookSharing, 500);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Product Management</li>
+                </ol>
+            </div>
+            <h4 class="page-title">Product Management</h4>
+            <p class="text-muted">Manage inventory products and customer visibility</p>
+        </div>
+    </div>
+</div>
+
+<!-- Facebook SDK Status -->
+<div id="fb-sdk-status" class="row mb-3" style="display: none;">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            Loading Facebook integration...
+        </div>
+    </div>
+</div>
+
+<!-- System Messages -->
+{% if messages %}
+<div class="row">
+    <div class="col-12">
+        {% for message in messages %}
+            <div class="alert alert-custom alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="alert-icon me-3">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle text-success"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-circle text-warning"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle text-info"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong>
+                            {% if message.tags == 'success' %}Success!{% elif message.tags == 'error' %}Error!{% elif message.tags == 'warning' %}Warning!{% else %}Notice:{% endif %}
+                        </strong> {{ message }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Product Stats -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="stats-card card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <p class="text-uppercase fw-bold mb-1 text-white">Total Products</p>
+                        <h3 class="mb-0 text-white">{{ total_products }}</h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm rounded-circle mini-stat-icon">
+                            <span class="avatar-title rounded-circle bg-white bg-opacity-25">
+                                <i class="fas fa-boxes font-20 text-white"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stats-card card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <p class="text-uppercase fw-bold mb-1 text-white">Customer Visible</p>
+                        <h3 class="mb-0 text-white">{{ customer_visible }}</h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm rounded-circle mini-stat-icon">
+                            <span class="avatar-title rounded-circle bg-white bg-opacity-25">
+                                <i class="fas fa-eye font-20 text-white"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stats-card card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <p class="text-uppercase fw-bold mb-1 text-white">Customer Hidden</p>
+                        <h3 class="mb-0 text-white">{{ customer_hidden }}</h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm rounded-circle mini-stat-icon">
+                            <span class="avatar-title rounded-circle bg-white bg-opacity-25">
+                                <i class="fas fa-eye-slash font-20 text-white"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="add-product-card card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <p class="text-uppercase fw-bold mb-1 text-white">Quick Actions</p>
+                        <a href="{% url 'products:create' %}" class="btn btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add Product
+                        </a>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm rounded-circle mini-stat-icon">
+                            <span class="avatar-title rounded-circle bg-white bg-opacity-25">
+                                <i class="fas fa-plus font-20 text-white"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label class="form-label">Search Products</label>
+                            <input type="text" class="form-control" name="search" placeholder="Product name, SKU, or brand..." value="{{ request.GET.search }}">
+                        </div>
+                        <div class="col-12 col-md-3 col-lg-2">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="">All Status</option>
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3 col-lg-3">
+                            <label class="form-label">Customer Visibility</label>
+                            <select class="form-select" name="visibility">
+                                <option value="">All Products</option>
+                                <option value="customer_visible" {% if request.GET.visibility == 'customer_visible' %}selected{% endif %}>Customer Visible</option>
+                                <option value="customer_hidden" {% if request.GET.visibility == 'customer_hidden' %}selected{% endif %}>Customer Hidden</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-12 col-lg-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                                {% if request.GET %}
+                                    <a href="{% url 'products:manage' %}" class="btn btn-outline-secondary">Clear</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Image</th>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Category</th>
+                                <th>Cost Price</th>
+                                <th>Selling Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Customer Visible</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    {% if product.images.first %}
+                                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>
+                                        <h6 class="mb-0">{{ product.name }}</h6>
+                                        <small class="text-muted">{{ product.brand }}</small>
+                                    </div>
+                                </td>
+                                <td><code>{{ product.sku }}</code></td>
+                                <td>{{ product.category.name }}</td>
+                                <td>
+                                    <span class="text-danger fw-bold">KES {{ product.cost_price|floatformat:0 }}</span>
+                                    <small class="text-muted d-block">Cost</small>
+                                </td>
+                                <td>
+                                    <span class="text-success fw-bold">KES {{ product.selling_price|floatformat:0 }}</span>
+                                    {% if product.is_on_sale %}
+                                        <small class="text-info d-block">Sale: KES {{ product.sale_price|floatformat:0 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.track_quantity %}
+                                        <span class="badge {% if product.is_low_stock %}bg-warning{% elif product.is_in_stock %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ product.quantity_in_stock }} units
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info">No tracking</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if product.status == 'active' %}bg-success{% elif product.status == 'draft' %}bg-secondary{% elif product.status == 'discontinued' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ product.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if product.show_to_customers %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-eye"></i> Visible
+                                        </span>
+                                        {% if product.customer_inquiry_only %}
+                                            <small class="text-info d-block">Inquiry Only</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-eye-slash"></i> Hidden
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'products:update' product.pk %}" class="btn btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{{ product.get_absolute_url }}" class="btn btn-outline-info" title="View Customer Page" target="_blank">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                        {% if product.show_to_customers %}
+                                        <button type="button" class="btn btn-outline-primary"
+                                                title="Share to Facebook"
+                                                onclick="shareProductFromTable(this, '{{ product.slug }}')">
+                                            <i class="fab fa-facebook-f"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10" class="text-center py-4">
+                                    <i class="fas fa-box-open fa-2x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Products Found</h5>
+                                    <p class="text-muted">No products match your current filters.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="row mt-3">
+                    <div class="col-sm-6">
+                        <div class="dataTables_info">
+                            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} products
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="dataTables_paginate paging_simple_numbers float-end">
+                            <nav aria-label="Product pagination">
+                                <ul class="pagination pagination-sm mb-0">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visibility %}&visibility={{ request.GET.visibility }}{% endif %}">First</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visibility %}&visibility={{ request.GET.visibility }}{% endif %}">Previous</a>
+                                        </li>
+                                    {% endif %}
+
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                    </li>
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visibility %}&visibility={{ request.GET.visibility }}{% endif %}">Next</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visibility %}&visibility={{ request.GET.visibility }}{% endif %}">Last</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

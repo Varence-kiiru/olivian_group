@@ -1,0 +1,95 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Cancelled #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[CANCELLED] Your Order Has Been Cancelled</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>We regret to inform you that your order has been cancelled. We understand this may be disappointing, and we sincerely apologize for any inconvenience caused.</p>
+
+<div class="highlight-box">
+    <h3>Cancellation Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Cancellation Date:</strong> {{ order.status_updated_at|date:"F d, Y \a\t g:i A" }}</p>
+    <p><strong>Order Value:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Cancellation Reason:</strong> {{ cancellation_reason|default:"Request from customer" }}</p>
+</div>
+
+{% if order.payment_status == 'paid' %}
+<div class="status-box" style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #0c5460; margin: 0 0 10px 0;">[REFUND] Payment Refund Process</h4>
+    <p style="margin: 0; color: #0c5460;">
+        Since your order was already paid, a <strong>full refund</strong> will be processed within <strong>5-7 business days</strong>. 
+        You will receive a confirmation email once the refund is initiated.
+    </p>
+    <ul style="margin: 10px 0 0 20px; color: #0c5460;">
+        <li>Refund Amount: KES {{ total_amount|floatformat:2|add:","|cut:" " }}</li>
+        <li>Processing Time: 5-7 business days</li>
+        <li>Refund Method: Same as original payment method</li>
+    </ul>
+</div>
+{% endif %}
+
+<h3>What Happens Next:</h3>
+<ul>
+    {% if order.payment_status == 'paid' %}
+    <li><strong>Refund Processing:</strong> Full refund will be initiated within 24 hours</li>
+    <li><strong>Refund Confirmation:</strong> You'll receive email confirmation when refund is processed</li>
+    {% endif %}
+    <li><strong>Order Removal:</strong> This order has been removed from our active orders</li>
+    <li><strong>Inventory Update:</strong> All reserved items have been released back to inventory</li>
+    <li><strong>Account Update:</strong> Your customer account remains active for future orders</li>
+</ul>
+
+{% if cancellation_reason %}
+<div class="status-box" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4>[REASON] Cancellation Details</h4>
+    <p>{{ cancellation_reason }}</p>
+</div>
+{% endif %}
+
+<h3>We'd Love to Help You in the Future:</h3>
+<div class="status-box" style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #155724; margin: 0 0 10px 0;">[FUTURE] Still Interested in Solar?</h4>
+    <p style="margin: 0; color: #155724;">
+        We understand that circumstances change. If you're still interested in solar energy solutions, 
+        our team is here to help you find the perfect system for your needs at the right time.
+    </p>
+</div>
+
+<h3>Alternative Options:</h3>
+<ul>
+    <li><strong>Consultation:</strong> Schedule a free consultation to discuss your energy needs</li>
+    <li><strong>Payment Plans:</strong> Explore flexible payment options and financing</li>
+    <li><strong>Product Updates:</strong> Get notified about new products and special offers</li>
+    <li><strong>Smaller Systems:</strong> Consider starter solar kits or smaller installations</li>
+</ul>
+
+<h3>Order Timeline (Final):</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[CANCELLED] <strong>Order Cancelled</strong> - {{ order.status_updated_at|date:"M d, Y at H:i" }}</li>
+    {% if order.payment_status == 'paid' %}
+    <li>[PENDING] <strong>Refund Processing</strong></li>
+    {% endif %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Still Have Questions?</strong></p>
+    <a href="tel:{{ company_phone }}" class="btn-primary">Call Us: {{ company_phone }}</a>
+    <a href="mailto:{{ company_email }}" class="btn-secondary">Email Support</a>
+</div>
+
+<p>Thank you for considering Olivian Group for your solar energy needs. We hope to serve you in the future when the timing is right.</p>
+
+{% endblock %}

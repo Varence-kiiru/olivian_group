@@ -1,0 +1,28 @@
+{
+  "name": "Olivian Solar",
+  "short_name": "Olivian",
+  "description": "Professional solar solutions for homes and businesses in Kenya",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#38b6ff",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["business", "lifestyle"],
+  "lang": "en-KE",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/static/images/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
