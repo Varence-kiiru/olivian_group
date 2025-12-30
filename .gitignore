@@ -3,7 +3,11 @@
 .env.local
 .env.*.local
 
+# Media files (user uploaded content)
+media/
+staticfiles/
+
 # Backup files
-/backups/
+backups/
 *.zip
 *.sql
