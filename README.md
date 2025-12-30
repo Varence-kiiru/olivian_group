@@ -306,6 +306,41 @@ python manage.py validate
 python manage.py setup_demo --settings=olivian_solar.settings_dev
 ```
 
+## 🤝 Contributing
+
+We welcome contributions to the Olivian Group Solar Solutions Platform! This project aims to provide a comprehensive solar energy management system for Kenya and beyond.
+
+### How to Contribute
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork** locally
+3. **Create a feature branch**: `git checkout -b feature/your-feature-name`
+4. **Make your changes** and test thoroughly
+5. **Commit your changes**: `git commit -m "Add your descriptive message"`
+6. **Push to your fork**: `git push origin feature/your-feature-name`
+7. **Create a Pull Request** with a clear description of your changes
+
+### Development Guidelines
+
+- Follow Django best practices and coding standards
+- Write clear, descriptive commit messages
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting
+
+### Areas for Contribution
+
+- **Bug fixes** and performance improvements
+- **New features** for solar energy management
+- **Documentation** improvements
+- **UI/UX enhancements**
+- **Mobile responsiveness** improvements
+- **API development** and integration
+
+### Code of Conduct
+
+Please be respectful and constructive in all interactions. We aim to create a welcoming environment for all contributors.
+
 ## 📞 Support & Contact
 
 - **Company**: The Olivian Group Limited
@@ -315,7 +350,9 @@ python manage.py setup_demo --settings=olivian_solar.settings_dev
 
 ## 📄 License
 
-Proprietary software for The Olivian Group Limited.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The Olivian Group Solar Solutions Platform is open source software developed by The Olivian Group Limited to support the solar energy industry in Kenya and beyond.
 
 ---
 
