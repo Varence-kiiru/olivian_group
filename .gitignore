@@ -3,9 +3,29 @@
 .env.local
 .env.*.local
 
+# Database files
+*.sqlite3
+*.sqlite
+*.db
+
+# Log files
+*.log
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Media files (user uploaded content)
 media/
 staticfiles/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
 
 # Backup files
 backups/
