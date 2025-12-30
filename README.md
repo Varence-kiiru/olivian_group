@@ -27,8 +27,8 @@ A comprehensive Django-based website for The Olivian Group Limited, featuring pr
    ```
 
 5. **Access the Application**
-   - Website: https://olivian.co.ke/
-   - Admin Panel: https://olivian.co.ke/admin/
+   - Website: http://localhost:8000/
+   - Admin Panel: http://localhost:8000/admin/
    - Admin Login: `admin` / `admin123`
 
 ### Production Deployment
@@ -49,6 +49,48 @@ A comprehensive Django-based website for The Olivian Group Limited, featuring pr
    - Configure Apache/Nginx to serve static files
    - Set up WSGI application
    - Enable HTTPS
+
+### PythonAnywhere Deployment
+
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/Varence-kiiru/olivian_group.git
+   cd olivian_group
+   ```
+
+2. **Set up Virtual Environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your PythonAnywhere settings
+   nano .env
+   ```
+
+4. **Set up Database**
+   ```bash
+   python manage.py migrate
+   python manage.py collectstatic --noinput
+   python manage.py createsuperuser
+   ```
+
+5. **Web App Configuration**
+   - Go to PythonAnywhere Web tab
+   - Set source code to: `/home/yourusername/olivian_group`
+   - Set virtualenv to: `/home/yourusername/olivian_group/venv`
+   - Set WSGI file to: `/home/yourusername/olivian_group/passenger_wsgi.py`
+   - Add static files mappings
+   - Add environment variables
+   - Reload web app
+
+6. **Access Application**
+   - Website: `https://yourusername.pythonanywhere.com/`
+   - Admin: `https://yourusername.pythonanywhere.com/admin/`
 
 ## 🏗️ System Architecture
 

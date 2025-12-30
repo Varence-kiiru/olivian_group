@@ -25,7 +25,7 @@ django-crispy-forms==2.3
 crispy-bootstrap5==2024.10
 django-widget-tweaks==1.5.0
 django-formtools==2.5.1
-django-ckeditor==6.7.1
+django-ckeditor-5==0.2.13
 
 # Data Management
 django-filter==24.3
@@ -57,6 +57,9 @@ google-cloud-storage==2.18.2
 
 # Web Server (Not needed for shared hosting)
 # gunicorn==23.0.0
+
+# System Monitoring
+psutil==6.1.0
 
 # Additional Production Dependencies
 django-extensions==3.2.3
