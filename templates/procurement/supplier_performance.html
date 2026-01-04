@@ -1,0 +1,875 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Supplier Performance Analytics - {{ block.super }}{% endblock %}
+
+{% block page_title %}Supplier Performance Analytics{% endblock %}
+{% block page_subtitle %}Comprehensive vendor evaluation and performance tracking{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Supplier Performance</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .performance-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .performance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .vendor-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+    
+    .performance-score {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .score-excellent { color: #4caf50; }
+    .score-good { color: #8bc34a; }
+    .score-average { color: #ff9800; }
+    .score-poor { color: #f44336; }
+    
+    .rating-bar {
+        background: #e0e0e0;
+        border-radius: 10px;
+        height: 8px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rating-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.5s ease;
+    }
+    
+    .rating-excellent { background: linear-gradient(90deg, #4caf50, #66bb6a); }
+    .rating-good { background: linear-gradient(90deg, #8bc34a, #9ccc65); }
+    .rating-average { background: linear-gradient(90deg, #ff9800, #ffb74d); }
+    .rating-poor { background: linear-gradient(90deg, #f44336, #e57373); }
+    
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-delivery { background: #e3f2fd; color: #1976d2; }
+    .metric-quality { background: #f3e5f5; color: #7b1fa2; }
+    .metric-service { background: #e8f5e8; color: #2e7d32; }
+    .metric-price { background: #fff3e0; color: #f57c00; }
+    
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .trend-up { background: #e8f5e8; color: #2e7d32; }
+    .trend-down { background: #ffebee; color: #d32f2f; }
+    .trend-stable { background: #f5f5f5; color: #666; }
+    
+    .performance-chart {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .ranking-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: linear-gradient(135deg, #ffd700, #ffb300);
+        color: #333;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .contract-info {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-top: 1rem;
+    }
+    
+    .performance-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .performance-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e0e0e0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 1rem;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e0e0e0;
+    }
+    
+    .comparison-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="row align-items-center">
+        <div class="col-md-3">
+            <label class="form-label small">Time Period</label>
+            <select class="form-select form-select-sm" id="timePeriod">
+                <option value="last_month">Last Month</option>
+                <option value="last_quarter" selected>Last Quarter</option>
+                <option value="last_6_months">Last 6 Months</option>
+                <option value="last_year">Last Year</option>
+                <option value="all_time">All Time</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Vendor Type</label>
+            <select class="form-select form-select-sm" id="vendorType">
+                <option value="">All Types</option>
+                <option value="supplier">Supplier</option>
+                <option value="contractor">Contractor</option>
+                <option value="service">Service Provider</option>
+                <option value="manufacturer">Manufacturer</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Minimum Orders</label>
+            <select class="form-select form-select-sm" id="minOrders">
+                <option value="1">1+ Orders</option>
+                <option value="3" selected>3+ Orders</option>
+                <option value="5">5+ Orders</option>
+                <option value="10">10+ Orders</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">&nbsp;</label>
+            <div>
+                <button class="btn btn-primary btn-sm me-2" onclick="updateAnalytics()">
+                    <i class="fas fa-sync me-1"></i>Update
+                </button>
+                <button class="btn btn-outline-success btn-sm" onclick="exportReport()">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Performance Metrics -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="performance-card text-center">
+            <div class="metric-icon metric-delivery mx-auto">
+                <i class="fas fa-truck"></i>
+            </div>
+            <div class="performance-score score-good">92%</div>
+            <div class="text-muted mb-2">On-Time Delivery</div>
+            <span class="trend-indicator trend-up">
+                <i class="fas fa-arrow-up me-1"></i>+3%
+            </span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="performance-card text-center">
+            <div class="metric-icon metric-quality mx-auto">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="performance-score score-excellent">4.2</div>
+            <div class="text-muted mb-2">Avg Quality Rating</div>
+            <span class="trend-indicator trend-up">
+                <i class="fas fa-arrow-up me-1"></i>+0.2
+            </span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="performance-card text-center">
+            <div class="metric-icon metric-service mx-auto">
+                <i class="fas fa-handshake"></i>
+            </div>
+            <div class="performance-score score-good">88%</div>
+            <div class="text-muted mb-2">Service Level</div>
+            <span class="trend-indicator trend-stable">
+                <i class="fas fa-minus me-1"></i>0%
+            </span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="performance-card text-center">
+            <div class="metric-icon metric-price mx-auto">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="performance-score score-average">85%</div>
+            <div class="text-muted mb-2">Price Competitiveness</div>
+            <span class="trend-indicator trend-down">
+                <i class="fas fa-arrow-down me-1"></i>-2%
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performing Vendors -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="performance-chart">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2 text-warning"></i>Top Performing Vendors
+                </h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="metricType" id="overall" checked>
+                    <label class="btn btn-outline-primary" for="overall">Overall</label>
+                    
+                    <input type="radio" class="btn-check" name="metricType" id="delivery">
+                    <label class="btn btn-outline-primary" for="delivery">Delivery</label>
+                    
+                    <input type="radio" class="btn-check" name="metricType" id="quality">
+                    <label class="btn btn-outline-primary" for="quality">Quality</label>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Vendor 1 -->
+                <div class="col-md-6 mb-3">
+                    <div class="performance-card position-relative">
+                        <div class="ranking-badge">1</div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="vendor-avatar me-3">SA</div>
+                            <div>
+                                <h6 class="mb-1">Solar Africa Ltd</h6>
+                                <small class="text-muted">Solar Panel Supplier</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Overall Score</span>
+                                <strong class="text-success">4.8/5.0</strong>
+                            </div>
+                            <div class="rating-bar">
+                                <div class="rating-fill rating-excellent" style="width: 96%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="small text-muted">Orders</div>
+                                <div class="fw-bold text-primary">24</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Value</div>
+                                <div class="fw-bold text-success">8.2M</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">On-Time</div>
+                                <div class="fw-bold text-info">96%</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Quality</div>
+                                <div class="fw-bold text-warning">4.9</div>
+                            </div>
+                        </div>
+                        
+                        <div class="contract-info">
+                            <div class="small">
+                                <i class="fas fa-file-contract me-1"></i>
+                                Contract: Annual Supply Agreement
+                            </div>
+                            <div class="small text-muted">
+                                Next Review: March 2024
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Vendor 2 -->
+                <div class="col-md-6 mb-3">
+                    <div class="performance-card position-relative">
+                        <div class="ranking-badge">2</div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="vendor-avatar me-3">TE</div>
+                            <div>
+                                <h6 class="mb-1">TechElectro Systems</h6>
+                                <small class="text-muted">Electronics Supplier</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Overall Score</span>
+                                <strong class="text-success">4.6/5.0</strong>
+                            </div>
+                            <div class="rating-bar">
+                                <div class="rating-fill rating-good" style="width: 92%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="small text-muted">Orders</div>
+                                <div class="fw-bold text-primary">18</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Value</div>
+                                <div class="fw-bold text-success">6.1M</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">On-Time</div>
+                                <div class="fw-bold text-info">89%</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Quality</div>
+                                <div class="fw-bold text-warning">4.7</div>
+                            </div>
+                        </div>
+                        
+                        <div class="contract-info">
+                            <div class="small">
+                                <i class="fas fa-file-contract me-1"></i>
+                                Contract: Project-based
+                            </div>
+                            <div class="small text-muted">
+                                Last Order: 2 weeks ago
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Vendor 3 -->
+                <div class="col-md-6 mb-3">
+                    <div class="performance-card position-relative">
+                        <div class="ranking-badge">3</div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="vendor-avatar me-3">KC</div>
+                            <div>
+                                <h6 class="mb-1">Kenya Cables Ltd</h6>
+                                <small class="text-muted">Cable Manufacturer</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Overall Score</span>
+                                <strong class="text-warning">4.3/5.0</strong>
+                            </div>
+                            <div class="rating-bar">
+                                <div class="rating-fill rating-good" style="width: 86%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="small text-muted">Orders</div>
+                                <div class="fw-bold text-primary">15</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Value</div>
+                                <div class="fw-bold text-success">4.8M</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">On-Time</div>
+                                <div class="fw-bold text-info">87%</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Quality</div>
+                                <div class="fw-bold text-warning">4.5</div>
+                            </div>
+                        </div>
+                        
+                        <div class="contract-info">
+                            <div class="small">
+                                <i class="fas fa-file-contract me-1"></i>
+                                Contract: Quarterly Agreement
+                            </div>
+                            <div class="small text-muted">
+                                Performance improving +5%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Vendor 4 -->
+                <div class="col-md-6 mb-3">
+                    <div class="performance-card position-relative">
+                        <div class="ranking-badge">4</div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="vendor-avatar me-3">IS</div>
+                            <div>
+                                <h6 class="mb-1">Installation Services Co</h6>
+                                <small class="text-muted">Service Provider</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Overall Score</span>
+                                <strong class="text-warning">4.1/5.0</strong>
+                            </div>
+                            <div class="rating-bar">
+                                <div class="rating-fill rating-average" style="width: 82%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="small text-muted">Orders</div>
+                                <div class="fw-bold text-primary">12</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Value</div>
+                                <div class="fw-bold text-success">3.2M</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">On-Time</div>
+                                <div class="fw-bold text-info">83%</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted">Quality</div>
+                                <div class="fw-bold text-warning">4.2</div>
+                            </div>
+                        </div>
+                        
+                        <div class="contract-info">
+                            <div class="small">
+                                <i class="fas fa-file-contract me-1"></i>
+                                Contract: Ad-hoc Services
+                            </div>
+                            <div class="small text-muted">
+                                Needs improvement
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Trends -->
+    <div class="col-lg-4">
+        <div class="performance-chart">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-line me-2"></i>Performance Trends
+            </h5>
+            
+            <div class="performance-timeline">
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">Q1 2024</div>
+                            <small class="text-muted">Latest Quarter</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="h6 text-success mb-0">4.3/5.0</div>
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+0.2
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">Q4 2023</div>
+                            <small class="text-muted">Previous Quarter</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="h6 text-warning mb-0">4.1/5.0</div>
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+0.1
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">Q3 2023</div>
+                            <small class="text-muted">3 Quarters Ago</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="h6 text-warning mb-0">4.0/5.0</div>
+                            <span class="trend-indicator trend-stable">
+                                <i class="fas fa-minus me-1"></i>0.0
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Items -->
+        <div class="performance-chart">
+            <h5 class="mb-3">
+                <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Action Items
+            </h5>
+            
+            <div class="list-group list-group-flush">
+                <div class="list-group-item px-0 py-2">
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-danger me-2">High</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">Contract Review</div>
+                            <small class="text-muted">3 vendors need contract renewal</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="list-group-item px-0 py-2">
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-warning me-2">Medium</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">Performance Improvement</div>
+                            <small class="text-muted">2 vendors below target</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="list-group-item px-0 py-2">
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-info me-2">Low</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">Vendor Audit</div>
+                            <small class="text-muted">Quarterly audit due</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Performance Comparison -->
+<div class="comparison-table">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-balance-scale me-2"></i>Detailed Performance Comparison
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Vendor</th>
+                        <th class="text-center">Orders</th>
+                        <th class="text-center">Value (KES)</th>
+                        <th class="text-center">On-Time %</th>
+                        <th class="text-center">Quality</th>
+                        <th class="text-center">Service</th>
+                        <th class="text-center">Price</th>
+                        <th class="text-center">Overall</th>
+                        <th class="text-center">Trend</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="vendor-avatar me-2" style="width: 40px; height: 40px; font-size: 0.9rem;">SA</div>
+                                <div>
+                                    <div class="fw-bold">Solar Africa Ltd</div>
+                                    <small class="text-muted">Supplier</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">24</td>
+                        <td class="text-center">8.2M</td>
+                        <td class="text-center">
+                            <span class="badge bg-success">96%</span>
+                        </td>
+                        <td class="text-center">4.9</td>
+                        <td class="text-center">4.8</td>
+                        <td class="text-center">4.7</td>
+                        <td class="text-center">
+                            <strong class="text-success">4.8</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up"></i>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewDetails('solar-africa')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success" onclick="createPO('solar-africa')">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="vendor-avatar me-2" style="width: 40px; height: 40px; font-size: 0.9rem;">TE</div>
+                                <div>
+                                    <div class="fw-bold">TechElectro Systems</div>
+                                    <small class="text-muted">Supplier</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">18</td>
+                        <td class="text-center">6.1M</td>
+                        <td class="text-center">
+                            <span class="badge bg-success">89%</span>
+                        </td>
+                        <td class="text-center">4.7</td>
+                        <td class="text-center">4.6</td>
+                        <td class="text-center">4.5</td>
+                        <td class="text-center">
+                            <strong class="text-success">4.6</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up"></i>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewDetails('techelectro')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success" onclick="createPO('techelectro')">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="vendor-avatar me-2" style="width: 40px; height: 40px; font-size: 0.9rem;">KC</div>
+                                <div>
+                                    <div class="fw-bold">Kenya Cables Ltd</div>
+                                    <small class="text-muted">Manufacturer</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">15</td>
+                        <td class="text-center">4.8M</td>
+                        <td class="text-center">
+                            <span class="badge bg-warning">87%</span>
+                        </td>
+                        <td class="text-center">4.5</td>
+                        <td class="text-center">4.2</td>
+                        <td class="text-center">4.3</td>
+                        <td class="text-center">
+                            <strong class="text-warning">4.3</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up"></i>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewDetails('kenya-cables')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="reviewPerformance('kenya-cables')">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="vendor-avatar me-2" style="width: 40px; height: 40px; font-size: 0.9rem;">IS</div>
+                                <div>
+                                    <div class="fw-bold">Installation Services Co</div>
+                                    <small class="text-muted">Service Provider</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">12</td>
+                        <td class="text-center">3.2M</td>
+                        <td class="text-center">
+                            <span class="badge bg-warning">83%</span>
+                        </td>
+                        <td class="text-center">4.2</td>
+                        <td class="text-center">4.1</td>
+                        <td class="text-center">4.0</td>
+                        <td class="text-center">
+                            <strong class="text-warning">4.1</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="trend-indicator trend-stable">
+                                <i class="fas fa-minus"></i>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewDetails('installation-services')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="performanceReview('installation-services')">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function updateAnalytics() {
+    const timePeriod = document.getElementById('timePeriod').value;
+    const vendorType = document.getElementById('vendorType').value;
+    const minOrders = document.getElementById('minOrders').value;
+    
+    // Show loading indicator
+    const updateBtn = document.querySelector('button[onclick="updateAnalytics()"]');
+    const originalText = updateBtn.innerHTML;
+    updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+    updateBtn.disabled = true;
+    
+    // Simulate API call
+    setTimeout(() => {
+        updateBtn.innerHTML = originalText;
+        updateBtn.disabled = false;
+        // In real implementation, this would fetch and update the data
+        console.log('Analytics updated with filters:', { timePeriod, vendorType, minOrders });
+    }, 1500);
+}
+
+function exportReport() {
+    // Generate performance report
+    const reportData = {
+        period: document.getElementById('timePeriod').value,
+        generated: new Date().toISOString(),
+        vendors: []
+    };
+    
+    // In real implementation, this would generate and download a PDF/Excel report
+    alert('Performance report export feature coming soon!');
+}
+
+function viewDetails(vendorSlug) {
+    // Navigate to vendor detail page
+    window.location.href = `/procurement/vendors/${vendorSlug}/`;
+}
+
+function createPO(vendorSlug) {
+    // Navigate to create PO for this vendor
+    window.location.href = `/procurement/purchase-orders/create/?vendor=${vendorSlug}`;
+}
+
+function reviewPerformance(vendorSlug) {
+    // Open performance review modal or page
+    alert(`Performance review for ${vendorSlug} - Coming soon!`);
+}
+
+function performanceReview(vendorSlug) {
+    // Open formal performance review process
+    alert(`Formal performance review for ${vendorSlug} - Coming soon!`);
+}
+
+// Metric type filter
+document.querySelectorAll('input[name="metricType"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const metric = this.id;
+        // Update the vendor rankings based on selected metric
+        console.log('Updating rankings for metric:', metric);
+        // In real implementation, this would re-sort the vendors
+    });
+});
+
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Performance trend chart would go here
+    console.log('Supplier performance analytics loaded');
+});
+</script>
+{% endblock %}

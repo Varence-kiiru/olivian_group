@@ -1,0 +1,1178 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Create Project - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Projects</a></li>
+                    <li class="breadcrumb-item active">Create Project</li>
+                </ol>
+            </div>
+            <h4 class="page-title">Create New Project</h4>
+        </div>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="project-form">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Basic Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                Project Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.project_type.id_for_label }}" class="form-label">
+                                Project Type <span class="text-danger">*</span>
+                            </label>
+                            {{ form.project_type }}
+                            {% if form.project_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.project_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                Project Status <span class="text-danger">*</span>
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.status.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.priority.id_for_label }}" class="form-label">
+                                Priority Level
+                            </label>
+                            {{ form.priority }}
+                            {% if form.priority.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.priority.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.completion_percentage.id_for_label }}" class="form-label">
+                                Completion Percentage
+                            </label>
+                            {{ form.completion_percentage }}
+                            {% if form.completion_percentage.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.completion_percentage.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.system_type.id_for_label }}" class="form-label">
+                                System Type <span class="text-danger">*</span>
+                            </label>
+                            {{ form.system_type }}
+                            {% if form.system_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.system_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.system_capacity.id_for_label }}" class="form-label">
+                                System Capacity (kW) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.system_capacity }}
+                            {% if form.system_capacity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.system_capacity.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            Description <span class="text-danger">*</span>
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.featured_image.id_for_label }}" class="form-label">
+                            Featured Project Image
+                        </label>
+                        {{ form.featured_image }}
+                        {% if form.featured_image.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.featured_image.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Upload a main project image that will be displayed on the website
+                        </small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estimated_generation.id_for_label }}" class="form-label">
+                                Estimated Generation (kWh/month) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.estimated_generation }}
+                            {% if form.estimated_generation.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.estimated_generation.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.duration_days.id_for_label }}" class="form-label">
+                                Duration (Days) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.duration_days }}
+                            {% if form.duration_days.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.duration_days.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Client Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>Client Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="{{ form.client.id_for_label }}" class="form-label">
+                            Client <span class="text-danger">*</span>
+                        </label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.client.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Select an existing client or <a href="#" onclick="openProjectCustomerModal(); return false;" id="create-client-link">create a new one</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location Details -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>Installation Location
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="{{ form.installation_address.id_for_label }}" class="form-label">
+                            Installation Address <span class="text-danger">*</span>
+                        </label>
+                        {{ form.installation_address }}
+                        {% if form.installation_address.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.installation_address.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.city.id_for_label }}" class="form-label">
+                                City <span class="text-danger">*</span>
+                            </label>
+                            {{ form.city }}
+                            {% if form.city.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.city.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.county.id_for_label }}" class="form-label">
+                                County <span class="text-danger">*</span>
+                            </label>
+                            {{ form.county }}
+                            {% if form.county.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.county.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financial Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-dollar-sign me-2"></i>Financial Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.contract_value.id_for_label }}" class="form-label">
+                                Contract Value (KES) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.contract_value }}
+                            {% if form.contract_value.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.contract_value.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">
+                                Estimated Cost (KES) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.estimated_cost }}
+                            {% if form.estimated_cost.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.estimated_cost.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.actual_cost.id_for_label }}" class="form-label">
+                                Actual Cost (KES)
+                            </label>
+                            {{ form.actual_cost }}
+                            {% if form.actual_cost.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.actual_cost.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Leave blank or 0 for new projects</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Project Management -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>Project Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="{{ form.project_manager.id_for_label }}" class="form-label">
+                            Project Manager
+                        </label>
+                        {{ form.project_manager }}
+                        {% if form.project_manager.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.project_manager.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Timeline -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar me-2"></i>Project Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                            Start Date <span class="text-danger">*</span>
+                        </label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.start_date.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.target_completion.id_for_label }}" class="form-label">
+                            Target Completion Date <span class="text-danger">*</span>
+                        </label>
+                        {{ form.target_completion }}
+                        {% if form.target_completion.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.target_completion.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.actual_completion.id_for_label }}" class="form-label">
+                            Actual Completion Date
+                        </label>
+                        {{ form.actual_completion }}
+                        {% if form.actual_completion.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.actual_completion.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Set only when project is actually completed</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Project
+                        </button>
+                        <a href="{% url 'projects:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="send_notification" name="send_notification" value="1" checked>
+                        <label class="form-check-label" for="send_notification">
+                            Send notification to project manager
+                        </label>
+                        <small class="form-text text-muted d-block">Email notification will be sent when project manager is assigned</small>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="create_calendar_event" name="create_calendar_event" value="1">
+                        <label class="form-check-label" for="create_calendar_event">
+                            Create calendar events for timeline
+                        </label>
+                        <small class="form-text text-muted d-block">Add project dates to calendar (future feature)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Universal Customer Modal -->
+{% include "components/customer_modal.html" %}
+
+<!-- Notification Container -->
+<div id="notification-container" class="notification-container"></div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-control, .form-select {
+    border-radius: 6px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.invalid-feedback {
+    display: block !important;
+}
+
+/* Notification System Styles */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1060;
+    max-width: 400px;
+}
+
+.notification {
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideInRight 0.3s ease-out;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification.success {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+.notification.error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+.notification.info {
+    background-color: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    color: #0c5460;
+}
+
+.notification.warning {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    color: #856404;
+}
+
+.notification-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.notification-message {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.notification.fade-out {
+    animation: slideOutRight 0.3s ease-in;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Notification System
+class NotificationSystem {
+    constructor() {
+        this.container = document.getElementById('notification-container');
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = 'notification-container';
+            this.container.className = 'notification-container';
+            document.body.appendChild(this.container);
+        }
+    }
+
+    show(type, title, message, duration = 5000) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        
+        const icons = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
+        };
+
+        notification.innerHTML = `
+            <i class="notification-icon ${icons[type] || icons.info}"></i>
+            <div class="notification-content">
+                <div class="notification-title">${title}</div>
+                <div class="notification-message">${message}</div>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        this.container.appendChild(notification);
+
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, duration);
+        }
+
+        return notification;
+    }
+
+    success(title, message, duration) {
+        return this.show('success', title, message, duration);
+    }
+
+    error(title, message, duration) {
+        return this.show('error', title, message, duration);
+    }
+
+    warning(title, message, duration) {
+        return this.show('warning', title, message, duration);
+    }
+
+    info(title, message, duration) {
+        return this.show('info', title, message, duration);
+    }
+
+    clear() {
+        this.container.innerHTML = '';
+    }
+}
+
+// Initialize notification system
+const notify = new NotificationSystem();
+
+// Check if jQuery is available and use appropriate initialization
+function initializePage() {
+    if (typeof $ !== 'undefined' && typeof jQuery !== 'undefined') {
+        initializeWithJQuery();
+    } else {
+        initializeWithVanillaJS();
+    }
+}
+
+function initializeWithJQuery() {
+    $(document).ready(function() {
+        // Initialize form controls
+        $('select').addClass('form-select');
+        $('input[type="text"], input[type="number"], input[type="email"], input[type="date"]').addClass('form-control');
+        $('textarea').addClass('form-control');
+        
+        // Date picker for timeline fields
+        $('input[type="date"]').attr('type', 'date');
+        
+        // Alternative event listener for create client link
+        $('#create-client-link').on('click', function(e) {
+            e.preventDefault();
+            openNewClientModal();
+            return false;
+        });
+        
+        // Add a button as backup if link doesn't work
+        if ($('#create-client-link').length) {
+            $('#create-client-link').after('<br><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="openNewClientModal()"><i class="fas fa-plus"></i> Add New Client</button>');
+        }
+        
+        // Form validation
+        $('#project-form').on('submit', function(e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Creating...');
+            submitBtn.prop('disabled', true);
+        });
+    });
+}
+
+function initializeWithVanillaJS() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize form controls
+        document.querySelectorAll('select').forEach(el => el.classList.add('form-select'));
+        document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="date"]').forEach(el => el.classList.add('form-control'));
+        document.querySelectorAll('textarea').forEach(el => el.classList.add('form-control'));
+        
+        // Add event listener for create client link
+        const createClientLink = document.getElementById('create-client-link');
+        if (createClientLink) {
+            createClientLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                openNewClientModal();
+                return false;
+            });
+            
+            // Add backup button
+            const backupBtn = document.createElement('button');
+            backupBtn.type = 'button';
+            backupBtn.className = 'btn btn-sm btn-outline-primary mt-2';
+            backupBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Client';
+            backupBtn.onclick = openNewClientModal;
+            createClientLink.parentNode.appendChild(document.createElement('br'));
+            createClientLink.parentNode.appendChild(backupBtn);
+        }
+        
+        // Form validation
+        const projectForm = document.getElementById('project-form');
+        if (projectForm) {
+            projectForm.addEventListener('submit', function(e) {
+                if (!validateFormVanilla()) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+                    submitBtn.disabled = true;
+                }
+            });
+        }
+    });
+}
+
+// Initialize the page
+initializePage();
+
+// Handle notification and calendar event checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const sendNotificationCheckbox = document.getElementById('send_notification');
+    const projectManagerSelect = document.querySelector('[name="project_manager"]');
+    
+    // Update notification checkbox state based on project manager selection
+    function updateNotificationAvailability() {
+        if (projectManagerSelect && sendNotificationCheckbox) {
+            const hasManager = projectManagerSelect.value !== '';
+            sendNotificationCheckbox.disabled = !hasManager;
+            
+            const label = sendNotificationCheckbox.nextElementSibling;
+            const helpText = label.nextElementSibling;
+            
+            if (hasManager) {
+                helpText.textContent = 'Email notification will be sent when project is created';
+                helpText.className = 'form-text text-muted d-block';
+            } else {
+                helpText.textContent = 'Select a project manager to enable notifications';
+                helpText.className = 'form-text text-warning d-block';
+                sendNotificationCheckbox.checked = false;
+            }
+        }
+    }
+    
+    // Listen for project manager changes
+    if (projectManagerSelect) {
+        projectManagerSelect.addEventListener('change', updateNotificationAvailability);
+        updateNotificationAvailability(); // Initial check
+    }
+    
+    // Handle calendar event checkbox (placeholder)
+    const calendarCheckbox = document.getElementById('create_calendar_event');
+    if (calendarCheckbox) {
+        calendarCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                notify.info('Calendar Events', 'Calendar integration is coming soon! This feature will be available in a future update.');
+            }
+        });
+    }
+});
+
+function validateForm() {
+    if (typeof $ !== 'undefined') {
+        let valid = true;
+        
+        // List of required field names based on Django model requirements
+        const requiredFieldNames = [
+            'name', 'project_type', 'system_type', 'system_capacity', 
+            'description', 'client', 'installation_address', 'city', 'county',
+            'estimated_generation', 'start_date', 'target_completion', 'duration_days',
+            'contract_value', 'estimated_cost'
+        ];
+        
+        requiredFieldNames.forEach(function(fieldName) {
+            const field = $(`[name="${fieldName}"]`);
+            if (field.length) {
+                const value = field.val();
+                if (!value || value.trim() === '') {
+                    field.addClass('is-invalid');
+                    valid = false;
+                } else {
+                    field.removeClass('is-invalid');
+                }
+            }
+        });
+        
+        if (!valid) {
+            notify.warning('Validation Error', 'Please fill in all required fields before proceeding.');
+        }
+        
+        return valid;
+    } else {
+        return validateFormVanilla();
+    }
+}
+
+function validateFormVanilla() {
+    let valid = true;
+    
+    // List of required field names based on Django model requirements
+    const requiredFieldNames = [
+        'name', 'project_type', 'system_type', 'system_capacity', 
+        'description', 'client', 'installation_address', 'city', 'county',
+        'estimated_generation', 'start_date', 'target_completion', 'duration_days',
+        'contract_value', 'estimated_cost'
+    ];
+    
+    requiredFieldNames.forEach(function(fieldName) {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field) {
+            const value = field.type === 'select-one' ? field.value : field.value.trim();
+            if (!value || value === '') {
+                field.classList.add('is-invalid');
+                valid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        }
+    });
+    
+    if (!valid) {
+        notify.warning('Validation Error', 'Please fill in all required fields before proceeding.');
+    }
+    
+    return valid;
+}
+
+// Projects Customer Modal - using universal modal
+function openProjectCustomerModal() {
+    openCustomerModal({
+        targetSelectId: 'id_client',
+        includeBusinessFields: true,
+        includeSolarFields: true,
+        onCustomerCreated: function(customer) {
+            notify.success('Client Added', `Client "${customer.display_name}" has been added successfully.`);
+        }
+    });
+}
+
+// Legacy function name support
+function openNewClientModal() {
+    openProjectCustomerModal();
+}
+
+function saveNewClient() {
+    // Check if jQuery is available
+    if (typeof $ === 'undefined' || typeof jQuery === 'undefined') {
+        saveNewClientVanilla();
+        return;
+    }
+    
+    try {
+        const formData = {
+            first_name: $('#new-client-form [name="first_name"]').val(),
+            last_name: $('#new-client-form [name="last_name"]').val(),
+            email: $('#new-client-form [name="email"]').val(),
+            phone: $('#new-client-form [name="phone"]').val(),
+            company: $('#new-client-form [name="company"]').val(),
+            address: $('#new-client-form [name="address"]').val(),
+        };
+        
+        // Validate required fields
+        if (!formData.first_name || !formData.last_name || !formData.email || !formData.phone) {
+            notify.warning('Validation Error', 'Please fill in all required fields: First Name, Last Name, Email, and Phone number.');
+            return;
+        }
+        
+        // Get CSRF token
+        const csrfToken = $('[name=csrfmiddlewaretoken]').val();
+        
+        if (!csrfToken) {
+            notify.error('Security Error', 'CSRF token not found! Please refresh the page and try again.');
+            return;
+        }
+        
+        // Make AJAX call
+        $.ajax({
+            url: '/pos/api/customer/create/',
+            method: 'POST',
+            data: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Add to dropdown
+                    const option = new Option(response.display_name, response.id, true, true);
+                    $('#id_client').append(option);
+                    
+                    // Close modal
+                    $('#newClientModal').modal('hide');
+                    $('#new-client-form')[0].reset();
+                    
+                    notify.success('Client Added', `${response.display_name} has been successfully added to your client list.`);
+                } else {
+                    notify.error('Client Creation Failed', response.message || 'Unknown error occurred while creating the client.');
+                }
+            },
+            error: function(xhr, status, error) {
+                const errorMsg = xhr.responseJSON?.message || `${xhr.status} - ${error}`;
+                notify.error('Request Failed', `Failed to create client: ${errorMsg}`);
+            }
+        });
+        
+    } catch (e) {
+        notify.error('System Error', `An unexpected error occurred: ${e.message}`);
+    }
+}
+
+// Vanilla JavaScript version (fallback when jQuery not available)
+function saveNewClientVanilla() {
+    console.log('=== VANILLA JS VERSION ===');
+    
+    try {
+        // Get form data using vanilla JavaScript
+        const form = document.getElementById('new-client-form');
+        if (!form) {
+            notify.error('Form Error', 'Client form not found! Please refresh the page.');
+            return;
+        }
+        
+        const formData = {
+            first_name: form.querySelector('[name="first_name"]').value,
+            last_name: form.querySelector('[name="last_name"]').value,
+            email: form.querySelector('[name="email"]').value,
+            phone: form.querySelector('[name="phone"]').value,
+            company: form.querySelector('[name="company"]').value,
+            address: form.querySelector('[name="address"]').value,
+        };
+        
+        console.log('Vanilla JS - Form data:', formData);
+        
+        // Validate
+        if (!formData.first_name || !formData.last_name || !formData.email || !formData.phone) {
+            notify.warning('Validation Error', 'Please fill in all required fields: First Name, Last Name, Email, and Phone number.');
+            return;
+        }
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        console.log('Vanilla JS - CSRF token:', csrfToken);
+        
+        if (!csrfToken) {
+            notify.error('Security Error', 'CSRF token not found! Please refresh the page and try again.');
+            return;
+        }
+        
+        // Create FormData for AJAX
+        const postData = new FormData();
+        Object.keys(formData).forEach(key => {
+            postData.append(key, formData[key]);
+        });
+        
+        // Make AJAX call using fetch
+        console.log('Vanilla JS - Making fetch request...');
+        
+        fetch('/pos/api/customer/create/', {
+            method: 'POST',
+            body: postData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => {
+            console.log('Fetch response:', response);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Success data:', data);
+            
+            if (data.success) {
+                // Add to dropdown
+                const clientSelect = document.getElementById('id_client');
+                if (clientSelect) {
+                    const option = document.createElement('option');
+                    option.value = data.id;
+                    option.text = data.display_name;
+                    option.selected = true;
+                    clientSelect.appendChild(option);
+                }
+                
+                // Close modal and reset form
+                const modal = document.getElementById('newClientModal');
+                if (modal) {
+                    // Try Bootstrap method
+                    if (window.bootstrap) {
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) bsModal.hide();
+                    } else {
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                        const backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) backdrop.remove();
+                    }
+                }
+                
+                form.reset();
+                notify.success('Client Added', `${data.display_name} has been successfully added to your client list.`);
+            } else {
+                notify.error('Client Creation Failed', data.message || 'Unknown error occurred while creating the client.');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            notify.error('Request Failed', `Failed to create client: ${error.message}`);
+        });
+        
+    } catch (e) {
+        console.error('Exception in vanilla version:', e);
+        notify.error('System Error', `An unexpected error occurred: ${e.message}`);
+    }
+}
+
+// Debug function to check form data capture
+function debugFormData() {
+    console.log('=== FORM DEBUG ===');
+    
+    // Check if form exists
+    const form = document.getElementById('new-client-form');
+    console.log('Form element:', form);
+    
+    // Check each field individually
+    const fields = ['first_name', 'last_name', 'email', 'phone', 'company', 'address'];
+    fields.forEach(field => {
+        const element = document.querySelector(`#new-client-form [name="${field}"]`);
+        console.log(`${field} element:`, element);
+        console.log(`${field} value:`, element ? element.value : 'NOT FOUND');
+    });
+    
+    // Check jQuery if available
+    if (typeof $ !== 'undefined') {
+        console.log('jQuery available');
+        console.log('jQuery form:', $('#new-client-form'));
+        console.log('First name via jQuery:', $('#new-client-form [name="first_name"]').val());
+        const csrf = $('[name=csrfmiddlewaretoken]').val();
+        console.log('CSRF token via jQuery:', csrf);
+    } else {
+        console.log('jQuery NOT available');
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        console.log('CSRF token via vanilla JS:', csrf ? csrf.value : 'NOT FOUND');
+    }
+    
+    notify.info('Debug Information', 'Form debug information has been logged to the console. Check the browser console for details.');
+}
+
+// Test function to verify API endpoint
+function testAPI() {
+    console.log('Testing API endpoint...');
+    
+    const testData = {
+        first_name: 'Test',
+        last_name: 'Customer',
+        email: 'test@example.com',
+        phone: '0700000000',
+        company: 'Test Company',
+        address: 'Test Address'
+    };
+    
+    // Get CSRF token (works with or without jQuery)
+    let csrfToken;
+    if (typeof $ !== 'undefined') {
+        csrfToken = $('[name=csrfmiddlewaretoken]').val();
+    } else {
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        csrfToken = csrfElement ? csrfElement.value : null;
+    }
+    
+    console.log('Test CSRF token:', csrfToken);
+    
+    if (!csrfToken) {
+        notify.error('Security Error', 'CSRF token not found! Please refresh the page and try again.');
+        return;
+    }
+    
+    // Use fetch instead of jQuery ajax
+    const formData = new FormData();
+    Object.keys(testData).forEach(key => {
+        formData.append(key, testData[key]);
+    });
+    
+    fetch('/pos/api/customer/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Test API success:', data);
+        if (data.success) {
+            notify.success('API Test Successful', `API is working correctly. Client "${data.display_name}" was created successfully.`);
+        } else {
+            notify.warning('API Test Warning', data.message || 'API responded but with an error.');
+        }
+    })
+    .catch(error => {
+        console.error('Test API error:', error);
+        notify.error('API Test Failed', `API test failed: ${error.message}`);
+    });
+}
+
+// Auto-fill end date based on project type (vanilla JS version)
+function setupProjectTypeAutoFill() {
+    const projectTypeField = document.getElementById('id_project_type');
+    const scheduledStartField = document.getElementById('id_scheduled_start');
+    const scheduledEndField = document.getElementById('id_scheduled_end');
+    
+    if (projectTypeField && scheduledStartField && scheduledEndField) {
+        projectTypeField.addEventListener('change', function() {
+            const projectType = this.value;
+            const startDate = scheduledStartField.value;
+            
+            if (startDate && projectType) {
+                const start = new Date(startDate);
+                let daysToAdd = 30; // Default
+                
+                switch(projectType) {
+                    case 'residential':
+                        daysToAdd = 7;
+                        break;
+                    case 'commercial':
+                        daysToAdd = 21;
+                        break;
+                    case 'industrial':
+                        daysToAdd = 60;
+                        break;
+                    case 'utility':
+                        daysToAdd = 180;
+                        break;
+                    case 'maintenance':
+                        daysToAdd = 1;
+                        break;
+                    case 'consultation':
+                        daysToAdd = 3;
+                        break;
+                }
+                
+                const endDate = new Date(start.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+                scheduledEndField.value = endDate.toISOString().split('T')[0];
+            }
+        });
+    }
+}
+
+// Initialize auto-fill functionality
+document.addEventListener('DOMContentLoaded', setupProjectTypeAutoFill);
+</script>
+
+<!-- Universal Customer Modal CSS -->
+{% include "components/customer_modal_css.html" %}
+
+<!-- Universal Customer Modal JS -->
+{% include "components/customer_modal_js.html" %}
+{% endblock %}

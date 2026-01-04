@@ -1,0 +1,349 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Purchase Requisitions - {{ block.super }}{% endblock %}
+
+{% block page_title %}Purchase Requisition Management{% endblock %}
+{% block page_subtitle %}Manage purchase requisitions and approval workflows{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Purchase Requisitions</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .requisition-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .requisition-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .requisition-card.draft { border-left-color: #6c757d; }
+    .requisition-card.submitted { border-left-color: #007bff; }
+    .requisition-card.pending { border-left-color: #ffc107; }
+    .requisition-card.approved { border-left-color: #28a745; }
+    .requisition-card.rejected { border-left-color: #dc3545; }
+    .requisition-card.cancelled { border-left-color: #dc3545; }
+    .requisition-card.completed { border-left-color: #17a2b8; }
+    .requisition-card.default { border-left-color: #38b6ff; }
+    
+    .requisition-amount {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #38b6ff;
+    }
+    
+    .requisition-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-submitted { background: #cce5ff; color: #004085; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .status-completed { background: #d1ecf1; color: #0c5460; }
+    
+    .requisition-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .urgency-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .urgency-urgent { background: #f8d7da; color: #721c24; }
+    .urgency-high { background: #fff3cd; color: #856404; }
+    .urgency-normal { background: #d4edda; color: #155724; }
+    .urgency-low { background: #e9ecef; color: #495057; }
+    
+    .approval-flow {
+        font-size: 0.8rem;
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>Purchase Requisitions
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'procurement:requisition_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Requisition
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Requisition number, description...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if current_status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="submitted" {% if current_status == 'submitted' %}selected{% endif %}>Submitted</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending Approval</option>
+                <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="urgency" class="form-label">Urgency</label>
+            <select class="form-select" id="urgency" name="urgency">
+                <option value="">All Urgencies</option>
+                <option value="urgent" {% if current_urgency == 'urgent' %}selected{% endif %}>Urgent</option>
+                <option value="high" {% if current_urgency == 'high' %}selected{% endif %}>High</option>
+                <option value="normal" {% if current_urgency == 'normal' %}selected{% endif %}>Normal</option>
+                <option value="low" {% if current_urgency == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="department" class="form-label">Department</label>
+            <select class="form-select" id="department" name="department">
+                <option value="">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if current_department == dept.id|stringformat:"s" %}selected{% endif %}>
+                    {{ dept.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">Date From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Requisitions Grid -->
+<div class="row">
+    {% for requisition in requisitions %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="requisition-card {{ requisition.status }}">
+            <!-- Requisition Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'procurement:requisition_detail' requisition.pk %}" class="text-decoration-none">
+                            {{ requisition.requisition_number }}
+                        </a>
+                    </h6>
+                    <div class="requisition-meta">
+                        {{ requisition.department.name }} • {{ requisition.requested_by.get_full_name|default:requisition.requested_by.username }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="requisition-status status-{{ requisition.status }}">{{ requisition.get_status_display }}</span>
+                    {% if requisition.urgency %}
+                        <div class="mt-1">
+                            <span class="urgency-badge urgency-{{ requisition.urgency }}">{{ requisition.get_urgency_display }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Estimated Amount -->
+            <div class="mb-3">
+                <div class="requisition-meta mb-1">Estimated Total</div>
+                <div class="requisition-amount">
+                    {% if requisition.estimated_total %}
+                        KES {{ requisition.estimated_total|floatformat:2 }}
+                    {% else %}
+                        <span class="text-muted">To be determined</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Requisition Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="requisition-meta mb-1">Requested Date</div>
+                    <div class="small">{{ requisition.request_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="requisition-meta mb-1">Required By</div>
+                    {% if requisition.required_date %}
+                        <div class="small">{{ requisition.required_date|date:"M d, Y" }}</div>
+                    {% else %}
+                        <div class="small text-muted">ASAP</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Description -->
+            {% if requisition.description %}
+            <div class="mb-3">
+                <div class="requisition-meta mb-1">Description</div>
+                <div class="small">{{ requisition.description|truncatechars:100 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Items Count -->
+            <div class="mb-3">
+                <div class="requisition-meta mb-1">Items</div>
+                <div class="small">{{ requisition.items_count }} item{{ requisition.items_count|pluralize }}</div>
+            </div>
+            
+            <!-- Approval Flow -->
+            {% if requisition.status != 'draft' %}
+            <div class="approval-flow">
+                <div class="requisition-meta mb-1">Approval Status</div>
+                {% if requisition.status == 'approved' %}
+                    <div class="small text-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Approved by {{ requisition.approved_by.get_full_name|default:requisition.approved_by.username }}
+                        <br><small>{{ requisition.approved_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                {% elif requisition.status == 'rejected' %}
+                    <div class="small text-danger">
+                        <i class="fas fa-times-circle me-1"></i>
+                        Rejected by {{ requisition.approved_by.get_full_name|default:requisition.approved_by.username }}
+                        <br><small>{{ requisition.approved_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                {% elif requisition.status == 'pending' %}
+                    <div class="small text-warning">
+                        <i class="fas fa-clock me-1"></i>
+                        Awaiting approval
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'procurement:requisition_detail' requisition.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                {% if requisition.status == 'draft' %}
+                <a href="{% url 'procurement:requisition_edit' requisition.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% endif %}
+                {% if requisition.status == 'approved' %}
+                <button class="btn btn-outline-success btn-sm" onclick="alert('Create PO feature coming soon!')">
+                    <i class="fas fa-file-invoice me-1"></i>Create PO
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No purchase requisitions found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_urgency or current_department %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by creating your first purchase requisition.
+                {% endif %}
+            </p>
+            <a href="{% url 'procurement:requisition_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Requisition
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Requisitions pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_urgency %}&urgency={{ current_urgency }}{% endif %}{% if current_department %}&department={{ current_department }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_urgency %}&urgency={{ current_urgency }}{% endif %}{% if current_department %}&department={{ current_department }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_urgency %}&urgency={{ current_urgency }}{% endif %}{% if current_department %}&department={{ current_department }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_urgency %}&urgency={{ current_urgency }}{% endif %}{% if current_department %}&department={{ current_department }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

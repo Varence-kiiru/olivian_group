@@ -1,0 +1,209 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Chat Settings - Olivian Solar{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-bell"></i> Chat Notification Preferences
+                    </h4>
+                    <p class="text-muted mb-0">Configure how you want to receive chat notifications</p>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <h5>Notification Level</h5>
+                            <p class="text-muted">Choose when you want to be notified about chat messages</p>
+                            <div class="d-grid gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="notification_type" id="notifications_all" value="all" {% if preferences and preferences.notification_type == 'all' %}checked{% endif %}>
+                                    <label class="form-check-label" for="notifications_all">
+                                        <strong>All Messages</strong>
+                                        <br><small class="text-muted">Receive notifications for all new messages in rooms you're part of</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="notification_type" id="notifications_mentions" value="mentions" {% if preferences and preferences.notification_type == 'mentions' %}checked{% endif %}>
+                                    <label class="form-check-label" for="notifications_mentions">
+                                        <strong>Mentions Only</strong>
+                                        <br><small class="text-muted">Only notify when someone mentions your name with @ or replies to you</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="notification_type" id="notifications_none" value="none" {% if preferences and preferences.notification_type == 'none' %}checked{% endif %}>
+                                    <label class="form-check-label" for="notifications_none">
+                                        <strong>No Notifications</strong>
+                                        <br><small class="text-muted">Disable all chat notifications</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-4">
+                            <h5>Notification Methods</h5>
+                            <p class="text-muted">Choose how you want to receive notifications</p>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="email_notifications" id="email_notifications"
+                                       {% if preferences and preferences.email_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="email_notifications">
+                                    <strong><i class="fas fa-envelope"></i> Email Notifications</strong>
+                                    <br><small class="text-muted">Receive chat notifications via email (recommended for important updates)</small>
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="push_notifications" id="push_notifications"
+                                       {% if preferences and preferences.push_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="push_notifications">
+                                    <strong><i class="fas fa-bell"></i> Browser Push Notifications</strong>
+                                    <br><small class="text-muted">Receive notifications in your browser (requires permission)</small>
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="sound_enabled" id="sound_enabled"
+                                       {% if preferences and preferences.sound_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="sound_enabled">
+                                    <strong><i class="fas fa-volume-up"></i> Sound Notifications</strong>
+                                    <br><small class="text-muted">Play notification sounds for new messages</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-4">
+                            <h5>Chat Behavior</h5>
+                            <p class="text-muted">Additional chat preferences</p>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-eye"></i> Read Status</h6>
+                                            <p class="small mb-0">Messages are automatically marked as read when viewed</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-clock"></i> Message History</h6>
+                                            <p class="small mb-0">Recent messages are loaded automatically when entering a room</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'chat:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Chat
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Help & Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Keyboard Shortcuts</h6>
+                            <ul class="small mb-0">
+                                <li><kbd>Enter</kbd> - Send message</li>
+                                <li><kbd>Shift+Enter</kbd> - New line</li>
+                                <li><kbd>↑</kbd> - Edit last message</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Mention People</h6>
+                            <ul class="small mb-0">
+                                <li>Use <code>@username</code> to mention someone</li>
+                                <li>Mentions always send notifications</li>
+                                <li>Check @ mentions in your Member Profile</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Notification type selection
+    const notificationTypeInputs = document.querySelectorAll('input[name="notification_type"]');
+
+    notificationTypeInputs.forEach(function(input) {
+        input.addEventListener('change', function() {
+            // Highlight selected option
+            document.querySelectorAll('input[name="notification_type"]').forEach(function(otherInput) {
+                const label = otherInput.closest('.form-check');
+                if (otherInput.checked) {
+                    label.classList.add('text-primary');
+                    label.querySelector('small').classList.add('text-primary-emphasis');
+                } else {
+                    label.classList.remove('text-primary');
+                    label.querySelector('small').classList.remove('text-primary-emphasis');
+                }
+            });
+        });
+    });
+
+    // On load, highlight the selected option
+    const selectedInput = document.querySelector('input[name="notification_type"]:checked');
+    if (selectedInput) {
+        selectedInput.closest('.form-check').classList.add('text-primary');
+        selectedInput.closest('.form-check').querySelector('small').classList.add('text-primary-emphasis');
+    }
+
+    // Form submission feedback
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        // Re-enable after 3 seconds (in case of error)
+        setTimeout(() => {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

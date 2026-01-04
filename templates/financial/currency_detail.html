@@ -1,0 +1,390 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ currency.code }} - Currency Details - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ currency.code }} - {{ currency.name }}{% endblock %}
+{% block page_subtitle %}Currency details and usage statistics{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:currency_list' %}">Currencies</a></li>
+<li class="breadcrumb-item active">{{ currency.code }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .currency-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .currency-symbol-large {
+        font-size: 4rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin: 0.25rem;
+    }
+    
+    .status-active { background: rgba(255, 255, 255, 0.2); }
+    .status-base { background: rgba(255, 255, 255, 0.3); }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #6c757d;
+    }
+    
+    .account-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .exchange-rate-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .rate-info {
+        flex-grow: 1;
+    }
+    
+    .rate-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .quick-actions {
+        position: sticky;
+        top: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Currency Header -->
+<div class="currency-header">
+    <div class="currency-symbol-large">{{ currency.symbol }}</div>
+    <h2>{{ currency.code }} - {{ currency.name }}</h2>
+    <div class="mt-3">
+        {% if currency.is_base_currency %}
+            <span class="status-badge status-base">Base Currency</span>
+        {% endif %}
+        {% if currency.is_active %}
+            <span class="status-badge status-active">Active</span>
+        {% endif %}
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stat-grid mt-4">
+        <div class="stat-item">
+            <div class="stat-number">{{ total_accounts }}</div>
+            <div class="stat-label">Bank Accounts</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ currency.symbol }}{{ total_balance|floatformat:2 }}</div>
+            <div class="stat-label">Total Balance</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ currency.exchange_rate|floatformat:6 }}</div>
+            <div class="stat-label">Exchange Rate</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ currency.decimal_places }}</div>
+            <div class="stat-label">Decimal Places</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Currency Information -->
+        <div class="info-card">
+            <h5 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>Currency Information
+            </h5>
+            
+            <div class="info-row">
+                <span class="info-label">Currency Code</span>
+                <span class="info-value">{{ currency.code }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Currency Name</span>
+                <span class="info-value">{{ currency.name }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Symbol</span>
+                <span class="info-value">{{ currency.symbol }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Decimal Places</span>
+                <span class="info-value">{{ currency.decimal_places }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Exchange Rate</span>
+                <span class="info-value">
+                    {% if currency.is_base_currency %}
+                        1.000000 (Base Currency)
+                    {% else %}
+                        {{ currency.exchange_rate|floatformat:6 }}
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Last Updated</span>
+                <span class="info-value">{{ currency.last_updated|date:"M d, Y H:i" }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">
+                    {% if currency.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                    {% if currency.is_base_currency %}
+                        <span class="badge bg-primary">Base Currency</span>
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ currency.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+        </div>
+        
+        <!-- Bank Accounts Using This Currency -->
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-university me-2"></i>Bank Accounts ({{ bank_accounts.count }})
+                </h5>
+                {% if bank_accounts.count > 0 %}
+                    <a href="{% url 'financial:account_list' %}?currency={{ currency.id }}" class="btn btn-outline-primary btn-sm">
+                        View All
+                    </a>
+                {% endif %}
+            </div>
+            
+            {% if bank_accounts.count > 0 %}
+                {% for account in bank_accounts %}
+                <div class="account-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'financial:account_detail' account.pk %}" class="text-decoration-none">
+                                    {{ account.account_name }}
+                                </a>
+                                {% if account.is_default %}
+                                    <span class="badge bg-primary ms-2">Default</span>
+                                {% endif %}
+                            </h6>
+                            <div class="small text-muted">
+                                {{ account.bank.name }} • {{ account.account_number }}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold">{{ currency.symbol }}{{ account.current_balance|floatformat:2 }}</div>
+                            <div class="small text-muted">{{ account.get_account_type_display }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-university fa-2x text-muted mb-2"></i>
+                    <div class="text-muted">No bank accounts using this currency</div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Recent Exchange Rates -->
+        {% if not currency.is_base_currency %}
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-exchange-alt me-2"></i>Recent Exchange Rates ({{ exchange_rates.count }})
+                </h5>
+                <a href="{% url 'financial:exchange_rate_list' %}?base_currency={{ currency.code }}" class="btn btn-outline-primary btn-sm">
+                    View All
+                </a>
+            </div>
+            
+            {% if exchange_rates.count > 0 %}
+                {% for rate in exchange_rates %}
+                <div class="exchange-rate-item">
+                    <div class="rate-info">
+                        <div class="rate-value">
+                            1 {{ rate.base_currency.code }} = {{ rate.rate|floatformat:6 }} {{ rate.target_currency.code }}
+                        </div>
+                        <div class="small text-muted">
+                            {{ rate.rate_date|date:"M d, Y" }} • Source: {{ rate.source }}
+                        </div>
+                    </div>
+                    <div>
+                        <a href="{% url 'financial:exchange_rate_detail' rate.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-exchange-alt fa-2x text-muted mb-2"></i>
+                    <div class="text-muted">No exchange rates recorded</div>
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="info-card quick-actions">
+            <h5 class="mb-3">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </h5>
+            
+            <div class="d-grid gap-2">
+                <a href="{% url 'financial:currency_update' currency.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Currency
+                </a>
+                
+                {% if not currency.is_base_currency %}
+                <a href="{% url 'financial:exchange_rate_create' %}?base_currency={{ currency.id }}" class="btn btn-outline-success">
+                    <i class="fas fa-plus me-2"></i>Add Exchange Rate
+                </a>
+                {% endif %}
+                
+                <a href="{% url 'financial:account_create' %}?currency={{ currency.id }}" class="btn btn-outline-info">
+                    <i class="fas fa-university me-2"></i>Add Bank Account
+                </a>
+                
+                <hr>
+                
+                <a href="{% url 'financial:currency_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Currencies
+                </a>
+                
+                {% if not currency.is_base_currency and currency.bankaccount_set.count == 0 %}
+                <a href="{% url 'financial:currency_delete' currency.pk %}" class="btn btn-outline-danger">
+                    <i class="fas fa-trash me-2"></i>Delete Currency
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Usage Guidelines -->
+        <div class="info-card">
+            <h6 class="mb-3">
+                <i class="fas fa-lightbulb me-2"></i>Usage Guidelines
+            </h6>
+            
+            <div class="small text-muted">
+                <ul class="list-unstyled">
+                    {% if currency.is_base_currency %}
+                    <li class="mb-2">
+                        <i class="fas fa-star text-warning me-2"></i>
+                        This is your base currency. All other currencies are valued relative to this one.
+                    </li>
+                    {% endif %}
+                    
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        Exchange rates should be updated regularly for accurate multi-currency support.
+                    </li>
+                    
+                    <li class="mb-2">
+                        <i class="fas fa-shield-alt text-success me-2"></i>
+                        Currency deletion is only allowed when no bank accounts use it.
+                    </li>
+                    
+                    {% if not currency.is_active %}
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        This currency is inactive and cannot be used for new transactions.
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

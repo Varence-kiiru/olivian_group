@@ -1,0 +1,35 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Received #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[RECEIVED] We've Received Your Order!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Thank you for your order! We've successfully received your request and our team is reviewing it. You'll hear from us soon with next steps.</p>
+
+<div class="highlight-box">
+    <h3>Order Summary:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y \a\t g:i A" }}</p>
+    <p><strong>Total Amount:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+</div>
+
+<h3>What Happens Next?</h3>
+<ul>
+    <li><strong>Review:</strong> Our team will review your order (within 2 hours)</li>
+    <li><strong>Confirmation:</strong> You'll receive order confirmation via email</li>
+    <li><strong>Processing:</strong> We'll begin preparing your items</li>
+    <li><strong>Delivery:</strong> Your order will be dispatched for delivery</li>
+</ul>
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>Thank you for choosing Olivian Group for your solar energy needs!</p>
+
+{% endblock %}

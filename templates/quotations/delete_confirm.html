@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Quotation {{ object.quotation_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-trash me-2 text-danger"></i>Delete Quotation
+        </h1>
+        <div>
+            <a href="{% url 'quotations:detail' object.quotation_number %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Details
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Warning!</h6>
+                        <p class="mb-0">You are about to permanently delete this quotation. This action cannot be undone.</p>
+                    </div>
+
+                    <!-- Quotation Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Quotation Details:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Number:</strong> {{ object.quotation_number }}</li>
+                                <li><strong>Customer:</strong> {{ object.customer.name }}</li>
+                                <li><strong>Email:</strong> {{ object.customer.email }}</li>
+                                <li><strong>Status:</strong> 
+                                    <span class="badge bg-{{ object.status|yesno:'success,warning,danger' }}">
+                                        {{ object.get_status_display }}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>System Information:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>System Type:</strong> {{ object.get_system_type_display }}</li>
+                                <li><strong>Capacity:</strong> {{ object.system_capacity }} kW</li>
+                                <li><strong>Total Amount:</strong> KES {{ object.total_amount|floatformat:0 }}</li>
+                                <li><strong>Created:</strong> {{ object.created_at|date:"M d, Y" }}</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {% if object.status not in 'draft,sent' %}
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-ban me-2"></i>Cannot Delete</h6>
+                        <p class="mb-0">This quotation cannot be deleted because it has been {{ object.get_status_display|lower }}. Only draft or sent quotations can be deleted.</p>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="d-flex gap-2 justify-content-end">
+                        {% csrf_token %}
+                        <a href="{% url 'quotations:detail' object.quotation_number %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        {% if object.status in 'draft,sent' %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Yes, Delete Quotation
+                        </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

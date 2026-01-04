@@ -1,0 +1,98 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Follow-ups - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Follow-ups</h3>
+        <div class="card-tools">
+            <div class="btn-group">
+                <a href="?status=pending" class="btn btn-sm btn-outline-primary">
+                    Pending <span class="badge bg-primary">{{ pending_count }}</span>
+                </a>
+                <a href="?status=overdue" class="btn btn-sm btn-outline-danger">
+                    Overdue <span class="badge bg-danger">{{ overdue_count }}</span>
+                </a>
+                <a href="?status=completed" class="btn btn-sm btn-outline-success">
+                    Completed <span class="badge bg-success">{{ completed_count }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Quotation</th>
+                        <th>Customer</th>
+                        <th>Type</th>
+                        <th>Scheduled Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for follow_up in follow_ups %}
+                    <tr class="{% if follow_up.is_overdue %}table-danger{% endif %}">
+                        <td>
+                            <a href="{% url 'quotations:detail' follow_up.quotation.quotation_number %}">
+                                {{ follow_up.quotation.quotation_number }}
+                            </a>
+                        </td>
+                        <td>{{ follow_up.quotation.customer.name }}</td>
+                        <td>{{ follow_up.get_follow_up_type_display }}</td>
+                        <td>{{ follow_up.scheduled_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if follow_up.completed %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif follow_up.is_overdue %}
+                            <span class="badge bg-danger">Overdue</span>
+                            {% else %}
+                            <span class="badge bg-primary">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ follow_up.notes|truncatechars:50 }}</td>
+                        <td>
+                            {% if not follow_up.completed %}
+                            <button class="btn btn-sm btn-success mark-complete" 
+                                    data-id="{{ follow_up.id }}">
+                                Mark Complete
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No follow-ups found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.mark-complete').click(function() {
+        const followUpId = $(this).data('id');
+        if (confirm('Mark this follow-up as complete?')) {
+            $.post(`/quotations/follow-up/${followUpId}/complete/`, 
+                { csrfmiddlewaretoken: '{{ csrf_token }}' },
+                function(response) {
+                    if (response.success) {
+                        location.reload();
+                    }
+                }
+            );
+        }
+    });
+});
+</script>
+{% endblock %}

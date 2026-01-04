@@ -1,0 +1,365 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}System Maintenance - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- System Status Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-server me-2"></i>System Status
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info">
+                                    <i class="fas fa-database"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Database Size</span>
+                                    <span class="info-box-number">{{ db_size_mb|floatformat:2 }} MB</span>
+                                    <small>({{ db_size_gb|floatformat:2 }} GB)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success">
+                                    <i class="fas fa-folder"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Media Files</span>
+                                    <span class="info-box-number">{{ media_size_mb|floatformat:2 }} MB</span>
+                                    <small>({{ media_size_gb|floatformat:2 }} GB)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box {% if disk_usage_percent >= 75 %}bg-danger{% elif disk_usage_percent >= 50 %}bg-warning{% else %}bg-primary{% endif %}">
+                                <span class="info-box-icon {% if disk_usage_percent >= 75 %}bg-danger{% elif disk_usage_percent >= 50 %}bg-warning{% else %}bg-primary{% endif %}">
+                                    <i class="fas fa-hdd"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Disk Usage</span>
+                                    <span class="info-box-number">{{ disk_used_gb }} GB</span>
+                                    <small>of {{ disk_total_gb }} GB ({{ disk_usage_percent }}%)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-warning">
+                                    <i class="fas fa-clock"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Last Backup</span>
+                                    <span class="info-box-number">
+                                        {% if last_backup %}
+                                            {{ last_backup|date:"Y-m-d H:i:s" }}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ last_backup|timesince }} ago
+                                            </small>
+                                        {% else %}
+                                            Never
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-primary">
+                                    <i class="fas fa-code-branch"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Versions</span>
+                                    <small>Python: {{ python_version }}</small><br>
+                                    <small>Django: {{ django_version }}</small><br>
+                                    <small>MySQL: {{ mysql_version }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Checks and Actions -->
+    <div class="row">
+        <!-- System Health Checks -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-heartbeat me-2"></i>System Health
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if system_checks %}
+                        {% for check in system_checks %}
+                            <div class="alert alert-{{ check.status }} mb-2">
+                                <strong>{{ check.name }}:</strong> {{ check.message }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>All systems operational
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Actions -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-tools me-2"></i>Maintenance Actions
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Backup Action -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'core:system_backup' %}" class="btn btn-primary mb-3">
+                            <i class="fas fa-download me-2"></i>Create System Backup
+                        </a>
+
+                        <button class="btn btn-warning mb-3" onclick="clearCache()">
+                            <i class="fas fa-broom me-2"></i>Clear System Cache
+                        </button>
+                        
+                        <button class="btn btn-info mb-3" onclick="runDiagnostics()">
+                            <i class="fas fa-stethoscope me-2"></i>Run System Diagnostics
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>System Information
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                {% for key, value in system_info.items %}
+                                <tr>
+                                    <th>{{ key|title }}</th>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Log Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-bug me-2"></i>Debug Logs
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="debug-log-container" style="max-height: 400px; overflow-y: auto;">
+                        <pre id="debugLog" class="bg-dark text-light p-3" style="font-size: 0.85rem;">
+                            {% if debug_logs %}
+                                {% for log in debug_logs %}
+                                    {{ log.timestamp }} [{{ log.level }}] {{ log.message }}
+                                {% endfor %}
+                            {% else %}
+                                No debug logs available
+                            {% endif %}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Messages -->
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Error:</strong> {{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Function to handle backup creation
+    async function createBackup() {
+        try {
+            const response = await fetch("{% url 'core:system_backup' %}");
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = response.headers.get('content-disposition').split('filename=')[1].replace(/"/g, '');
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showNotification('success', 'Backup created successfully!');
+            } else {
+                throw new Error('Backup creation failed');
+            }
+        } catch (error) {
+            showNotification('error', 'Failed to create backup: ' + error.message);
+        }
+    }
+
+    // Function to show notifications
+    function showNotification(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.querySelector('.container-fluid').insertAdjacentElement('afterbegin', alertDiv);
+        setTimeout(() => alertDiv.remove(), 5000);
+    }
+
+    // Function to clear system cache
+    function clearCache() {
+        const button = document.querySelector('button[onclick="clearCache()"]');
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Clearing Cache...';
+
+        fetch("{% url 'core:clear_cache' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', 'Cache cleared successfully');
+                // Refresh page after 1 second to show updated stats
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.message || 'Failed to clear cache');
+            }
+        })
+        .catch(error => {
+            showNotification('error', `Failed to clear cache: ${error.message}`);
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-broom me-2"></i>Clear System Cache';
+        });
+    }
+
+    // Function to run system diagnostics
+    function runDiagnostics() {
+        const button = document.querySelector('button[onclick="runDiagnostics()"]');
+        const checksContainer = document.querySelector('.card-body');
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Running Diagnostics...';
+
+        fetch("{% url 'core:run_diagnostics' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', 'Diagnostics completed');
+                
+                // Update the system checks display
+                if (data.checks && checksContainer) {
+                    let html = '';
+                    data.checks.forEach(check => {
+                        html += `
+                            <div class="alert alert-${check.status} mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas ${getStatusIcon(check.status)} fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <strong>${check.name}</strong><br>
+                                        ${check.message}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    checksContainer.innerHTML = html || `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>All systems operational
+                        </div>
+                    `;
+                }
+            } else {
+                throw new Error(data.message || 'Diagnostics failed');
+            }
+        })
+        .catch(error => {
+            showNotification('error', `Diagnostics failed: ${error.message}`);
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-stethoscope me-2"></i>Run System Diagnostics';
+        });
+    }
+
+    // Helper function for status icons
+    function getStatusIcon(status) {
+        switch(status) {
+            case 'success':
+                return 'fa-check-circle text-success';
+            case 'warning':
+                return 'fa-exclamation-triangle text-warning';
+            case 'danger':
+            case 'error':
+                return 'fa-exclamation-circle text-danger';
+            default:
+                return 'fa-info-circle text-info';
+        }
+    }
+
+    // Auto-refresh system checks every 30 seconds
+    setInterval(() => {
+        fetch("{% url 'core:api_health_check' %}")
+            .then(response => response.json())
+            .then(data => {
+                // Update system health checks
+                const checksContainer = document.querySelector('.system-checks');
+                if (checksContainer) {
+                    // Update the UI with new health check data
+                }
+            });
+    }, 30000);
+</script>
+{% endblock %}

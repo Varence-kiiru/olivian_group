@@ -1,0 +1,158 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Lead - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Lead{% endblock %}
+{% block page_subtitle %}Confirm deletion of lead: {{ lead.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:lead_list' %}">Leads</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:lead_detail' lead.pk %}">{{ lead.title|truncatechars:30 }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <!-- Warning Header -->
+                <div class="alert alert-danger" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Danger Zone</h5>
+                            <p class="mb-0">You are about to permanently delete this lead.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lead Information -->
+                <div class="card border-warning mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title text-warning">
+                            <i class="fas fa-user-times me-2"></i>{{ lead.title }}
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Contact:</strong></p>
+                                <p class="mb-1">{{ lead.contact.get_full_name }}</p>
+                                <small class="text-muted">{{ lead.contact.email }}</small>
+                            </div>
+                            <div class="col-sm-6">
+                                {% if lead.company %}
+                                <p class="mb-1"><strong>Company:</strong></p>
+                                <p class="mb-1">{{ lead.company.name }}</p>
+                                <small class="text-muted">{{ lead.company.industry|default:"Industry not specified" }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="mb-1"><strong>Status:</strong></p>
+                                <span class="badge bg-{{ lead.status|yesno:'success,warning,danger' }}">
+                                    {{ lead.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="mb-1"><strong>Priority:</strong></p>
+                                <span class="badge bg-warning">
+                                    {{ lead.get_priority_display }}
+                                </span>
+                            </div>
+                            <div class="col-sm-4">
+                                {% if lead.estimated_value %}
+                                <p class="mb-1"><strong>Value:</strong></p>
+                                <p class="text-success mb-0">KES {{ lead.estimated_value|floatformat:0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Data Warning -->
+                <div class="alert alert-info" role="alert">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Related Data That Will Be Affected:</h6>
+                    <ul class="mb-0 mt-2">
+                        {% if lead.activities.exists %}
+                        <li>{{ lead.activities.count }} related activities will be deleted</li>
+                        {% endif %}
+                        <li>{{ lead.created_by.get_full_name }} created this lead</li>
+                        {% if lead.assigned_to %}
+                        <li>Currently assigned to {{ lead.assigned_to.get_full_name }}</li>
+                        {% endif %}
+                        {% if lead.source %}
+                        <li>Source: {{ lead.source.name }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Confirmation Question -->
+                <div class="mb-4">
+                    <h6 class="mb-3">Are you sure you want to delete this lead?</h6>
+                    <p class="text-muted">
+                        This action <strong>cannot be undone</strong> and will permanently remove all data associated with this lead from the system.
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'crm:lead_detail' lead.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="fas fa-trash me-2"></i>Yes, Delete Lead
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteConfirmModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Type <strong>DELETE</strong> in the box below to confirm deletion:</p>
+        <input type="text" id="deleteConfirmationInput" class="form-control" placeholder="Type DELETE">
+        <div class="form-text">
+          This will permanently delete "{{ lead.title }}" and cannot be undone.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+            <i class="fas fa-trash me-2"></i>Delete Lead
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+}
+
+document.getElementById('deleteConfirmationInput').addEventListener('input', function() {
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    deleteBtn.disabled = this.value !== 'DELETE';
+});
+</script>
+{% endblock %}

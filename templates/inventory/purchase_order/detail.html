@@ -1,0 +1,456 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ purchase_order.po_number }} - Purchase Order Details - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:purchase_order_list' %}">Purchase Orders</a></li>
+<li class="breadcrumb-item active">{{ purchase_order.po_number }}</li>
+{% endblock %}
+
+{% block page_name %}Purchase Order Details{% endblock %}
+{% block page_title %}{{ purchase_order.po_number }}{% endblock %}
+{% block page_subtitle %}Complete purchase order information and status{% endblock %}
+
+{% block extra_css %}
+<style>
+    .po-header {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .po-info-card {
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .supplier-card {
+        border-left: 4px solid #28a745;
+    }
+    
+    .delivery-card {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .items-table th {
+        background-color: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .amount-total {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+    
+    .action-buttons {
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- PO Header -->
+<div class="po-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-2">{{ purchase_order.po_number }}</h2>
+            <p class="mb-3">Order Date: {{ purchase_order.order_date|date:"F d, Y" }}</p>
+            <div class="d-flex align-items-center">
+                <span class="status-badge badge {% if purchase_order.status == 'received' %}bg-success{% elif purchase_order.status == 'sent' %}bg-info{% elif purchase_order.status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %} me-3">
+                    {{ purchase_order.get_status_display }}
+                </span>
+                {% if purchase_order.supplier_reference %}
+                <span class="text-white-50">Supplier Ref: {{ purchase_order.supplier_reference }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="h3">{{ company.default_currency|default:"KES" }} {{ purchase_order.total_amount|floatformat:2 }}</div>
+            <small>Total Amount</small>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Order Details -->
+    <div class="col-lg-8">
+        <!-- Items List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-list me-2"></i>Order Items
+                    <span class="badge bg-primary ms-2">{{ items.count }}</span>
+                </h5>
+                {% if purchase_order.status == 'draft' %}
+                <button class="btn btn-outline-primary btn-sm" onclick="addItem()">
+                    <i class="fas fa-plus me-1"></i>Add Item
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if items %}
+                <div class="table-responsive">
+                    <table class="table table-hover items-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                {% if purchase_order.status == 'draft' %}
+                                <th>Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.images.first %}
+                                        <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" 
+                                             class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-box text-muted"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ item.product.name }}</div>
+                                            <small class="text-muted">{{ item.product.category }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><code>{{ item.product.sku }}</code></td>
+                                <td>{{ item.quantity_ordered }}</td>
+                                <td>{{ company.default_currency|default:"KES" }} {{ item.unit_price|floatformat:2 }}</td>
+                                <td class="fw-bold">{{ company.default_currency|default:"KES" }} {{ item.total_amount|floatformat:2 }}</td>
+                                {% if purchase_order.status == 'draft' %}
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="editItem({{ item.pk }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="removeItem({{ item.pk }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Order Totals -->
+                <div class="amount-total">
+                    <div class="row">
+                        <div class="col-md-8">
+                            {% if purchase_order.notes %}
+                            <div class="mb-2">
+                                <strong>Notes:</strong> {{ purchase_order.notes }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <span>{{ company.default_currency|default:"KES" }} {{ purchase_order.subtotal|floatformat:2 }}</span>
+                            </div>
+                            {% if purchase_order.tax_amount %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tax:</span>
+                                <span>{{ company.default_currency|default:"KES" }} {{ purchase_order.tax_amount|floatformat:2 }}</span>
+                            </div>
+                            {% endif %}
+                            {% if purchase_order.shipping_cost %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Shipping:</span>
+                                <span>{{ company.default_currency|default:"KES" }} {{ purchase_order.shipping_cost|floatformat:2 }}</span>
+                            </div>
+                            {% endif %}
+                            <hr>
+                            <div class="d-flex justify-content-between h5">
+                                <span>Total:</span>
+                                <span>{{ company.default_currency|default:"KES" }} {{ purchase_order.total_amount|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-list fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No items in this purchase order.</p>
+                    {% if purchase_order.status == 'draft' %}
+                    <button class="btn btn-primary" onclick="addItem()">
+                        <i class="fas fa-plus me-2"></i>Add First Item
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Information -->
+    <div class="col-lg-4">
+        <!-- Purchase Order Info -->
+        <div class="card po-info-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>Order Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">PO Number</label>
+                    <div class="fw-bold">{{ purchase_order.po_number }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Status</label>
+                    <div>
+                        <span class="badge {% if purchase_order.status == 'received' %}bg-success{% elif purchase_order.status == 'sent' %}bg-info{% elif purchase_order.status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %}">
+                            {{ purchase_order.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Warehouse</label>
+                    <div>{{ purchase_order.warehouse.name }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Created By</label>
+                    <div>{{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username }}</div>
+                    <small class="text-muted">{{ purchase_order.created_at|date:"M d, Y g:i A" }}</small>
+                </div>
+                
+                {% if purchase_order.approved_by %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">Approved By</label>
+                    <div>{{ purchase_order.approved_by.get_full_name|default:purchase_order.approved_by.username }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Supplier Information -->
+        <div class="card supplier-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-building me-2"></i>Supplier Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="fw-bold h6">{{ purchase_order.supplier.name }}</div>
+                    <div>{{ purchase_order.supplier.contact_person }}</div>
+                    <div class="text-muted">{{ purchase_order.supplier.email }}</div>
+                    <div class="text-muted">{{ purchase_order.supplier.phone }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Payment Terms</label>
+                    <div>{{ purchase_order.payment_terms }}</div>
+                </div>
+                
+                {% if purchase_order.delivery_terms %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">Delivery Terms</label>
+                    <div>{{ purchase_order.delivery_terms }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid">
+                    <a href="{% url 'inventory:supplier_detail' purchase_order.supplier.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-2"></i>View Supplier
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Information -->
+        <div class="card delivery-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-truck me-2"></i>Delivery Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Expected Delivery</label>
+                    <div class="fw-bold">{{ purchase_order.expected_delivery|date:"F d, Y" }}</div>
+                    {% if purchase_order.expected_delivery %}
+                        {% with days_until=purchase_order.expected_delivery|timeuntil %}
+                        <small class="{% if 'day' in days_until and days_until|slice:':1'|add:0 <= 3 %}text-danger{% elif 'day' in days_until and days_until|slice:':1'|add:0 <= 7 %}text-warning{% else %}text-muted{% endif %}">
+                            {% if purchase_order.expected_delivery < today %}
+                                {{ purchase_order.expected_delivery|timesince }} overdue
+                            {% else %}
+                                in {{ days_until }}
+                            {% endif %}
+                        </small>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+                
+                {% if purchase_order.actual_delivery %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">Actual Delivery</label>
+                    <div>{{ purchase_order.actual_delivery|date:"F d, Y" }}</div>
+                </div>
+                {% endif %}
+                
+                {% if purchase_order.shipping_cost %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">Shipping Cost</label>
+                    <div>{{ company.default_currency|default:"KES" }} {{ purchase_order.shipping_cost|floatformat:2 }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid action-buttons">
+                    {% if purchase_order.status == 'draft' %}
+                    <a href="{% url 'inventory:purchase_order_update' purchase_order.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Order
+                    </a>
+                    
+                    <button class="btn btn-info" onclick="sendToSupplier()">
+                        <i class="fas fa-paper-plane me-2"></i>Send to Supplier
+                    </button>
+                    {% endif %}
+                    
+                    {% if purchase_order.status in 'sent,confirmed' and can_receive %}
+                    <button class="btn btn-success" onclick="receiveGoods()">
+                        <i class="fas fa-truck me-2"></i>Receive Goods
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" onclick="downloadPDF()">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                    
+                    <button class="btn btn-outline-secondary" onclick="printOrder()">
+                        <i class="fas fa-print me-2"></i>Print Order
+                    </button>
+                    
+                    {% if purchase_order.status == 'draft' %}
+                    <button class="btn btn-outline-danger" onclick="cancelOrder()">
+                        <i class="fas fa-times me-2"></i>Cancel Order
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sendToSupplier() {
+    if (confirm('Send this purchase order to the supplier?')) {
+        fetch(`/inventory/purchase-orders/{{ purchase_order.pk }}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    }
+}
+
+function receiveGoods() {
+    window.location.href = `/inventory/purchase-orders/{{ purchase_order.pk }}/receive/`;
+}
+
+function downloadPDF() {
+    window.open(`/inventory/purchase-orders/{{ purchase_order.pk }}/pdf/`, '_blank');
+}
+
+function printOrder() {
+    window.print();
+}
+
+function cancelOrder() {
+    if (confirm('Are you sure you want to cancel this purchase order?')) {
+        fetch(`/inventory/purchase-orders/{{ purchase_order.pk }}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    }
+}
+
+function addItem() {
+    window.location.href = `/inventory/purchase-orders/{{ purchase_order.pk }}/add-item/`;
+}
+
+function editItem(itemId) {
+    window.location.href = `/inventory/purchase-orders/{{ purchase_order.pk }}/items/${itemId}/edit/`;
+}
+
+function removeItem(itemId) {
+    if (confirm('Remove this item from the purchase order?')) {
+        fetch(`/inventory/purchase-orders/{{ purchase_order.pk }}/items/${itemId}/remove/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

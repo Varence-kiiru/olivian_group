@@ -1,0 +1,63 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Processing #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[PROCESSING] Your Order is Being Processed</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Good news! Your order is now being processed. Our team is carefully preparing your solar equipment for dispatch.</p>
+
+<div class="highlight-box">
+    <h3>Order Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Current Status:</strong> {{ status_display }}</p>
+    <p><strong>Total Amount:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+</div>
+
+<div class="status-box" style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #0c5460; margin: 0 0 10px 0;">[ACTIVE] What's Happening Now</h4>
+    <ul style="margin: 0; color: #0c5460;">
+        <li>Quality checking all items</li>
+        <li>Preparing installation accessories</li>
+        <li>Generating delivery documentation</li>
+        <li>Coordinating with our logistics team</li>
+    </ul>
+</div>
+
+<h3>Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[ACTIVE] <strong>Processing</strong> (Current Stage - 1-2 business days)</li>
+    <li>[PENDING] <strong>Packed & Ready</strong></li>
+    <li>[PENDING] <strong>Shipped</strong></li>
+    <li>[PENDING] <strong>Delivered</strong></li>
+    {% if installation_required %}
+    <li>[PENDING] <strong>Installation Scheduled</strong></li>
+    {% endif %}
+</ul>
+
+{% if notes %}
+<div class="notes-box" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4>Additional Notes:</h4>
+    <p>{{ notes }}</p>
+</div>
+{% endif %}
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>We'll notify you as soon as your order is packed and ready for dispatch. Thank you for your patience!</p>
+
+{% endblock %}

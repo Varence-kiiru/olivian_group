@@ -1,0 +1,314 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Vendor{% else %}Add New Vendor{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Vendor{% else %}Add New Vendor{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    {% if object %}Update vendor information{% else %}Register a new supplier or service provider{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:vendor_list' %}">Vendors</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit{% else %}Add{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-section {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <form method="post" class="form-card">
+            {% csrf_token %}
+            
+            <!-- Basic Information Section -->
+            <div class="form-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.company_name.id_for_label }}" class="form-label required-field">
+                            Company Name
+                        </label>
+                        {{ form.company_name }}
+                        {% if form.company_name.errors %}
+                            <div class="text-danger small">{{ form.company_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.contact_person.id_for_label }}" class="form-label required-field">
+                            Contact Person
+                        </label>
+                        {{ form.contact_person }}
+                        {% if form.contact_person.errors %}
+                            <div class="text-danger small">{{ form.contact_person.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label required-field">
+                            Email Address
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.phone.id_for_label }}" class="form-label required-field">
+                            Phone Number
+                        </label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="text-danger small">{{ form.phone.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.alternative_phone.id_for_label }}" class="form-label">
+                        Alternative Phone
+                    </label>
+                    {{ form.alternative_phone }}
+                    {% if form.alternative_phone.errors %}
+                        <div class="text-danger small">{{ form.alternative_phone.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Address Information Section -->
+            <div class="form-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-map-marker-alt me-2"></i>Address Information
+                </h5>
+                
+                <div class="mb-3">
+                    <label for="{{ form.address.id_for_label }}" class="form-label required-field">
+                        Address
+                    </label>
+                    {{ form.address }}
+                    {% if form.address.errors %}
+                        <div class="text-danger small">{{ form.address.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.city.id_for_label }}" class="form-label required-field">
+                            City
+                        </label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                            <div class="text-danger small">{{ form.city.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.postal_code.id_for_label }}" class="form-label">
+                            Postal Code
+                        </label>
+                        {{ form.postal_code }}
+                        {% if form.postal_code.errors %}
+                            <div class="text-danger small">{{ form.postal_code.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.country.id_for_label }}" class="form-label required-field">
+                            Country
+                        </label>
+                        {{ form.country }}
+                        {% if form.country.errors %}
+                            <div class="text-danger small">{{ form.country.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Business Details Section -->
+            <div class="form-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-building me-2"></i>Business Details
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.vendor_type.id_for_label }}" class="form-label required-field">
+                            Vendor Type
+                        </label>
+                        {{ form.vendor_type }}
+                        {% if form.vendor_type.errors %}
+                            <div class="text-danger small">{{ form.vendor_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.tax_number.id_for_label }}" class="form-label">
+                            Tax Number (KRA PIN)
+                        </label>
+                        {{ form.tax_number }}
+                        {% if form.tax_number.errors %}
+                            <div class="text-danger small">{{ form.tax_number.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.bank_name.id_for_label }}" class="form-label">
+                            Bank Name
+                        </label>
+                        {{ form.bank_name }}
+                        {% if form.bank_name.errors %}
+                            <div class="text-danger small">{{ form.bank_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.bank_account.id_for_label }}" class="form-label">
+                            Bank Account Number
+                        </label>
+                        {{ form.bank_account }}
+                        {% if form.bank_account.errors %}
+                            <div class="text-danger small">{{ form.bank_account.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.payment_terms.id_for_label }}" class="form-label">
+                        Payment Terms
+                    </label>
+                    {{ form.payment_terms }}
+                    {% if form.payment_terms.errors %}
+                        <div class="text-danger small">{{ form.payment_terms.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Status & Performance Section -->
+            <div class="form-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line me-2"></i>Status & Performance
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label required-field">
+                            Status
+                        </label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="text-danger small">{{ form.status.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.credit_limit.id_for_label }}" class="form-label">
+                            Credit Limit (KES)
+                        </label>
+                        {{ form.credit_limit }}
+                        {% if form.credit_limit.errors %}
+                            <div class="text-danger small">{{ form.credit_limit.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if object %}
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.rating.id_for_label }}" class="form-label">
+                            Rating (1-5 stars)
+                        </label>
+                        {{ form.rating }}
+                        {% if form.rating.errors %}
+                            <div class="text-danger small">{{ form.rating.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'procurement:vendor_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                </a>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>
+                    {% if object %}Update Vendor{% else %}Create Vendor{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form classes to Django form fields
+    const formControls = document.querySelectorAll('input, select, textarea');
+    formControls.forEach(function(control) {
+        control.classList.add('form-control');
+    });
+    
+    // Add validation feedback
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        const requiredFields = document.querySelectorAll('input[required], select[required], textarea[required]');
+        requiredFields.forEach(function(field) {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+        }
+    });
+});
+</script>
+{% endblock %}

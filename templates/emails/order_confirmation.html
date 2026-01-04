@@ -1,0 +1,112 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Confirmation #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>Order Confirmation</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Thank you for your order! We're excited to get started on your solar project. Your order has been confirmed and our team is preparing to process it.</p>
+
+<div class="highlight-box">
+    <h3>Order Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+    <p><strong>Total Amount:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+    {% if order.mpesa_transaction_id %}
+    <p><strong>M-Pesa Transaction ID:</strong> {{ order.mpesa_transaction_id }}</p>
+    {% endif %}
+</div>
+
+<h3>Items Ordered:</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Product</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Qty</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Unit Price</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.product_name }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.quantity }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ item.unit_price|floatformat:2|add:","|cut:" " }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ item.total_price|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: #f8f9fa; font-weight: bold;">
+            <td colspan="3" style="padding: 10px; border: 1px solid #ddd; text-align: right;">Subtotal:</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ order.subtotal|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+        {% if order.discount_amount > 0 %}
+        <tr>
+            <td colspan="3" style="padding: 10px; border: 1px solid #ddd; text-align: right;">Discount:</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">-KES {{ order.discount_amount|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td colspan="3" style="padding: 10px; border: 1px solid #ddd; text-align: right;">VAT (16%):</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">KES {{ order.tax_amount|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+        <tr style="background-color: {{ primary_color }}; color: white; font-weight: bold; font-size: 16px;">
+            <td colspan="3" style="padding: 15px; border: 1px solid #ddd; text-align: right;">TOTAL:</td>
+            <td style="padding: 15px; text-align: right; border: 1px solid #ddd;">KES {{ total_amount|floatformat:2|add:","|cut:" " }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>What Happens Next?</h3>
+<ol>
+    <li><strong>Payment Verification:</strong> We'll verify your payment within 2-4 hours</li>
+    <li><strong>Order Processing:</strong> Our team will prepare your items for delivery/installation</li>
+    <li><strong>Site Survey:</strong> Our technicians will schedule a site visit if required</li>
+    <li><strong>Installation:</strong> Professional installation by our certified team</li>
+    <li><strong>Project Completion:</strong> Final testing and commissioning of your solar system</li>
+</ol>
+
+{% if order.payment_method == 'bank_transfer' or order.payment_method == 'mpesa' %}
+<div class="highlight-box">
+    <h3>Payment Instructions:</h3>
+    {% if order.payment_method == 'bank_transfer' %}
+    <p><strong>Bank Transfer Details:</strong></p>
+    <p>Please use the bank details provided in your receipt to complete payment. Quote your order number <strong>{{ order_number }}</strong> as the reference.</p>
+    {% elif order.payment_method == 'mpesa' %}
+    <p><strong>M-Pesa Payment:</strong></p>
+    <p>You can pay via M-Pesa using the details provided in your receipt. Use order number <strong>{{ order_number }}</strong> as the reference.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="highlight-box">
+    <h3>Estimated Timeline:</h3>
+    <p><strong>Processing Time:</strong> 2-3 business days</p>
+    <p><strong>Delivery/Installation:</strong> 5-7 business days after processing</p>
+    <p><strong>Project Completion:</strong> Varies based on system size and complexity</p>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ order_tracking_url }}" class="button">Track Your Order</a>
+</div>
+
+<p>You will receive regular updates via email and SMS as your order progresses. Our project manager will contact you within 24 hours to discuss the installation schedule.</p>
+
+<p>Thank you for choosing {{ company_name }} for your solar energy needs. We're committed to delivering excellent service and helping you achieve energy independence!</p>
+
+<p>Best regards,<br>
+<strong>The Olivian Group Team</strong><br>
+Order Processing Department</p>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+<p style="font-size: 12px; color: #666;">
+    <strong>Need Help?</strong><br>
+    Order Support: {{ "info@olivian.co.ke" }}<br>
+    Phone: {{ company_phone }}<br>
+    WhatsApp: {{ company_phone }}
+</p>
+{% endblock %}

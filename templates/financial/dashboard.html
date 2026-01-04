@@ -1,0 +1,532 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Financial Controls - {{ block.super }}{% endblock %}
+
+{% block page_title %}Financial Controls{% endblock %}
+{% block page_subtitle %}Bank reconciliation, audit trails, and financial management{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Financial Controls</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid var(--primary-color);
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .metric-number {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .function-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .function-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary-color);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .function-card .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .account-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid transparent;
+    }
+    
+    .account-card.positive { border-left-color: #28a745; }
+    .account-card.negative { border-left-color: #dc3545; }
+    .account-card.zero { border-left-color: #6c757d; }
+    
+    .status-badge {
+        padding: 0.3rem 0.7rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-reconciled { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-unbalanced { background: #f8d7da; color: #721c24; }
+    
+    .currency-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .quick-action-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .quick-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+        color: white;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Key Financial Metrics -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">KES {{ total_cash|floatformat:0 }}</div>
+                    <div class="metric-label">Total Cash</div>
+                </div>
+                <div class="metric-icon text-success">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ unreconciled_transactions }}</div>
+                    <div class="metric-label">Unreconciled Transactions</div>
+                </div>
+                <div class="metric-icon text-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ pending_reconciliations }}</div>
+                    <div class="metric-label">Pending Reconciliations</div>
+                </div>
+                <div class="metric-icon text-info">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">KES {{ total_fixed_assets|floatformat:0 }}</div>
+                    <div class="metric-label">Fixed Assets Value</div>
+                </div>
+                <div class="metric-icon text-primary">
+                    <i class="fas fa-building"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Currency Summary & Quick Actions -->
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Bank Accounts Overview -->
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-university me-2"></i>Bank Accounts
+                </h5>
+                <a href="{% url 'financial:account_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All Accounts
+                </a>
+            </div>
+            
+            {% if bank_accounts %}
+                <div class="row">
+                    {% for account in bank_accounts %}
+                    <div class="col-md-6 mb-3">
+                        <div class="account-card {% if account.current_balance > 0 %}positive{% elif account.current_balance < 0 %}negative{% else %}zero{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'financial:account_detail' account.pk %}" class="text-decoration-none">
+                                            {{ account.account_name }}
+                                        </a>
+                                        {% if account.is_default %}
+                                        <span class="badge bg-primary ms-2">Default</span>
+                                        {% endif %}
+                                    </h6>
+                                    <div class="small text-muted">
+                                        {{ account.bank.name }} • {{ account.account_number|slice:"-4" }}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold">
+                                        {{ account.currency.symbol }}{{ account.current_balance|floatformat:2 }}
+                                    </div>
+                                    <div class="small text-muted">{{ account.currency.code }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <div class="small text-muted">
+                                    Last reconciled: 
+                                    {% if account.last_reconciled_date %}
+                                        {{ account.last_reconciled_date }}
+                                    {% else %}
+                                        <span class="text-warning">Never</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-university fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No bank accounts configured</h6>
+                    <p class="text-muted">Add bank accounts to start tracking your finances</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Currency Summary -->
+        <div class="currency-summary">
+            <h5 class="mb-3">
+                <i class="fas fa-coins me-2"></i>Multi-Currency Summary
+            </h5>
+            
+            {% for balance in currency_balances %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>{{ balance.currency__code }}</span>
+                <strong>{{ balance.currency__symbol }}{{ balance.total_balance|floatformat:2 }}</strong>
+            </div>
+            {% empty %}
+            <div class="text-center opacity-75">
+                <small>No active accounts</small>
+            </div>
+            {% endfor %}
+            
+            <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+            
+            <div class="d-grid gap-2">
+                <button class="quick-action-btn" onclick="location.href='{% url 'financial:reconciliation_create' %}'">
+                    <i class="fas fa-balance-scale me-2"></i>New Reconciliation
+                </button>
+                <button class="quick-action-btn" onclick="location.href='{% url 'financial:reports' %}'">
+                    <i class="fas fa-chart-bar me-2"></i>Financial Reports
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Financial Functions -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-coins"></i>
+            </div>
+            <h5>Currency Management</h5>
+            <p class="text-muted">Manage currencies and exchange rates</p>
+            <a href="{% url 'financial:currency_list' %}" class="btn btn-primary">
+                Manage Currencies
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-university"></i>
+            </div>
+            <h5>Bank Management</h5>
+            <p class="text-muted">Manage banks and account institutions</p>
+            <a href="{% url 'financial:bank_list' %}" class="btn btn-primary">
+                Manage Banks
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <h5>Bank Reconciliation</h5>
+            <p class="text-muted">Reconcile bank statements with your records</p>
+            <a href="{% url 'financial:reconciliation_list' %}" class="btn btn-primary">
+                Manage Reconciliations
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <h5>Exchange Rates</h5>
+            <p class="text-muted">View and manage currency exchange rates</p>
+            <a href="{% url 'financial:exchange_rate_list' %}" class="btn btn-primary">
+                Exchange Rates
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Functions -->
+<div class="row mt-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <h5>Transactions</h5>
+            <p class="text-muted">View and manage all financial transactions</p>
+            <a href="{% url 'financial:transaction_list' %}" class="btn btn-primary">
+                View Transactions
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <h5>Fixed Assets</h5>
+            <p class="text-muted">Manage and track fixed asset depreciation</p>
+            <a href="{% url 'financial:asset_list' %}" class="btn btn-primary">
+                Asset Register
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h5>Audit Trails</h5>
+            <p class="text-muted">Complete audit log of all financial activities</p>
+            <a href="{% url 'financial:audit_trail' %}" class="btn btn-primary">
+                View Audit Log
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="function-card">
+            <div class="icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h5>Financial Reports</h5>
+            <p class="text-muted">Generate financial reports and analytics</p>
+            <a href="{% url 'financial:reports' %}" class="btn btn-primary">
+                View Reports
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities & Reconciliations -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Recent Transactions
+                </h5>
+                <a href="{% url 'financial:transaction_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All Transactions
+                </a>
+            </div>
+            
+            {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Account</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <span class="font-monospace">{{ transaction.transaction_id }}</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">{{ transaction.bank_account.account_name|truncatechars:20 }}</div>
+                                    <small class="text-muted">{{ transaction.bank_account.bank.name }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ transaction.get_transaction_type_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="{% if transaction.transaction_type in 'deposit,receipt' %}text-success{% else %}text-danger{% endif %}">
+                                        {{ transaction.currency.symbol }}{{ transaction.amount|floatformat:2 }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.transaction_date|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if transaction.is_reconciled %}
+                                        <span class="status-badge status-reconciled">Reconciled</span>
+                                    {% else %}
+                                        <span class="status-badge status-pending">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No recent transactions</h6>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-tasks me-2"></i>Pending Reconciliations
+            </h5>
+            
+            {% if pending_reconciliations_list %}
+                {% for reconciliation in pending_reconciliations_list %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
+                    <div>
+                        <div class="fw-bold">{{ reconciliation.bank_account.account_name|truncatechars:20 }}</div>
+                        <small class="text-muted">
+                            {{ reconciliation.period_start }} - {{ reconciliation.period_end }}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        {% if reconciliation.is_balanced %}
+                            <span class="status-badge status-reconciled">Balanced</span>
+                        {% else %}
+                            <span class="status-badge status-unbalanced">Unbalanced</span>
+                        {% endif %}
+                        <div class="small text-muted">
+                            Variance: {{ reconciliation.currency.symbol }}{{ reconciliation.variance|floatformat:2 }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'financial:reconciliation_list' %}" class="btn btn-outline-primary btn-sm w-100">
+                        View All Reconciliations
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <div class="text-muted">All reconciliations up to date</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any financial dashboard charts here
+    console.log('Financial dashboard loaded');
+    
+    // Auto-refresh metrics every 60 seconds
+    setInterval(function() {
+        // Update metrics without full page reload
+        fetch(window.location.href, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => {
+            if (response.ok) {
+                console.log('Financial metrics refreshed');
+            }
+        });
+    }, 60000);
+});
+</script>
+{% endblock %}

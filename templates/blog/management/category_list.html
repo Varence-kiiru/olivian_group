@@ -1,0 +1,145 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Manage Categories - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Categories{% endblock %}
+{% block page_subtitle %}Create and manage blog categories{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-tags me-2"></i>
+                    All Categories
+                </h5>
+                <a href="{% url 'blog:category_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>
+                    New Category
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <form method="GET" class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <input type="text" name="search" class="form-control" placeholder="Search categories by name, description, or slug..." value="{{ search }}">
+                            </div>
+                            <select name="sort" class="form-select" style="width: auto;">
+                                <option value="">Sort by...</option>
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                                <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                                <option value="posts" {% if sort_by == 'posts' %}selected{% endif %}>Most Posts</option>
+                                <option value="-posts" {% if sort_by == '-posts' %}selected{% endif %}>Least Posts</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if categories %}
+                            <a href="{% url 'blog:category_export' %}?{% if search %}search={{ search }}{% if sort_by %}&{% endif %}{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-download me-1"></i>
+                                Export
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Categories Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Slug</th>
+                                <th>Description</th>
+                                <th>Posts</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ category.name }}</strong>
+                                    </td>
+                                    <td>{{ category.slug }}</td>
+                                    <td>
+                                        {% if category.description %}
+                                            {{ category.description|truncatechars:100 }}
+                                        {% else %}
+                                            <span class="text-muted">No description</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ category.post_set.count }}</span>
+                                        <small class="text-muted">posts</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'blog:category_edit' category.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if category.post_set.count == 0 %}
+                                                <a href="{% url 'blog:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            {% else %}
+                                                <button class="btn btn-sm btn-outline-secondary" disabled title="Cannot delete category with posts">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-tags fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No categories found.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if categories.has_other_pages %}
+                    <nav aria-label="Categories pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if categories.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ categories.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in categories.paginator.page_range %}
+                                {% if page_num >= categories.number|add:-2 and page_num <= categories.number|add:2 %}
+                                    <li class="page-item {% if page_num == categories.number %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if categories.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ categories.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

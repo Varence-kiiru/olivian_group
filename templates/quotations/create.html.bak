@@ -1,0 +1,1127 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if is_from_request %}
+        Create Quotation from Request #{{ quotation_request.id }}
+    {% else %}
+        Create New Quotation
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/quotations.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                {% if is_from_request %}
+                    <i class="fas fa-plus-circle me-2"></i>Create Quotation from Request
+                {% else %}
+                    <i class="fas fa-plus-circle me-2"></i>Create New Quotation
+                {% endif %}
+            </h1>
+            {% if is_from_request %}
+                <p class="text-muted mb-0">Request #{{ quotation_request.id }} - {{ quotation_request.customer_name }}</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'quotations:requests_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Requests
+        </a>
+    </div>
+
+    <!-- Customer Info (if from request) -->
+    {% if is_from_request %}
+    <div class="customer-info mb-4">
+        <h4><i class="fas fa-user me-2"></i>Customer Information (from Request)</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Name:</strong> {{ quotation_request.customer_name }}<br>
+                <strong>Email:</strong> {{ quotation_request.email }}<br>
+                <strong>Phone:</strong> {{ quotation_request.phone }}
+            </div>
+            <div class="col-md-6">
+                <strong>Location:</strong> {{ quotation_request.location }}<br>
+                <strong>System Type:</strong> {{ quotation_request.get_system_type_display }}<br>
+                <strong>Estimated Budget:</strong> {% if quotation_request.estimated_budget %}KES {{ quotation_request.estimated_budget|floatformat:0 }}{% else %}Not specified{% endif %}
+            </div>
+        </div>
+        {% if quotation_request.system_requirements %}
+        <div class="mt-3">
+            <strong>Requirements:</strong>
+            <p class="mb-0">{{ quotation_request.system_requirements }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <form method="post" id="quotation-form" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Quotation Basic Information -->
+                <div class="quotation-form-container">
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-info-circle me-2"></i>Quotation Details</h3>
+                            <span class="badge">Required</span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">Title</label>
+                                    {{ quotation_form.title }}
+                                    {% if quotation_form.title.errors %}
+                                        <div class="errorlist">{{ quotation_form.title.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">System Type</label>
+                                    {{ quotation_form.system_type }}
+                                    {% if quotation_form.system_type.errors %}
+                                        <div class="errorlist">{{ quotation_form.system_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">System Requirements</label>
+                            {{ quotation_form.system_requirements }}
+                            {% if quotation_form.system_requirements.errors %}
+                                <div class="errorlist">{{ quotation_form.system_requirements.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">Tax Rate (%)</label>
+                                    {{ quotation_form.tax_rate }}
+                                    {% if quotation_form.tax_rate.errors %}
+                                        <div class="errorlist">{{ quotation_form.tax_rate.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">Validity (Days)</label>
+                                    {{ quotation_form.validity_days }}
+                                    {% if quotation_form.validity_days.errors %}
+                                        <div class="errorlist">{{ quotation_form.validity_days.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">Terms and Conditions</label>
+                            {{ quotation_form.terms_and_conditions }}
+                            {% if quotation_form.terms_and_conditions.errors %}
+                                <div class="errorlist">{{ quotation_form.terms_and_conditions.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">Internal Notes</label>
+                                    {{ quotation_form.internal_notes }}
+                                    {% if quotation_form.internal_notes.errors %}
+                                        <div class="errorlist">{{ quotation_form.internal_notes.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label">Customer Notes</label>
+                                    {{ quotation_form.customer_notes }}
+                                    {% if quotation_form.customer_notes.errors %}
+                                        <div class="errorlist">{{ quotation_form.customer_notes.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quotation Items -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-list me-2"></i>Items & Pricing</h3>
+                            {% if item_formset.total_form_count > 0 %}
+                                <span class="badge bg-success">{{ item_formset.total_form_count }} item{{ item_formset.total_form_count|pluralize }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="quotation-items" id="quotation-items">
+                            <div class="items-header">
+                                <h4>Add Products and Services</h4>
+                                <button type="button" class="btn btn-success btn-sm" id="add-item-btn">
+                                    <i class="fas fa-plus me-1"></i>Add Item
+                                </button>
+                            </div>
+
+                            {{ item_formset.management_form }}
+
+                            <div id="items-container">
+                                {% for item_form in item_formset %}
+                                <div class="item-row" data-form-index="{{ forloop.counter0 }}">
+                                    <div class="d-flex">
+                                        <div class="item-number">{{ forloop.counter }}</div>
+                                        <div class="flex-grow-1">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Item Type</label>
+                                                        {{ item_form.item_type }}
+                                                        {% if item_form.item_type.errors %}
+                                                            <div class="errorlist">{{ item_form.item_type.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 product-selector-container">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Select Product</label>
+                                                        {{ item_form.product }}
+                                                        <button type="button" class="btn btn-outline-primary btn-sm mt-2 browse-products-btn">
+                                                            <i class="fas fa-search me-1"></i>Browse Products
+                                                        </button>
+                                                        {% if item_form.product.errors %}
+                                                            <div class="errorlist">{{ item_form.product.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 custom-fields">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Item Name</label>
+                                                        {{ item_form.custom_name }}
+                                                        {% if item_form.custom_name.errors %}
+                                                            <div class="errorlist">{{ item_form.custom_name.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="custom-fields">
+                                                <div class="form-group">
+                                                    <label class="control-label">Description</label>
+                                                    {{ item_form.custom_description }}
+                                                    {% if item_form.custom_description.errors %}
+                                                        <div class="errorlist">{{ item_form.custom_description.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Quantity</label>
+                                                        {{ item_form.quantity }}
+                                                        {% if item_form.quantity.errors %}
+                                                            <div class="errorlist">{{ item_form.quantity.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Unit Price</label>
+                                                        {{ item_form.unit_price }}
+                                                        {% if item_form.unit_price.errors %}
+                                                            <div class="errorlist">{{ item_form.unit_price.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Discount %</label>
+                                                        {{ item_form.discount_percentage }}
+                                                        {% if item_form.discount_percentage.errors %}
+                                                            <div class="errorlist">{{ item_form.discount_percentage.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label class="control-label">Total</label>
+                                                        <input type="text" class="form-control item-total" readonly value="0.00">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="control-label">Notes</label>
+                                                {{ item_form.notes }}
+                                                {% if item_form.notes.errors %}
+                                                    <div class="errorlist">{{ item_form.notes.errors }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="item-controls">
+                                                {% if item_form.DELETE %}
+                                                    <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+                                                        <i class="fas fa-trash me-1"></i>Remove
+                                                    </button>
+                                                    {{ item_form.DELETE }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <div class="btn-group-custom">
+                        <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button type="submit" name="save_draft" value="true" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>Save as Draft
+                        </button>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-check me-2"></i>Create Quotation
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="totals-sidebar">
+                <h5><i class="fas fa-calculator me-2"></i>Quotation Totals</h5>
+
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotal-display">KES 0.00</span>
+                </div>
+
+                <div class="total-row">
+                    <span>Tax:</span>
+                    <span id="tax-display">KES 0.00</span>
+                </div>
+
+                <div class="total-row">
+                    <span>Discount:</span>
+                    <span id="discount-display">KES 0.00</span>
+                </div>
+
+                <div class="total-row total">
+                    <strong>Total:</strong>
+                    <strong id="grand-total-display">KES 0.00</strong>
+                </div>
+            </div>
+
+            {% if is_from_request %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Request Details</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Urgency:</strong>
+                        <span class="badge bg-{{ quotation_request.urgency_color }}">{{ quotation_request.get_urgency_display }}</span>
+                    </p>
+                    <p><strong>Status:</strong>
+                        <span class="badge bg-{{ quotation_request.status_color }}">{{ quotation_request.get_status_display }}</span>
+                    </p>
+                    {% if quotation_request.assigned_to %}
+                    <p><strong>Assigned to:</strong> {{ quotation_request.assigned_to.get_full_name }}</p>
+                    {% endif %}
+                    <p><strong>Created:</strong> {{ quotation_request.created_at|date:"M d, Y" }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Product Selector Modal -->
+<div class="modal fade" id="productSelectorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-search me-2"></i>Select Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="productSearch" class="form-control" placeholder="Search products...">
+                    </div>
+                    <div class="col-md-6">
+                        <select id="categoryFilter" class="form-control">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="productList" class="product-list">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let itemCount = {{ item_formset.total_form_count }};
+    let currentModalTargetIndex = null;
+
+    // Initialize existing items
+    document.querySelectorAll('.item-row').forEach(function(itemRow, index) {
+        initializeItemRow(itemRow);
+    });
+
+    // Add item button
+    document.getElementById('add-item-btn').addEventListener('click', function() {
+        addNewItem();
+    });
+
+    // Product selector functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('browse-products-btn')) {
+            console.log('Browse products button clicked');
+            const itemRow = e.target.closest('.item-row');
+            console.log('Item row found:', !!itemRow);
+
+            if (itemRow) {
+                currentModalTargetIndex = Array.from(itemRow.parentNode.children).indexOf(itemRow);
+                console.log('Current modal target index set to:', currentModalTargetIndex);
+                openProductModal();
+            } else {
+                console.error('Item row not found for browse products button');
+            }
+        }
+    });
+
+    // Product selection (from modal)
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('select-product-btn')) {
+            console.log('Select product button clicked');
+
+            const productId = e.target.dataset.productId;
+            const productName = e.target.dataset.productName;
+            const price = e.target.dataset.price;
+
+            console.log('Product data from modal:', { productId, productName, price, currentModalTargetIndex });
+
+            if (currentModalTargetIndex !== null) {
+                selectProductForItem(currentModalTargetIndex, productId, productName, price);
+            } else {
+                console.error('Current modal target index is null');
+            }
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('productSelectorModal'));
+            modal.hide();
+        }
+    });
+
+    // Handle direct product selection from dropdown
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('select[name*="-product"]')) {
+            const productId = e.target.value;
+            const itemRow = e.target.closest('.item-row');
+
+            console.log('Product selection changed:', productId, itemRow);
+
+            if (productId && itemRow) {
+                console.log('Fetching price for product ID:', productId);
+                // Fetch product price via AJAX
+                fetch(`/quotations/product-price/${productId}/`)
+                    .then(response => {
+                        console.log('Price fetch response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Price fetch data:', data);
+                        if (data.success && data.price !== null) {
+                            const priceInput = itemRow.querySelector('input[name*="-unit_price"]');
+                            console.log('Price input element found:', priceInput);
+                            console.log('Price input selector query:', 'input[name*="-unit_price"]');
+                            console.log('All unit_price inputs in row:', itemRow.querySelectorAll('input[name*="-unit_price"]'));
+
+                            if (priceInput) {
+                                const priceValue = parseFloat(data.price).toFixed(2);
+                                priceInput.value = priceValue;
+                                console.log('Set price input value to:', priceValue, 'from original:', data.price);
+
+                                // Trigger input event to ensure calculations update
+                                const event = new Event('input', { bubbles: true });
+                                priceInput.dispatchEvent(event);
+
+                                updateItemTotal(itemRow);
+                            } else {
+                                console.error('Price input not found in row. Available inputs:',
+                                    Array.from(itemRow.querySelectorAll('input')).map(input => ({
+                                        name: input.name,
+                                        type: input.type
+                                    }))
+                                );
+                            }
+                        } else {
+                            console.warn('Price fetch unsuccessful or price is null:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching product price:', error);
+                    });
+            } else {
+                console.log('No productId or itemRow found');
+            }
+        }
+    });
+
+    // Form validation and calculation
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('form-control') &&
+            (e.target.name.includes('quantity') ||
+             e.target.name.includes('unit_price') ||
+             e.target.name.includes('discount_percentage'))) {
+            updateItemTotal(e.target.closest('.item-row'));
+        }
+
+        // Tax rate change affects totals
+        if (e.target.name === 'tax_rate') {
+            updateAllTotals();
+        }
+
+        // Global discount change
+        if (e.target.name === 'discount_amount') {
+            updateAllTotals();
+        }
+    });
+
+    // Item type change
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-type-selector')) {
+            toggleItemFields(e.target.closest('.item-row'), e.target.value);
+        }
+    });
+
+    // Remove item
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-item-btn')) {
+            removeItem(e.target.closest('.item-row'));
+        }
+    });
+
+    // Initialize totals
+    console.log('Initializing application...');
+    console.log('Total form count:', {{ item_formset.total_form_count }});
+    updateAllTotals();
+
+    function initializeItemRow(itemRow) {
+        const itemType = itemRow.querySelector('.item-type-selector').value;
+        toggleItemFields(itemRow, itemType);
+        updateItemTotal(itemRow);
+    }
+
+    function addNewItem() {
+        const container = document.getElementById('items-container');
+        const managementForm = document.querySelector('[name="items-TOTAL_FORMS"]');
+
+        // Update management form
+        itemCount++;
+        managementForm.value = itemCount;
+
+        // Clone the first item template
+        const templateRow = container.querySelector('.item-row').cloneNode(true);
+        const formIndex = itemCount - 1;
+
+        // Update form indices in the clone
+        updateFormIndices(templateRow, formIndex);
+
+        // Reset values
+        resetFormFields(templateRow);
+
+        // Update item number
+        templateRow.querySelector('.item-number').textContent = itemCount;
+        templateRow.dataset.formIndex = formIndex;
+
+        // Initialize the new row
+        initializeItemRow(templateRow);
+
+        container.appendChild(templateRow);
+        renumberItems();
+    }
+
+    function removeItem(itemRow) {
+        itemRow.remove();
+        itemCount--;
+        document.querySelector('[name="items-TOTAL_FORMS"]').value = itemCount;
+        renumberItems();
+        updateAllTotals();
+    }
+
+    function updateFormIndices(element, newIndex) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/items-(\d+)-/, `items-${newIndex}-`);
+                input.id = input.id.replace(/id_items-(\d+)-/, `id_items-${newIndex}-`);
+            }
+        });
+    }
+
+    function resetFormFields(element) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+    }
+
+    function renumberItems() {
+        document.querySelectorAll('.item-row').forEach((row, index) => {
+            row.querySelector('.item-number').textContent = index + 1;
+        });
+    }
+
+    function toggleItemFields(itemRow, itemType) {
+        const productFields = itemRow.querySelector('.product-selector-container');
+        const customFields = itemRow.querySelectorAll('.custom-fields');
+
+        if (itemType === 'product') {
+            if (productFields) productFields.style.display = 'block';
+            customFields.forEach(field => field.style.display = 'none');
+        } else {
+            if (productFields) productFields.style.display = 'none';
+            customFields.forEach(field => field.style.display = 'block');
+        }
+    }
+
+    function updateItemTotal(itemRow) {
+        const quantity = parseFloat(itemRow.querySelector('input[name*="[quantity]"]')?.value) || 0;
+        const price = parseFloat(itemRow.querySelector('input[name*="[unit_price]"]')?.value) || 0;
+        const discountPercent = parseFloat(itemRow.querySelector('input[name*="[discount_percentage]"]')?.value) || 0;
+                            console.log('All unit_price inputs in row:', itemRow.querySelectorAll('input[name*="-unit_price"]'));
+
+                            if (priceInput) {
+                                const priceValue = parseFloat(data.price).toFixed(2);
+                                priceInput.value = priceValue;
+                                console.log('Set price input value to:', priceValue, 'from original:', data.price);
+
+                                // Trigger input event to ensure calculations update
+                                const event = new Event('input', { bubbles: true });
+                                priceInput.dispatchEvent(event);
+
+                                updateItemTotal(itemRow);
+                            }
+                        } else {
+                            console.warn('Price fetch unsuccessful or price is null:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching product price:', error);
+                    });
+            } else {
+                console.log('No productId or itemRow found');
+            }
+        }
+    });
+
+    // Form validation and calculation
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('form-control') &&
+            (e.target.name.includes('quantity') ||
+             e.target.name.includes('unit_price') ||
+             e.target.name.includes('discount_percentage'))) {
+            updateItemTotal(e.target.closest('.item-row'));
+        }
+
+        // Tax rate change affects totals
+        if (e.target.name === 'tax_rate') {
+            updateAllTotals();
+        }
+
+        // Global discount change
+        if (e.target.name === 'discount_amount') {
+            updateAllTotals();
+        }
+    });
+
+    // Item type change
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-type-selector')) {
+            toggleItemFields(e.target.closest('.item-row'), e.target.value);
+        }
+    });
+
+    // Remove item
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-item-btn')) {
+            removeItem(e.target.closest('.item-row'));
+        }
+    });
+
+    // Initialize totals
+    console.log('Initializing application...');
+    console.log('Total form count:', {{ item_formset.total_form_count }});
+    updateAllTotals();
+
+    function initializeItemRow(itemRow) {
+        const itemType = itemRow.querySelector('.item-type-selector').value;
+        toggleItemFields(itemRow, itemType);
+        updateItemTotal(itemRow);
+    }
+
+    function addNewItem() {
+        const container = document.getElementById('items-container');
+        const managementForm = document.querySelector('[name="items-TOTAL_FORMS"]');
+
+        // Update management form
+        itemCount++;
+        managementForm.value = itemCount;
+
+        // Clone the first item template
+        const templateRow = container.querySelector('.item-row').cloneNode(true);
+        const formIndex = itemCount - 1;
+
+        // Update form indices in the clone
+        updateFormIndices(templateRow, formIndex);
+
+        // Reset values
+        resetFormFields(templateRow);
+
+        // Update item number
+        templateRow.querySelector('.item-number').textContent = itemCount;
+        templateRow.dataset.formIndex = formIndex;
+
+        // Initialize the new row
+        initializeItemRow(templateRow);
+
+        container.appendChild(templateRow);
+        renumberItems();
+    }
+
+    function removeItem(itemRow) {
+        itemRow.remove();
+        itemCount--;
+        document.querySelector('[name="items-TOTAL_FORMS"]').value = itemCount;
+        renumberItems();
+        updateAllTotals();
+    }
+
+    function updateFormIndices(element, newIndex) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/items-(\d+)-/, `items-${newIndex}-`);
+                input.id = input.id.replace(/id_items-(\d+)-/, `id_items-${newIndex}-`);
+            }
+        });
+    }
+
+    function resetFormFields(element) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+    }
+
+    function renumberItems() {
+        document.querySelectorAll('.item-row').forEach((row, index) => {
+            row.querySelector('.item-number').textContent = index + 1;
+        });
+    }
+
+    function toggleItemFields(itemRow, itemType) {
+        const productFields = itemRow.querySelector('.product-selector-container');
+        const customFields = itemRow.querySelectorAll('.custom-fields');
+
+        if (itemType === 'product') {
+            if (productFields) productFields.style.display = 'block';
+            customFields.forEach(field => field.style.display = 'none');
+        } else {
+            if (productFields) productFields.style.display = 'none';
+            customFields.forEach(field => field.style.display = 'block');
+        }
+    }
+
+    function updateItemTotal(itemRow) {
+        const quantity = parseFloat(itemRow.querySelector('input[name*="-quantity"]')?.value) || 0;
+        const price = parseFloat(itemRow.querySelector('input[name*="-unit_price"]')?.value) || 0;
+        const discountPercent = parseFloat(itemRow.querySelector('input[name*="-discount_percentage"]')?.value) || 0;
+                            } else {
+                                console.error('Price input not found in row. Available inputs:',
+                                    Array.from(itemRow.querySelectorAll('input')).map(input => ({
+                                        name: input.name,
+                                        type: input.type
+                                    }))
+                                );
+                            }
+                        } else {
+                            console.warn('Price fetch unsuccessful or price is null:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching product price:', error);
+                    });
+            } else {
+                console.log('No productId or itemRow found');
+            }
+        }
+    });
+
+    // Form validation and calculation
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('form-control') &&
+            (e.target.name.includes('quantity') ||
+             e.target.name.includes('unit_price') ||
+             e.target.name.includes('discount_percentage'))) {
+            updateItemTotal(e.target.closest('.item-row'));
+        }
+
+        // Tax rate change affects totals
+        if (e.target.name === 'tax_rate') {
+            updateAllTotals();
+        }
+
+        // Global discount change
+        if (e.target.name === 'discount_amount') {
+            updateAllTotals();
+        }
+    });
+
+    // Item type change
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-type-selector')) {
+            toggleItemFields(e.target.closest('.item-row'), e.target.value);
+        }
+    });
+
+    // Remove item
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-item-btn')) {
+            removeItem(e.target.closest('.item-row'));
+        }
+    });
+
+    // Initialize totals
+    console.log('Initializing application...');
+    console.log('Total form count:', {{ item_formset.total_form_count }});
+    updateAllTotals();
+
+    function initializeItemRow(itemRow) {
+        const itemType = itemRow.querySelector('.item-type-selector').value;
+        toggleItemFields(itemRow, itemType);
+        updateItemTotal(itemRow);
+    }
+
+    function addNewItem() {
+        const container = document.getElementById('items-container');
+        const managementForm = document.querySelector('[name="items-TOTAL_FORMS"]');
+
+        // Update management form
+        itemCount++;
+        managementForm.value = itemCount;
+
+        // Clone the first item template
+        const templateRow = container.querySelector('.item-row').cloneNode(true);
+        const formIndex = itemCount - 1;
+
+        // Update form indices in the clone
+        updateFormIndices(templateRow, formIndex);
+
+        // Reset values
+        resetFormFields(templateRow);
+
+        // Update item number
+        templateRow.querySelector('.item-number').textContent = itemCount;
+        templateRow.dataset.formIndex = formIndex;
+
+        // Initialize the new row
+        initializeItemRow(templateRow);
+
+        container.appendChild(templateRow);
+        renumberItems();
+    }
+
+    function removeItem(itemRow) {
+        itemRow.remove();
+        itemCount--;
+        document.querySelector('[name="items-TOTAL_FORMS"]').value = itemCount;
+        renumberItems();
+        updateAllTotals();
+    }
+
+    function updateFormIndices(element, newIndex) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/items-(\d+)-/, `items-${newIndex}-`);
+                input.id = input.id.replace(/id_items-(\d+)-/, `id_items-${newIndex}-`);
+            }
+        });
+    }
+
+    function resetFormFields(element) {
+        const inputs = element.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+    }
+
+    function renumberItems() {
+        document.querySelectorAll('.item-row').forEach((row, index) => {
+            row.querySelector('.item-number').textContent = index + 1;
+        });
+    }
+
+    function toggleItemFields(itemRow, itemType) {
+        const productFields = itemRow.querySelector('.product-selector-container');
+        const customFields = itemRow.querySelectorAll('.custom-fields');
+
+        if (itemType === 'product') {
+            if (productFields) productFields.style.display = 'block';
+            customFields.forEach(field => field.style.display = 'none');
+        } else {
+            if (productFields) productFields.style.display = 'none';
+            customFields.forEach(field => field.style.display = 'block');
+        }
+    }
+
+    function updateItemTotal(itemRow) {
+        const quantity = parseFloat(itemRow.querySelector('input[name*="[quantity]"]')?.value) || 0;
+        const price = parseFloat(itemRow.querySelector('input[name*="[unit_price]"]')?.value) || 0;
+        const discountPercent = parseFloat(itemRow.querySelector('input[name*="[discount_percentage]"]')?.value) || 0;
+
+        const subtotal = quantity * price;
+        const discount = subtotal * (discountPercent / 100);
+        const total = subtotal - discount;
+
+        const totalDisplay = itemRow.querySelector('.item-total');
+        if (totalDisplay) {
+            totalDisplay.value = total.toFixed(2);
+        }
+
+        updateAllTotals();
+    }
+
+    function updateAllTotals() {
+        let subtotal = 0;
+
+        document.querySelectorAll('.item-row').forEach(row => {
+            const totalStr = row.querySelector('.item-total')?.value || '0';
+            subtotal += parseFloat(totalStr) || 0;
+        });
+
+        const taxRate = parseFloat(document.querySelector('[name="tax_rate"]')?.value) || 0;
+        const globalDiscount = parseFloat(document.querySelector('[name="discount_amount"]')?.value) || 0;
+
+        const taxAmount = (subtotal * taxRate) / 100;
+        const grandTotal = subtotal + taxAmount - globalDiscount;
+
+        // Update displays
+        document.getElementById('subtotal-display').textContent = `KES ${subtotal.toFixed(2)}`;
+        document.getElementById('tax-display').textContent = `KES ${taxAmount.toFixed(2)}`;
+        document.getElementById('discount-display').textContent = `KES ${globalDiscount.toFixed(2)}`;
+        document.getElementById('grand-total-display').textContent = `KES ${grandTotal.toFixed(2)}`;
+    }
+
+    function openProductModal() {
+        const modal = new bootstrap.Modal(document.getElementById('productSelectorModal'));
+        loadProducts();
+        modal.show();
+    }
+
+    function loadProducts() {
+        const searchTerm = document.getElementById('productSearch').value;
+
+        fetch(`/quotations/product-selector/?search=${encodeURIComponent(searchTerm)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayProducts(data.products);
+                }
+            })
+            .catch(error => console.error('Error loading products:', error));
+    }
+
+    function displayProducts(products) {
+        const container = document.getElementById('productList');
+        container.innerHTML = '';
+
+        if (products.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted">No products found.</p>';
+            return;
+        }
+
+        products.forEach(product => {
+            const productElement = createProductElement(product);
+            container.appendChild(productElement);
+        });
+    }
+
+    function createProductElement(product) {
+        const div = document.createElement('div');
+        div.className = 'product-item';
+        div.innerHTML = `
+            <img src="${product.image_url || '/static/images/no-image.png'}" alt="${product.name}">
+            <div class="product-info flex-grow-1">
+                <h6>${product.name}</h6>
+                <small class="text-muted">${product.brand} - ${product.category}</small>
+                <div class="mt-1">
+                    <span class="product-price ${product.is_on_sale ? 'sale' : ''}">KES ${product.selling_price.toFixed(2)}</span>
+                    ${product.is_on_sale ? '<span class="sale-price ms-2">KES ' + (product.sale_price?.toFixed(2) || '0.00') + '</span>' : ''}
+                </div>
+                <small class="text-muted">${product.stock_status}</small>
+            </div>
+            <button type="button" class="btn btn-success btn-sm select-product-btn"
+                    data-product-id="${product.id}"
+                    data-product-name="${product.name}"
+                    data-price="${product.selling_price}">
+                Select
+            </button>
+        `;
+        return div;
+    }
+
+    function selectProductForItem(itemIndex, productId, productName, price) {
+        console.log('selectProductForItem called with:', { itemIndex, productId, productName, price });
+
+        const itemRows = document.querySelectorAll('.item-row');
+        console.log('Total item rows:', itemRows.length);
+
+        if (itemIndex >= itemRows.length) {
+            console.error('Item index out of range:', itemIndex, '>=', itemRows.length);
+            return;
+        }
+
+        const itemRow = itemRows[itemIndex];
+        console.log('Selected item row:', itemRow);
+
+        // Try multiple selector strategies to find the elements
+        // Based on debug logs: product select is "items-0-product", price input is "items-0-unit_price"
+        let productSelect = itemRow.querySelector('select[name$="product"]'); // Ends with "product"
+        let priceInput = itemRow.querySelector('input[name$="unit_price"]'); // Ends with "unit_price"
+
+        // Fallback searches if the first selectors fail
+        if (!productSelect) {
+            productSelect = itemRow.querySelector('select[name*="product"]'); // Contains "product"
+            console.log('Fallback 1 product select search result:', !!productSelect);
+        }
+        if (!priceInput) {
+            priceInput = itemRow.querySelector('input[name*="unit_price"]'); // Contains "unit_price"
+            console.log('Fallback 1 price input search result:', !!priceInput);
+        }
+
+        // Final fallback - find any remaining unfound elements by type
+        if (!productSelect) {
+            const selects = Array.from(itemRow.querySelectorAll('select'));
+            productSelect = selects.find(s => s.name && s.name.includes('product'));
+            console.log('Fallback 2 product select search result:', !!productSelect);
+        }
+        if (!priceInput) {
+            const inputs = Array.from(itemRow.querySelectorAll('input[type="number"], input[type="text"]'));
+            priceInput = inputs.find(i => i.name && i.name.includes('unit_price'));
+            console.log('Fallback 2 price input search result:', !!priceInput);
+        }
+
+        console.log('Final search results - Product select found:', !!productSelect, 'Price input found:', !!priceInput);
+
+        // Log all available form elements for debugging
+        const allSelects = itemRow.querySelectorAll('select');
+        const allInputs = itemRow.querySelectorAll('input');
+        console.log('All selects in row:');
+        allSelects.forEach((s, index) => console.log(`  Select ${index}: name="${s.name}" id="${s.id}"`));
+        console.log('All inputs in row:');
+        allInputs.forEach((i, index) => console.log(`  Input ${index}: name="${i.name}" id="${i.id}" type="${i.type}"`));
+
+        if (productSelect) {
+            console.log('Setting product select value to:', productId);
+            // Set the select value to the product ID
+            let optionExists = false;
+            for (let option of productSelect.options) {
+                if (option.value === productId) {
+                    optionExists = true;
+                    break;
+                }
+            }
+
+            if (!optionExists) {
+                console.log('Adding new option to select:', productName, productId);
+                // Add the option if it doesn't exist
+                const option = new Option(productName, productId);
+                productSelect.appendChild(option);
+            }
+
+            productSelect.value = productId;
+            console.log('Product select value set to:', productSelect.value);
+        } else {
+            console.error('Product select not found in item row');
+        }
+
+        if (priceInput) {
+            const priceValue = parseFloat(price).toFixed(2);
+            priceInput.value = priceValue;
+            console.log('Price input set to:', priceValue, 'from original:', price);
+
+            // Trigger input event to ensure calculations update
+            const event = new Event('input', { bubbles: true });
+            priceInput.dispatchEvent(event);
+        } else {
+            console.error('Price input not found in item row');
+        }
+
+        // Update the item total
+        console.log('Calling updateItemTotal for row');
+        updateItemTotal(itemRow);
+    }
+
+    // Search functionality
+    document.getElementById('productSearch').addEventListener('input', debounce(loadProducts, 300));
+
+    // Prevent form submission on enter in search
+    document.getElementById('productSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+        }
+    });
+});
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1521 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ room.name|title }} - Chat{% endblock %}
+
+{% block content %}
+<div class="container-fluid chat-container">
+    <!-- Mobile Header -->
+    <div class="mobile-header d-md-none">
+        <div class="mobile-header-content">
+            <button class="btn btn-link text-white mobile-menu-btn" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="mobile-room-info">
+                <h6 class="mb-0">
+                    {% if room.room_type == 'department' %}🏢 {% elif room.room_type == 'project' %}📋 {% elif room.room_type == 'private' %}🔒 {% else %}💬 {% endif %}
+                    {{ room.name|title }}
+                </h6>
+                <small class="text-white-50" id="mobile-participant-count">
+                    <i class="fas fa-users"></i> {{ room.get_participants_count }} members
+                </small>
+            </div>
+            <div class="mobile-actions">
+                <a href="{% url 'chat:room_members' room.name %}" class="btn btn-link text-white">
+                    <i class="fas fa-user-friends"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row chat-main-row">
+        <!-- Hidden input for user ID -->
+        <input type="hidden" id="current-user-id" value="{{ user.id }}">
+
+        <!-- Chat area -->
+        <div class="col-12 col-md-8 chat-main-col">
+            <div class="card chat-room-card">
+                <!-- Desktop Header -->
+                <div class="card-header d-none d-md-flex justify-content-between align-items-center bg-primary text-white">
+                    <div>
+                        <h5 class="mb-0">
+                            {% if room.room_type == 'department' %}🏢 {% elif room.room_type == 'project' %}📋 {% elif room.room_type == 'private' %}🔒 {% else %}💬 {% endif %}
+                            {{ room.name|title }}
+                            <span class="badge bg-white text-dark ms-2">{{ room.get_room_type_display }}</span>
+                        </h5>
+                        {% if room.description %}
+                        <small>{{ room.description }}</small>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark me-2 d-none d-lg-inline" id="participant-count">
+                            <i class="fas fa-users"></i> {{ room.get_participants_count }} members
+                        </span>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'chat:room_members' room.name %}" class="btn btn-sm btn-outline-light" title="Members">
+                                <i class="fas fa-user-friends"></i>
+                            </a>
+                            {% if room.created_by == user or user.is_staff %}
+                            <a href="{% url 'chat:edit_room' room.name %}" class="btn btn-sm btn-outline-light d-none d-lg-inline" title="Settings">
+                                <i class="fas fa-cog"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages area -->
+                <div class="card-body chat-messages" id="messages-container">
+                    <!-- Typing Indicators -->
+                    <div id="typing-indicators" class="typing-indicators" style="display: none;">
+                        <div class="typing-indicator-content">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span class="typing-text"></span>
+                        </div>
+                    </div>
+
+                    <div id="messages-list">
+                        <!-- Load More Button (shown when there are older messages) -->
+                        <div id="load-more-container" class="load-more-container" style="display: none;">
+                            <button id="load-more-btn" class="btn btn-outline-primary btn-sm load-more-btn">
+                                <i class="fas fa-arrow-up"></i> Load Earlier Messages
+                            </button>
+                            <div id="loading-spinner" class="loading-spinner" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                        {% for message in messages %}
+                        <div class="message-item {% if message.author == user %}message-own{% else %}message-other{% endif %}" data-message-id="{{ message.id }}">
+                            <div class="message-avatar">
+                                {% if message.author.profile.avatar %}
+                                <img src="{{ message.author.profile.avatar.url }}" alt="{{ message.author.username }}" class="rounded-circle" width="32">
+                                {% else %}
+                                <div class="avatar-placeholder">
+                                    {{ message.author.username|first|upper }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% if message.reply_to %}
+                            <div class="message-reply">
+                                <small class="text-muted">
+                                    <i class="fas fa-reply"></i> Replying to
+                                    <strong>{{ message.reply_to.author.get_full_name|default:message.reply_to.author.username }}</strong>
+                                </small>
+                                <div class="reply-content">
+                                    {{ message.reply_to.content|truncatechars:100 }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <div class="message-author-info">
+                                        <strong>{{ message.author.get_full_name|default:message.author.username }}</strong>
+                                        <div class="message-role">{{ message.author.get_role_display }}</div>
+                                    </div>
+                                    <small class="text-muted">{{ message.timestamp|date:"M j, H:i" }}</small>
+                                    {% if message.is_edited %}
+                                    <small class="text-muted">(edited)</small>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-link text-muted reply-btn" title="Reply" data-message-id="{{ message.id }}" data-author="{{ message.author.get_full_name|default:message.author.username }}" data-content="{{ message.content|truncatechars:100 }}">
+                                        <i class="fas fa-reply"></i>
+                                    </button>
+                                </div>
+                            <div class="message-text">
+                                {{ message.content|linebreaksbr }}
+                            </div>
+                            {% if message.file_attachment %}
+                            <div class="message-file" data-file-type="{% if message.file_attachment.name|lower|slice:"-4:" in '.jpg.jpeg.png.gif.webp' %}image{% elif message.file_attachment.name|lower|slice:"-4:" == '.pdf' %}pdf{% elif message.file_attachment.name|lower|slice:"-5:" in '.docx.docx' %}document{% elif message.file_attachment.name|lower|slice:"-4:" in '.zip.rar' %}archive{% elif message.file_attachment.name|lower|slice:"-4:" == '.txt' %}text{% else %}unknown{% endif %}">
+                                <div class="message-file-content">
+                                    <div class="message-file-icon"></div>
+                                    <div class="message-file-info">
+                                        <span class="message-file-name">{{ message.file_name|default:message.file_attachment.name }}</span>
+                                        <span class="message-file-size">{% load static %}{% if message.file_attachment.size %}{{ message.file_attachment.size|filesizeformat }}{% endif %}</span>
+                                    </div>
+                                    <a href="{{ message.file_attachment.url }}" target="_blank" class="message-file-download" download>
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Message Reactions -->
+                            <div class="message-reactions" data-message-id="{{ message.id }}">
+                                <!-- Reaction buttons will be populated by JavaScript -->
+                            </div>
+
+                            <div class="reaction-buttons" style="display: none;">
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="👍">
+                                    👍
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="❤️">
+                                    ❤️
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="😂">
+                                    😂
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="👎">
+                                    👎
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="😮">
+                                    😮
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="🎉">
+                                    🎉
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="😢">
+                                    😢
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary reaction-btn" data-emoji="😡">
+                                    😡
+                                </button>
+                            </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="message-item empty-message">
+                            <div class="message-content">
+                                <i class="fas fa-comments"></i>
+                                <h5>Welcome to the conversation</h5>
+                                <p>This is the beginning of a beautiful conversation. Send your first message to get started!</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Reply Context (shown when replying) -->
+                <div id="reply-context" class="reply-context" style="display: none;">
+                    <div class="reply-context-content">
+                        <div class="reply-context-header">
+                            <i class="fas fa-reply"></i>
+                            <strong id="reply-author"></strong>
+                            <button class="btn btn-sm btn-link text-muted ms-auto reply-close" title="Cancel Reply" id="reply-close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="reply-context-text" id="reply-content"></div>
+                    </div>
+                </div>
+
+                <!-- Message input -->
+                <div class="card-footer">
+                    <form id="message-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <textarea
+                                class="form-control message-input"
+                                id="message-input"
+                                rows="1"
+                                placeholder="Type your message..."
+                                maxlength="1000"
+                                required
+                            ></textarea>
+                            <input type="file" id="file-input" style="display: none;" accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt,.zip,.rar">
+                            <button class="btn btn-outline-secondary" type="button" id="attach-button" title="Attach file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <button class="btn btn-primary" type="submit" id="send-button">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div id="file-preview" class="file-preview" style="display: none;">
+                            <div class="file-preview-content">
+                                <span id="file-name"></span>
+                                <button type="button" class="btn btn-sm btn-link text-danger" id="remove-file">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Press Enter to send, Shift+Enter for new line. Max 1000 characters.
+                            <span class="file-limit">File limit: 10MB (Images, PDF, Word docs, Text files, ZIP)</span>
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Online Users -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-circle text-success"></i> Online in this room
+                        <span class="badge bg-success float-end">{{ online_users|length }}</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if online_users %}
+                        {% for online_user in online_users %}
+                        <div class="d-flex align-items-center mb-2" id="user-{{ online_user.id }}">
+                            <i class="fas fa-circle text-success me-2"></i>
+                            {{ online_user.get_full_name|default:online_user.username }}
+                        </div>
+                        {% empty %}
+                        <div class="text-muted">
+                            You're the only one here
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted">
+                            You're the only one here
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Room Info -->
+            {% if room.description %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Room Information</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ room.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'chat:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Rooms
+                        </a>
+                        <button class="btn btn-outline-info btn-sm" onclick="window.location.reload()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        {% if user.is_staff %}
+                        <a href="{% url 'chat:edit_room' room.name %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-cog"></i> Room Settings
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Status -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+    <div id="connection-status" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-wifi"></i> Connected
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chat_room.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/smart-polling.js' %}"></script>
+<script>
+// Real-time chat using WebSockets
+let lastMessageId = 0;
+let isInitialLoad = true; // Prevent notifications on page load
+let currentReplyTo = null; // For reply functionality
+let selectedFile = null; // For file attachments
+let currentUserId; // Current user ID for filtering notifications
+
+// Initialize user ID from Django template
+document.addEventListener('DOMContentLoaded', function() {
+    currentUserId = parseInt(document.getElementById('current-user-id').value);
+});
+
+// Typing indicators
+let isTypingSent = false;
+let typingTimeout = null;
+let currentTypingUsers = [];
+
+// Legacy variables for backward compatibility
+let pollInterval = null;
+
+// DOM elements
+const messagesContainer = document.getElementById('messages-container');
+const messagesList = document.getElementById('messages-list');
+const messageForm = document.getElementById('message-form');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+const connectionStatus = document.getElementById('connection-status');
+const loadMoreContainer = document.getElementById('load-more-container');
+
+// Initialize last message ID from existing messages
+function initializeLastMessageId() {
+    const messageItems = document.querySelectorAll('.message-item[data-message-id]');
+    if (messageItems.length > 0) {
+        const lastItem = messageItems[messageItems.length - 1];
+        lastMessageId = parseInt(lastItem.dataset.messageId) || 0;
+    }
+}
+
+function sendMessageAjax(content, replyTo = null, file = null) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('content', content);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    if (replyTo) {
+        formData.append('reply_to', replyTo);
+    }
+
+    if (file) {
+        formData.append('file_attachment', file);
+    }
+
+    fetch(`/chat/api/room/{{ room.name }}/send/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add message locally for immediate feedback
+            const messageData = {
+                id: data.message_id,
+                content: content,
+                author: '{{ user.username }}',
+                author_id: '{{ user.id }}',
+                timestamp: new Date().toISOString(),
+                is_edited: false,
+                file_attachment: file ? file.name : null,
+            };
+
+            // Include reply information if replying
+            if (data.reply_to) {
+                messageData.reply_to = {
+                    id: data.reply_to,
+                    author: data.reply_to_author || 'Unknown',
+                    content: data.reply_to_content || ''
+                };
+            }
+
+            addMessageToUI(messageData, true);
+
+            // Clear form inputs
+            messageInput.value = '';
+            hideReplyContext();
+            if (file) {
+                clearFileSelection();
+            }
+            scrollToBottom();
+
+            // Update last message ID
+            if (data.message_id) {
+                lastMessageId = data.message_id;
+            }
+        } else {
+            showConnectionStatus('danger', data.error || 'Failed to send message');
+        }
+    })
+    .catch(error => {
+        console.error('Send message error:', error);
+        showConnectionStatus('danger', 'Failed to send message');
+    });
+}
+
+function pollForNewMessages() {
+    // Prevent overlapping poll requests
+    if (isPollingInProgress) {
+        return;
+    }
+
+    isPollingInProgress = true;
+
+    fetch(`/chat/api/room/{{ room.name }}/messages/?last_id=${lastMessageId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => {
+        // Handle HTTP errors
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Check if API returned an error
+        if (data.success === false) {
+            throw new Error(data.error || 'API returned error');
+        }
+
+        if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(message => {
+                addMessageToUI(message, false);
+                lastMessageId = Math.max(lastMessageId, message.id);
+            });
+            scrollToBottom();
+
+            // Only play notification sound and show popup for new messages AFTER initial load
+            if (!isInitialLoad) {
+                playNotificationSound();
+                showNewMessageNotification(data.messages.length);
+            }
+        }
+
+        // Mark that we've completed the initial load
+        isInitialLoad = false;
+        isPollingInProgress = false;
+    })
+    .catch(error => {
+        // Always reset polling flag
+        isPollingInProgress = false;
+
+        // Handle aborted requests gracefully (don't log as errors)
+        if (error.name === 'AbortError' || error.message.includes('aborted')) {
+            // Request was aborted, this is normal - don't log
+            return;
+        }
+
+        // Log other errors
+        console.error('Poll messages error:', error);
+
+        // Still mark initial load as complete even on error
+        isInitialLoad = false;
+    });
+}
+
+function addMessageToUI(messageData, isOwnMessage = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message-item ${isOwnMessage ? 'message-own' : 'message-other'}`;
+    messageDiv.dataset.messageId = messageData.id;
+
+    const timestamp = new Date(messageData.timestamp);
+    const timeString = timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    let replyHtml = '';
+    if (messageData.reply_to) {
+        replyHtml = `
+            <div class="message-reply">
+                <small class="text-muted">
+                    <i class="fas fa-reply"></i> Replying to
+                    <strong>${messageData.reply_to.author || 'Unknown'}</strong>
+                </small>
+                <div class="reply-content">
+                    ${messageData.reply_to.content || ''}
+                </div>
+            </div>
+        `;
+    }
+
+    const authorName = messageData.author_full_name || messageData.author;
+    const authorRole = messageData.author_role || '';
+
+    let fileHtml = '';
+    if (messageData.file_attachment) {
+        const fileType = getFileType(messageData.file_attachment);
+        fileHtml = `
+            <div class="message-file" data-file-type="${fileType}">
+                <div class="message-file-content">
+                    <div class="message-file-icon"></div>
+                    <div class="message-file-info">
+                        <span class="message-file-name">${messageData.file_attachment}</span>
+                        <span class="message-file-size">File attached</span>
+                    </div>
+                    <a href="/media/chat_attachments/${messageData.file_attachment}" target="_blank" class="message-file-download" download>
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    messageDiv.innerHTML = `
+        <div class="message-avatar">
+            <div class="avatar-placeholder">${authorName.charAt(0).toUpperCase()}</div>
+        </div>
+        ${replyHtml}
+        <div class="message-content">
+            <div class="message-header">
+                <div class="message-author-info">
+                    <strong>${authorName}</strong>
+                    ${authorRole ? `<div class="message-role">${authorRole}</div>` : ''}
+                </div>
+                <small class="text-muted">${timeString}</small>
+                <button class="btn btn-sm btn-link text-muted reply-btn reply-btn-small" title="Reply" data-message-id="${messageData.id}" data-author="${authorName}" data-content="${messageData.content.substring(0, 100)}${messageData.content.length > 100 ? '...' : ''}">
+                    <i class="fas fa-reply"></i>
+                </button>
+            </div>
+            <div class="message-text">${messageData.content.replace(/\n/g, '<br>')}</div>
+            ${fileHtml}
+        </div>
+    `;
+
+    // Attach reply event handlers to the new buttons
+    const replyBtn = messageDiv.querySelector('.reply-btn');
+    if (replyBtn) {
+        replyBtn.addEventListener('click', handleReplyClick);
+    }
+
+    if (!isOwnMessage) {
+        messagesList.appendChild(messageDiv);
+    } else {
+        // Own messages go on the right
+        messageDiv.className = 'message-item message-own';
+        messagesList.appendChild(messageDiv);
+    }
+}
+
+function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showConnectionStatus(type, message) {
+    connectionStatus.className = `toast align-items-center text-white bg-${type} border-0 chat-alert`;
+    connectionStatus.querySelector('.toast-body').innerHTML = getAlertContent(type, message);
+    connectionStatus.classList.add('show');
+
+    setTimeout(() => {
+        connectionStatus.classList.remove('show');
+    }, 4000);
+}
+
+function getAlertContent(type, message) {
+    let icon, gradientClass, emoji;
+
+    switch(type) {
+        case 'success':
+            icon = 'fas fa-check-circle';
+            gradientClass = 'success-alert';
+            emoji = '✅';
+            break;
+        case 'error':
+        case 'danger':
+            icon = 'fas fa-exclamation-triangle';
+            gradientClass = 'danger-alert';
+            emoji = '⚠️';
+            break;
+        case 'warning':
+            icon = 'fas fa-exclamation-circle';
+            gradientClass = 'warning-alert';
+            emoji = '🔔';
+            break;
+        case 'info':
+            icon = 'fas fa-info-circle';
+            gradientClass = 'info-alert';
+            emoji = '💡';
+            break;
+        default:
+            icon = 'fas fa-bell';
+            gradientClass = 'default-alert';
+            emoji = '🔔';
+    }
+
+    return `
+        <div class="alert-content">
+            <div class="alert-icon-wrapper ${gradientClass}">
+                <i class="${icon}"></i>
+            </div>
+            <div class="alert-message">
+                <div class="alert-text">${message}</div>
+                <div class="alert-emoji">${emoji}</div>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    `;
+}
+
+// File attachment variables
+
+// File attachment handling
+const attachButton = document.getElementById('attach-button');
+const fileInput = document.getElementById('file-input');
+const filePreview = document.getElementById('file-preview');
+const fileName = document.getElementById('file-name');
+const removeFileBtn = document.getElementById('remove-file');
+
+attachButton.addEventListener('click', function() {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showConnectionStatus('danger', 'File size cannot exceed 10MB.');
+            clearFileSelection();
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            'application/zip', 'application/x-rar-compressed'
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            // Check extensions for some types
+            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.zip', '.rar'];
+            const fileName = file.name.toLowerCase();
+            const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+            if (!hasValidExtension) {
+                showConnectionStatus('danger', 'Unsupported file type. Allowed: Images, PDF, Word docs, Text files, ZIP archives.');
+                clearFileSelection();
+                return;
+            }
+        }
+
+        selectedFile = file;
+        fileName.textContent = file.name;
+        filePreview.style.display = 'block';
+        messageInput.placeholder = 'Add a message (optional)...';
+        messageInput.required = false;
+    }
+});
+
+removeFileBtn.addEventListener('click', function() {
+    clearFileSelection();
+});
+
+function clearFileSelection() {
+    selectedFile = null;
+    fileInput.value = '';
+    filePreview.style.display = 'none';
+    messageInput.placeholder = 'Type your message...';
+    messageInput.required = true;
+}
+
+// Helper function to determine file type from filename
+function getFileType(filename) {
+    const lowerName = filename.toLowerCase();
+    if (lowerName.match(/\.(jpg|jpeg|png|gif|webp)$/)) return 'image';
+    if (lowerName.match(/\.pdf$/)) return 'pdf';
+    if (lowerName.match(/\.(doc|docx)$/)) return 'document';
+    if (lowerName.match(/\.(zip|rar)$/)) return 'archive';
+    if (lowerName.match(/\.txt$/)) return 'text';
+    return 'unknown';
+}
+
+// Form handling
+let isSubmitting = false; // Prevent multiple simultaneous submissions
+
+messageForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Prevent multiple simultaneous submissions
+    if (isSubmitting) {
+        return;
+    }
+
+    const content = messageInput.value.trim();
+    const hasFile = selectedFile !== null;
+
+    // Require either content or file
+    if (!content && !hasFile) {
+        showConnectionStatus('warning', 'Please enter a message or attach a file.');
+        return;
+    }
+
+    // Set submitting flag
+    isSubmitting = true;
+
+    // For file uploads, show loading state
+    if (hasFile) {
+        attachButton.disabled = true;
+        attachButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    } else {
+        // Disable send button immediately to prevent double-sends
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    sendMessageAjax(content, currentReplyTo, hasFile ? selectedFile : null);
+
+    // Reset form state
+    function resetFormState() {
+        isSubmitting = false;
+        if (hasFile) {
+            attachButton.disabled = false;
+            attachButton.innerHTML = '<i class="fas fa-paperclip"></i>';
+        }
+        sendButton.disabled = false;
+        sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    }
+
+    // Reset after a delay to prevent rapid clicking
+    setTimeout(resetFormState, hasFile ? 2000 : 1000);
+});
+
+// Auto-resize textarea
+messageInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+
+// Keyboard shortcuts - Enter key handling is managed by form submit event
+
+// Notification functions
+function playNotificationSound() {
+    try {
+        const audio = new Audio('/static/sounds/alert.mp3');
+        audio.volume = 0.5; // Set volume to 50%
+        audio.play().catch(e => {
+            console.log('Audio play failed:', e);
+            // Fallback: try Web Audio API
+            playFallbackSound();
+        });
+    } catch (error) {
+        console.log('Audio error:', error);
+    }
+}
+
+function playFallbackSound() {
+    // Fallback beep using Web Audio API
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime + 0.2);
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Fallback audio also failed:', error);
+    }
+}
+
+function showNewMessageNotification(count) {
+    // Create or update existing notification
+    let notification = document.getElementById('new-message-notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'new-message-notification';
+        notification.className = 'message-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="fas fa-comment-alt"></i>
+                </div>
+                <div class="notification-text">
+                    <strong>New Messages!</strong>
+                    <span class="notification-count">You have <span class="count">${count}</span> new message${count > 1 ? 's' : ''}</span>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(notification);
+
+        // Add CSS animation
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+    } else {
+        // Update count if notification already exists
+        const countElement = notification.querySelector('.count');
+        if (countElement) {
+            countElement.textContent = count;
+            notification.querySelector('.notification-count').textContent =
+                `You have ${count} new message${count > 1 ? 's' : ''}`;
+        }
+    }
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (notification && notification.parentElement) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300); // Wait for animation
+        }
+    }, 5000);
+}
+
+// Check if there are older messages and show/hide load more button
+function checkForOlderMessages() {
+    fetch(`/chat/api/room/{{ room.name }}/messages/?limit=1`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success === false) {
+            throw new Error(data.error || 'API returned error');
+        }
+        if (data.has_more) {
+            loadMoreContainer.style.display = 'block';
+            document.getElementById('load-more-btn').onclick = loadOlderMessages;
+        } else {
+            loadMoreContainer.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Check older messages error:', error);
+        // Don't show connection status error for this initial check
+    });
+}
+
+// Load older messages
+function loadOlderMessages() {
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+
+    // Disable button and show loading
+    loadMoreBtn.style.display = 'none';
+    loadingSpinner.style.display = 'inline-block';
+
+    // Get the oldest message ID currently loaded
+    const messageItems = messagesList.querySelectorAll('.message-item[data-message-id]');
+    let oldestMessageId = null;
+
+    if (messageItems.length > 0) {
+        oldestMessageId = parseInt(messageItems[0].dataset.messageId);
+    }
+
+    fetch(`/chat/api/room/{{ room.name }}/messages/?before_id=${oldestMessageId}&limit=50`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.messages && data.messages.length > 0) {
+            // Add older messages to the top (in reverse order since they come oldest first)
+            const messageContainer = messagesList.querySelector('.load-more-container');
+
+            data.messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message-item';
+                messageDiv.dataset.messageId = message.id;
+
+                const timestamp = new Date(message.timestamp);
+                const timeString = timestamp.toLocaleDateString() + ' ' + timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                const authorName = message.author_full_name || message.author;
+                const authorRole = message.author_role || '';
+
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">
+                        <div class="avatar-placeholder">${authorName.charAt(0).toUpperCase()}</div>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <div class="message-author-info">
+                                <strong>${authorName}</strong>
+                                ${authorRole ? `<div class="message-role">${authorRole}</div>` : ''}
+                            </div>
+                            <small class="text-muted">${timeString}</small>
+                            ${message.is_edited ? '<small class="text-muted">(edited)</small>' : ''}
+                        </div>
+                        <div class="message-text">${message.content.replace(/\n/g, '<br>')}</div>
+                    </div>
+                `;
+
+                // Insert before the load more container
+                messagesList.insertBefore(messageDiv, messageContainer);
+            });
+
+            // Check if there are still more messages
+            if (!data.has_more) {
+                loadMoreContainer.style.display = 'none';
+            }
+        }
+
+        // Re-enable button and hide loading
+        loadingSpinner.style.display = 'none';
+        loadMoreBtn.style.display = 'inline-block';
+    })
+    .catch(error => {
+        console.error('Load older messages error:', error);
+        showConnectionStatus('danger', 'Failed to load older messages');
+
+        // Re-enable button and hide loading on error
+        loadingSpinner.style.display = 'none';
+        loadMoreBtn.style.display = 'inline-block';
+    });
+}
+
+// Reply functionality
+
+function handleReplyClick(event) {
+    event.preventDefault();
+    const button = event.target.closest('.reply-btn');
+    const messageId = button.dataset.messageId;
+    const author = button.dataset.author;
+    const content = button.dataset.content;
+
+    showReplyContext(messageId, author, content);
+}
+
+function showReplyContext(messageId, author, content) {
+    currentReplyTo = messageId;
+    document.getElementById('reply-author').textContent = author;
+    document.getElementById('reply-content').textContent = content;
+    document.getElementById('reply-context').style.display = 'block';
+
+    // Focus the input
+    messageInput.focus();
+
+    // Update placeholder
+    messageInput.placeholder = 'Reply to ' + author + '...';
+}
+
+function hideReplyContext() {
+    currentReplyTo = null;
+    document.getElementById('reply-context').style.display = 'none';
+    messageInput.placeholder = 'Type your message...';
+}
+
+// Handle reply close button
+document.addEventListener('DOMContentLoaded', function() {
+    const replyCloseBtn = document.getElementById('reply-close');
+    if (replyCloseBtn) {
+        replyCloseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            hideReplyContext();
+        });
+    }
+
+    // Attach event handlers to existing reply buttons
+    document.querySelectorAll('.reply-btn').forEach(button => {
+        button.addEventListener('click', handleReplyClick);
+    });
+});
+
+// Clear any existing notifications from previous sessions (old and new systems)
+function clearExistingNotifications() {
+    // Clear new message notification system
+    const newNotifications = document.querySelectorAll('.message-notification');
+    newNotifications.forEach(notification => notification.remove());
+
+    // Clear any other notification popups that might exist from old system
+    const allPopups = document.querySelectorAll('[class*="notification"], [class*="popup"], [class*="alert"], [id*="notification"], [id*="popup"]');
+    allPopups.forEach(popup => {
+        if (!popup.classList.contains('toast') && !popup.closest('#connection-status')) {
+            popup.remove();
+        }
+    });
+
+    // Additional cleanup - remove any fixed position elements that might be notifications
+    const fixedElements = document.querySelectorAll('.position-fixed, .fixed-top, .fixed-bottom');
+    fixedElements.forEach(element => {
+        if (element.id !== 'connection-status' &&
+            !element.closest('.dashboard-nav') &&
+            !element.closest('.navbar')) {
+            // Keep only the connection status toast
+            if (!element.querySelector('.toast-body')) {
+                element.remove();
+            }
+        }
+    });
+}
+
+// Smart polling functions for room messages and typing
+function startSmartPolling() {
+    // Initialize last message ID
+    initializeLastMessageId();
+
+    if (window.SmartPollingManager) {
+        // Register room messages polling with smart intervals
+        window.SmartPollingManager.register('room_messages', {
+            url: `/chat/api/room/{{ room.name }}/messages/?last_id=${lastMessageId}`,
+            method: 'GET',
+            interval: 3000,        // Base interval: 3 seconds
+            maxInterval: 30000,    // Max 30 seconds during inactivity
+            successCallback: handleRoomMessagesResponse,
+            errorCallback: handleRoomMessagesError,
+            dataCallback: hasNewMessages,
+            pauseOnBlur: false,    // Continue polling when tab not visible (room context)
+            pauseOffline: true,    // Pause when offline
+            enabled: true
+        });
+
+        // Register typing indicators polling with smart intervals
+        window.SmartPollingManager.register('room_typing', {
+            url: `/chat/api/room/{{ room.name }}/typing/`,
+            method: 'GET',
+            interval: 3000,        // Base interval: 3 seconds (same as before)
+            maxInterval: 15000,    // Max 15 seconds (shorter for typing)
+            successCallback: handleTypingResponse,
+            errorCallback: handleTypingError,
+            dataCallback: hasTypingUsers,
+            pauseOnBlur: false,    // Continue polling for typing
+            pauseOffline: true,
+            enabled: true
+        });
+
+        console.log('Smart polling started for room chat');
+    } else {
+        // Fallback to legacy polling
+        console.warn('SmartPollingManager not available, using legacy polling');
+        startLegacyPolling();
+    }
+}
+
+function handleRoomMessagesResponse(data) {
+    if (data.messages && data.messages.length > 0) {
+        let otherUserMessages = 0;
+
+        data.messages.forEach(message => {
+            addMessageToUI(message, false);
+            lastMessageId = Math.max(lastMessageId, message.id);
+
+            // Count messages from other users (exclude own messages)
+            if (message.author_id !== currentUserId) {
+                otherUserMessages++;
+            }
+        });
+        scrollToBottom();
+
+        // Only play notification sound and show popup for new messages from OTHER users AFTER initial load
+        if (!isInitialLoad && otherUserMessages > 0) {
+            playNotificationSound();
+            showNewMessageNotification(otherUserMessages);
+        }
+
+        // Update the polling URL with the new lastMessageId to prevent infinite loops
+        if (window.SmartPollingManager) {
+            window.SmartPollingManager.updateConfig('room_messages', {
+                url: `/chat/api/room/{{ room.name }}/messages/?last_id=${lastMessageId}`
+            });
+        }
+    }
+
+    // Mark that we've completed the initial load
+    isInitialLoad = false;
+
+    console.log(`Processed ${data.messages ? data.messages.length : 0} new messages, lastMessageId: ${lastMessageId}`);
+}
+
+function handleRoomMessagesError(error) {
+    console.warn('Smart polling error for room messages:', error);
+    // Mark initial load as complete even on error
+    isInitialLoad = false;
+}
+
+function hasNewMessages(data) {
+    return data.messages && data.messages.length > 0;
+}
+
+function handleTypingResponse(data) {
+    if (data.success && data.typing_users) {
+        updateTypingIndicators(data.typing_users);
+    }
+}
+
+function handleTypingError(error) {
+    console.warn('Smart polling error for typing indicators:', error);
+}
+
+function hasTypingUsers(data) {
+    return data.typing_users && data.typing_users.length > 0;
+}
+
+// Legacy polling removed - using only smart polling for better performance and reliability
+
+// Run cleanup immediately to clear any old notifications
+clearExistingNotifications();
+
+// Initialize after cleanup
+document.addEventListener('DOMContentLoaded', function() {
+    scrollToBottom();
+
+    // Load reactions for existing messages
+    loadAllReactions();
+
+    // Initialize typing events
+    initTypingEvents();
+
+    // Start smart polling instead of fixed intervals
+    startSmartPolling();
+
+    // Check for older messages after initial load
+    setTimeout(() => {
+        checkForOlderMessages();
+    }, 1000);
+
+    showConnectionStatus('success', 'Chat loaded successfully');
+});
+
+// Emoji Reactions functionality
+let activeReactionMessageId = null;
+
+function loadReactionsForMessage(messageId) {
+    fetch(`/chat/api/message/${messageId}/reactions/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success === false) {
+            throw new Error(data.error || 'API returned error');
+        }
+        if (data.reactions) {
+            renderReactions(messageId, data.reactions);
+        }
+    })
+    .catch(error => {
+        // Handle aborted requests gracefully (don't log as errors)
+        if (error.name === 'AbortError' || error.message.includes('aborted')) {
+            // Request was aborted, this is normal - don't log
+            return;
+        }
+
+        // Log other errors
+        console.error('Load reactions error:', error);
+    });
+}
+
+function renderReactions(messageId, reactionsData) {
+    const reactionsContainer = document.querySelector(`.message-reactions[data-message-id="${messageId}"]`);
+    if (!reactionsContainer) return;
+
+    reactionsContainer.innerHTML = '';
+
+    // Filter out reactions with count 0
+    const activeReactions = Object.entries(reactionsData).filter(([emoji, data]) => data.count > 0);
+
+    if (activeReactions.length > 0) {
+        const reactionsBar = document.createElement('div');
+        reactionsBar.className = 'reactions-bar';
+
+        activeReactions.forEach(([emoji, data]) => {
+            const reactionBtn = document.createElement('button');
+            reactionBtn.className = `reaction-display ${data.has_reacted ? 'reacted' : ''}`;
+            reactionBtn.dataset.emoji = emoji;
+            reactionBtn.dataset.messageId = messageId;
+            reactionBtn.title = `${data.users.join(', ')} reacted with ${emoji}`;
+            reactionBtn.innerHTML = `${emoji} ${data.count}`;
+
+            reactionBtn.addEventListener('click', handleReactionClick);
+            reactionsBar.appendChild(reactionBtn);
+        });
+
+        reactionsContainer.appendChild(reactionsBar);
+    }
+
+    // Add the add reaction button
+    const addReactionBtn = document.createElement('button');
+    addReactionBtn.className = 'btn btn-sm btn-link text-muted add-reaction-btn';
+    addReactionBtn.innerHTML = '<i class="fas fa-plus"></i>';
+    addReactionBtn.title = 'Add reaction';
+    addReactionBtn.dataset.messageId = messageId;
+    addReactionBtn.addEventListener('click', showReactionPicker);
+
+    reactionsContainer.appendChild(addReactionBtn);
+}
+
+function handleReactionClick(event) {
+    event.preventDefault();
+    const button = event.target;
+    const emoji = button.dataset.emoji;
+    const messageId = button.dataset.messageId;
+
+    toggleReaction(messageId, emoji);
+}
+
+function toggleReaction(messageId, emoji) {
+    const formData = new FormData();
+    formData.append('emoji', emoji);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch(`/chat/api/message/${messageId}/react/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the reactions display immediately
+            renderReactions(messageId, data.reactions);
+
+            // Hide reaction picker if it's showing
+            hideReactionPicker();
+        } else {
+            showConnectionStatus('danger', data.error || 'Failed to toggle reaction');
+        }
+    })
+    .catch(error => {
+        console.error('Toggle reaction error:', error);
+        showConnectionStatus('danger', 'Failed to toggle reaction');
+    });
+}
+
+function showReactionPicker(event) {
+    event.preventDefault();
+    const button = event.target.closest('.add-reaction-btn');
+    const messageId = button.dataset.messageId;
+
+    // Hide any existing reaction picker
+    hideReactionPicker();
+
+    // Find the reaction buttons container for this message
+    const messageItem = button.closest('.message-item');
+    const reactionButtons = messageItem.querySelector('.reaction-buttons');
+    if (reactionButtons) {
+        activeReactionMessageId = messageId;
+        reactionButtons.style.display = 'block';
+
+        // Attach event handlers to reaction buttons
+        reactionButtons.querySelectorAll('.reaction-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const emoji = this.dataset.emoji;
+                toggleReaction(messageId, emoji);
+            });
+        });
+
+        // Hide picker when clicking outside
+        document.addEventListener('click', hideReactionPickerOnClickOutside);
+    }
+}
+
+function hideReactionPicker() {
+    if (activeReactionMessageId) {
+        const messageItem = document.querySelector(`.message-item[data-message-id="${activeReactionMessageId}"]`);
+        if (messageItem) {
+            const reactionButtons = messageItem.querySelector('.reaction-buttons');
+            if (reactionButtons) {
+                reactionButtons.style.display = 'none';
+            }
+        }
+        activeReactionMessageId = null;
+        document.removeEventListener('click', hideReactionPickerOnClickOutside);
+    }
+}
+
+function hideReactionPickerOnClickOutside(event) {
+    if (!event.target.closest('.reaction-buttons') && !event.target.closest('.add-reaction-btn')) {
+        hideReactionPicker();
+    }
+}
+
+function loadAllReactions() {
+    // Load reactions for all existing messages
+    document.querySelectorAll('.message-reactions[data-message-id]').forEach(container => {
+        const messageId = container.dataset.messageId;
+        loadReactionsForMessage(messageId);
+    });
+}
+
+// Typing Indicators functionality
+
+// Typing detection - debounced to avoid too many API calls
+function handleTypingStart() {
+    if (isTypingSent) return;
+
+    isTypingSent = true;
+
+    fetch(`/chat/api/room/{{ room.name }}/typing/start/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            console.error('Failed to start typing:', response.status);
+        }
+    })
+    .catch(error => {
+        console.error('Start typing error:', error);
+    });
+}
+
+function handleTypingStop() {
+    if (!isTypingSent) return;
+
+    isTypingSent = false;
+
+    fetch('/chat/api/typing/stop/', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            console.error('Failed to stop typing:', response.status);
+        }
+    })
+    .catch(error => {
+        console.error('Stop typing error:', error);
+    });
+}
+
+function pollTypingStatus() {
+    // Poll for typing users
+    fetch(`/chat/api/room/{{ room.name }}/typing/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.typing_users) {
+            updateTypingIndicators(data.typing_users);
+        }
+    })
+    .catch(error => {
+        // Handle aborted requests gracefully
+        if (error.name === 'AbortError' || error.message.includes('aborted')) {
+            return;
+        }
+        console.error('Poll typing error:', error);
+    });
+}
+
+function updateTypingIndicators(typingUsers) {
+    const typingContainer = document.getElementById('typing-indicators');
+    const typingText = typingContainer.querySelector('.typing-text');
+
+    if (typingUsers.length > 0) {
+        // Format typing text
+        let text = '';
+        if (typingUsers.length === 1) {
+            text = `${typingUsers[0].full_name || typingUsers[0].username} is typing...`;
+        } else if (typingUsers.length === 2) {
+            text = `${typingUsers[0].full_name || typingUsers[0].username} and ${typingUsers[1].full_name || typingUsers[1].username} are typing...`;
+        } else {
+            text = `${typingUsers[0].full_name || typingUsers[0].username} and ${typingUsers.length - 1} others are typing...`;
+        }
+
+        typingText.textContent = text;
+        typingContainer.style.display = 'block';
+    } else {
+        typingContainer.style.display = 'none';
+    }
+}
+
+// Typing event handlers
+let typingEventAdded = false;
+
+function initTypingEvents() {
+    if (typingEventAdded) return;
+
+    typingEventAdded = true;
+
+    // Detect typing start
+    messageInput.addEventListener('input', function(e) {
+        const currentValue = e.target.value.trim();
+
+        if (currentValue.length > 0) {
+            handleTypingStart();
+
+            // Clear existing timeout
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+
+            // Set timeout to stop typing after 3 seconds of inactivity
+            typingTimeout = setTimeout(() => {
+                handleTypingStop();
+            }, 3000);
+        } else {
+            // If input is empty, stop typing
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            handleTypingStop();
+        }
+    });
+
+    // Detect when user submits message
+    messageForm.addEventListener('submit', function() {
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        handleTypingStop();
+    });
+
+    // Detect when user stops typing by pressing enter
+    messageInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            handleTypingStop();
+        }
+    });
+
+    // Stop typing when window loses focus (user switches tabs)
+    window.addEventListener('blur', function() {
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        handleTypingStop();
+    });
+
+    // Stop typing when page unloads
+    window.addEventListener('beforeunload', function() {
+        handleTypingStop();
+    });
+}
+
+// Stop typing when leaving the page
+window.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        handleTypingStop();
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+
+    // Stop typing when leaving
+    handleTypingStop();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,484 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Exchange Rates - {{ block.super }}{% endblock %}
+
+{% block page_title %}Exchange Rate Management{% endblock %}
+{% block page_subtitle %}Manage currency exchange rates and conversion history{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Exchange Rates</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .rate-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid var(--primary-color);
+        transition: transform 0.2s ease;
+    }
+    
+    .rate-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .currency-pair {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .exchange-rate-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rate-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .rate-date {
+        background: #f8f9fa;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: 1px solid #e9ecef;
+    }
+    
+    .rate-source {
+        background: rgba(56, 182, 255, 0.1);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .calculator-card {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .calc-input-group {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .calc-result {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .calc-result-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid var(--primary-color);
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .trending-up {
+        color: #28a745;
+    }
+    
+    .trending-down {
+        color: #dc3545;
+    }
+    
+    .trending-neutral {
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-exchange-alt me-2"></i>Exchange Rate Management
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'financial:exchange_rate_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Exchange Rate
+        </a>
+        <a href="{% url 'financial:currency_list' %}" class="btn btn-outline-info">
+            <i class="fas fa-coins me-2"></i>Manage Currencies
+        </a>
+    </div>
+</div>
+
+<!-- Currency Converter -->
+<div class="calculator-card">
+    <h5 class="mb-3">
+        <i class="fas fa-calculator me-2"></i>Currency Converter
+    </h5>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="calc-input-group">
+                <label class="form-label text-white">Amount</label>
+                <input type="number" class="form-control" id="convert-amount" placeholder="Enter amount" value="1">
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="calc-input-group">
+                <label class="form-label text-white">From</label>
+                <select class="form-select" id="convert-from">
+                    <option value="">Select currency</option>
+                    {% for currency in currencies %}
+                    <option value="{{ currency.code }}">{{ currency.code }} - {{ currency.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="calc-input-group">
+                <label class="form-label text-white">To</label>
+                <select class="form-select" id="convert-to">
+                    <option value="">Select currency</option>
+                    {% for currency in currencies %}
+                    <option value="{{ currency.code }}">{{ currency.code }} - {{ currency.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-light w-100" onclick="convertCurrency()">
+                <i class="fas fa-calculator"></i> Convert
+            </button>
+        </div>
+    </div>
+    
+    <div class="calc-result" id="conversion-result" style="display: none;">
+        <div class="calc-result-value" id="result-value">0.00</div>
+        <div id="result-text">Converted amount</div>
+        <div class="small opacity-75 mt-2" id="result-rate">Exchange rate: 1.000000</div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="stats-row">
+    <div class="stat-item">
+        <div class="stat-value">{{ exchange_rates.count }}</div>
+        <div class="stat-label">Total Rates</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">{{ currencies.count }}</div>
+        <div class="stat-label">Active Currencies</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">
+            {% if exchange_rates %}{{ exchange_rates.first.rate_date|date:"M d" }}{% else %}N/A{% endif %}
+        </div>
+        <div class="stat-label">Last Update</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">{{ exchange_rates|dictsort:"rate_date"|last.count|default:"0" }}</div>
+        <div class="stat-label">Today's Updates</div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="base_currency" class="form-label">Base Currency</label>
+            <select class="form-select" id="base_currency" name="base_currency">
+                <option value="">All Base Currencies</option>
+                {% for currency in currencies %}
+                <option value="{{ currency.code }}" {% if current_filters.base_currency == currency.code %}selected{% endif %}>
+                    {{ currency.code }} - {{ currency.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="target_currency" class="form-label">Target Currency</label>
+            <select class="form-select" id="target_currency" name="target_currency">
+                <option value="">All Target Currencies</option>
+                {% for currency in currencies %}
+                <option value="{{ currency.code }}" {% if current_filters.target_currency == currency.code %}selected{% endif %}>
+                    {{ currency.code }} - {{ currency.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">From Date</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ current_filters.date_from }}">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_to" class="form-label">To Date</label>
+            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ current_filters.date_to }}">
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Exchange Rates Grid -->
+<div class="row">
+    {% for rate in exchange_rates %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="rate-card">
+            <!-- Currency Pair -->
+            <div class="currency-pair">
+                {{ rate.base_currency.code }}/{{ rate.target_currency.code }}
+            </div>
+            
+            <!-- Exchange Rate Value -->
+            <div class="exchange-rate-value">
+                {{ rate.rate|floatformat:6 }}
+            </div>
+            
+            <!-- Rate Information -->
+            <div class="rate-info mb-3">
+                1 {{ rate.base_currency.code }} = {{ rate.rate|floatformat:6 }} {{ rate.target_currency.code }}
+            </div>
+            
+            <!-- Rate Details -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <div class="rate-date">{{ rate.rate_date|date:"M d, Y" }}</div>
+                </div>
+                <div>
+                    <div class="rate-source">{{ rate.source }}</div>
+                </div>
+            </div>
+            
+            <!-- Currency Information -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="small text-muted mb-1">Base Currency</div>
+                    <div class="small">
+                        {{ rate.base_currency.symbol }} {{ rate.base_currency.name }}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="small text-muted mb-1">Target Currency</div>
+                    <div class="small">
+                        {{ rate.target_currency.symbol }} {{ rate.target_currency.name }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Creation Info -->
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Added</div>
+                <div class="small">
+                    {{ rate.created_at|date:"M d, Y H:i" }}
+                    {% if rate.created_by %}by {{ rate.created_by.get_full_name|default:rate.created_by.username }}{% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="d-flex gap-2">
+                <a href="{% url 'financial:exchange_rate_detail' rate.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <a href="{% url 'financial:exchange_rate_update' rate.pk %}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                <a href="{% url 'financial:exchange_rate_delete' rate.pk %}" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No exchange rates found</h5>
+            <p class="text-muted">
+                {% if current_filters.base_currency or current_filters.target_currency or current_filters.date_from or current_filters.date_to %}
+                    Try adjusting your filter criteria.
+                {% else %}
+                    Start by adding your first exchange rate.
+                {% endif %}
+            </p>
+            <a href="{% url 'financial:exchange_rate_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Exchange Rate
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Exchange rates pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function convertCurrency() {
+    const amount = document.getElementById('convert-amount').value;
+    const fromCurrency = document.getElementById('convert-from').value;
+    const toCurrency = document.getElementById('convert-to').value;
+    
+    if (!amount || !fromCurrency || !toCurrency) {
+        alert('Please fill in all fields');
+        return;
+    }
+    
+    if (fromCurrency === toCurrency) {
+        alert('Please select different currencies');
+        return;
+    }
+    
+    // Show loading state
+    const resultDiv = document.getElementById('conversion-result');
+    const resultValue = document.getElementById('result-value');
+    const resultText = document.getElementById('result-text');
+    const resultRate = document.getElementById('result-rate');
+    
+    resultDiv.style.display = 'block';
+    resultValue.textContent = 'Converting...';
+    resultText.textContent = 'Please wait';
+    resultRate.textContent = '';
+    
+    // Make AJAX request
+    fetch(`{% url 'financial:currency_conversion_ajax' %}?amount=${amount}&from_currency=${fromCurrency}&to_currency=${toCurrency}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resultValue.textContent = 'Error';
+                resultText.textContent = data.error;
+                resultRate.textContent = '';
+            } else {
+                resultValue.textContent = data.converted_amount.toFixed(6);
+                resultText.textContent = `${amount} ${fromCurrency} = ${data.converted_amount.toFixed(6)} ${toCurrency}`;
+                resultRate.textContent = `Exchange rate: 1 ${fromCurrency} = ${data.rate.toFixed(6)} ${toCurrency} (${data.rate_date})`;
+            }
+        })
+        .catch(error => {
+            resultValue.textContent = 'Error';
+            resultText.textContent = 'Failed to convert currency';
+            resultRate.textContent = '';
+            console.error('Error:', error);
+        });
+}
+
+// Auto-convert when fields change
+document.addEventListener('DOMContentLoaded', function() {
+    const amountField = document.getElementById('convert-amount');
+    const fromField = document.getElementById('convert-from');
+    const toField = document.getElementById('convert-to');
+    
+    function autoConvert() {
+        const amount = amountField.value;
+        const from = fromField.value;
+        const to = toField.value;
+        
+        if (amount && from && to && from !== to) {
+            convertCurrency();
+        }
+    }
+    
+    amountField.addEventListener('input', autoConvert);
+    fromField.addEventListener('change', autoConvert);
+    toField.addEventListener('change', autoConvert);
+});
+</script>
+{% endblock %}

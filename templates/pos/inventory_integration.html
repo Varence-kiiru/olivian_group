@@ -1,0 +1,797 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}POS Inventory Integration - {{ block.super }}{% endblock %}
+
+{% block page_title %}POS Inventory Integration{% endblock %}
+{% block page_subtitle %}Real-time stock management and product availability{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Inventory Integration</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inventory-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 1.5rem;
+        height: calc(100vh - 200px);
+    }
+    
+    .product-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .inventory-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        overflow-y: auto;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-bar {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        max-height: calc(100vh - 350px);
+        overflow-y: auto;
+    }
+    
+    .product-card {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .product-card:hover {
+        border-color: #38b6ff;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 182, 255, 0.2);
+    }
+    
+    .product-card.low-stock {
+        border-color: #ffc107;
+        background: #fff3cd;
+    }
+    
+    .product-card.out-of-stock {
+        border-color: #dc3545;
+        background: #f8d7da;
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .product-image {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        background: #e9ecef;
+    }
+    
+    .product-name {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+    
+    .product-sku {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .product-price {
+        color: #38b6ff;
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stock-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+    }
+    
+    .stock-level {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        font-weight: 600;
+    }
+    
+    .stock-high { background: #d4edda; color: #155724; }
+    .stock-low { background: #fff3cd; color: #856404; }
+    .stock-out { background: #f8d7da; color: #721c24; }
+    
+    .inventory-alerts {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+    }
+    
+    .alert-item:last-child {
+        border-bottom: none;
+    }
+    
+    .sync-status {
+        background: #e8f5e8;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    .sync-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #28a745;
+        display: inline-block;
+        margin-right: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    .category-filter {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .category-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+    
+    .category-btn.active {
+        background: #38b6ff;
+        color: white;
+        border-color: #38b6ff;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .stock-movement {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .movement-in { border-left: 4px solid #28a745; }
+    .movement-out { border-left: 4px solid #dc3545; }
+    
+    .barcode-scanner {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 1rem;
+        width: 100%;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inventory-grid">
+    <!-- Main Product Section -->
+    <div class="product-section">
+        <!-- Search and Filters -->
+        <div class="search-bar">
+            <div class="row g-2">
+                <div class="col-8">
+                    <input type="text" class="form-control" id="productSearch" 
+                           placeholder="Search products by name, SKU, or barcode..." autocomplete="off">
+                </div>
+                <div class="col-4">
+                    <button class="barcode-scanner" onclick="openBarcodeScanner()">
+                        <i class="fas fa-barcode me-2"></i>Scan Barcode
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="category-filter">
+                <div class="category-btn active" data-category="all">All Products</div>
+                <div class="category-btn" data-category="solar-panels">Solar Panels</div>
+                <div class="category-btn" data-category="batteries">Batteries</div>
+                <div class="category-btn" data-category="inverters">Inverters</div>
+                <div class="category-btn" data-category="accessories">Accessories</div>
+                <div class="category-btn" data-category="low-stock">Low Stock</div>
+                <div class="category-btn" data-category="out-of-stock">Out of Stock</div>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="product-grid" id="productsGrid">
+            <!-- Sample Products -->
+            <div class="product-card" data-product-id="1" data-category="solar-panels">
+                <img src="{% static 'images/solar-panel.jpg' %}" alt="Solar Panel" class="product-image">
+                <div class="product-name">Monocrystalline Solar Panel 300W</div>
+                <div class="product-sku">SKU: SP-300-MONO</div>
+                <div class="product-price">KES 25,000.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-high">In Stock: 45</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addToCart(1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="product-card low-stock" data-product-id="2" data-category="batteries">
+                <img src="{% static 'images/battery.jpg' %}" alt="Battery" class="product-image">
+                <div class="product-name">Deep Cycle Battery 100Ah</div>
+                <div class="product-sku">SKU: BAT-100AH-DC</div>
+                <div class="product-price">KES 18,500.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-low">Low Stock: 8</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addToCart(2)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="product-card" data-product-id="3" data-category="inverters">
+                <img src="{% static 'images/inverter.jpg' %}" alt="Inverter" class="product-image">
+                <div class="product-name">Pure Sine Wave Inverter 1000W</div>
+                <div class="product-sku">SKU: INV-1000W-PSW</div>
+                <div class="product-price">KES 15,200.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-high">In Stock: 23</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addToCart(3)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="product-card out-of-stock" data-product-id="4" data-category="accessories">
+                <img src="{% static 'images/charge-controller.jpg' %}" alt="Charge Controller" class="product-image">
+                <div class="product-name">MPPT Charge Controller 60A</div>
+                <div class="product-sku">SKU: CC-60A-MPPT</div>
+                <div class="product-price">KES 8,750.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-out">Out of Stock</span>
+                    <button class="btn btn-sm btn-secondary" disabled>
+                        <i class="fas fa-ban"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="product-card" data-product-id="5" data-category="accessories">
+                <img src="{% static 'images/solar-cable.jpg' %}" alt="Solar Cable" class="product-image">
+                <div class="product-name">Solar Cable 4mm² (per meter)</div>
+                <div class="product-sku">SKU: CABLE-4MM-SOL</div>
+                <div class="product-price">KES 75.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-high">In Stock: 250m</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addToCart(5)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="product-card low-stock" data-product-id="6" data-category="batteries">
+                <img src="{% static 'images/lithium-battery.jpg' %}" alt="Lithium Battery" class="product-image">
+                <div class="product-name">Lithium Iron Phosphate Battery 200Ah</div>
+                <div class="product-sku">SKU: LI-200AH-LFP</div>
+                <div class="product-price">KES 85,000.00</div>
+                <div class="stock-info">
+                    <span class="stock-level stock-low">Low Stock: 3</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addToCart(6)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Inventory Management Panel -->
+    <div class="inventory-panel">
+        <!-- Sync Status -->
+        <div class="sync-status">
+            <div class="mb-2">
+                <span class="sync-indicator"></span>
+                <strong>Real-time Sync Active</strong>
+            </div>
+            <small class="text-muted">Last sync: {{ now|date:"H:i:s" }}</small>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="forceSyncInventory()">
+                <i class="fas fa-sync me-1"></i>Force Sync
+            </button>
+        </div>
+        
+        <!-- Inventory Alerts -->
+        <div class="inventory-alerts">
+            <h6 class="mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>Inventory Alerts
+            </h6>
+            
+            <div class="alert-item">
+                <div>
+                    <div class="fw-bold">MPPT Charge Controller 60A</div>
+                    <small class="text-muted">Out of stock</small>
+                </div>
+                <button class="btn btn-sm btn-outline-warning" onclick="reorderProduct(4)">
+                    <i class="fas fa-shopping-cart"></i>
+                </button>
+            </div>
+            
+            <div class="alert-item">
+                <div>
+                    <div class="fw-bold">Deep Cycle Battery 100Ah</div>
+                    <small class="text-muted">Low stock (8 remaining)</small>
+                </div>
+                <button class="btn btn-sm btn-outline-warning" onclick="reorderProduct(2)">
+                    <i class="fas fa-shopping-cart"></i>
+                </button>
+            </div>
+            
+            <div class="alert-item">
+                <div>
+                    <div class="fw-bold">Lithium Battery 200Ah</div>
+                    <small class="text-muted">Low stock (3 remaining)</small>
+                </div>
+                <button class="btn btn-sm btn-outline-warning" onclick="reorderProduct(6)">
+                    <i class="fas fa-shopping-cart"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Recent Stock Movements -->
+        <div class="mb-4">
+            <h6 class="mb-3">
+                <i class="fas fa-exchange-alt me-2"></i>Recent Stock Movements
+            </h6>
+            
+            <div class="stock-movement movement-out">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="fw-bold">Solar Panel 300W</div>
+                        <small class="text-muted">Sale - Terminal 1</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-danger">-2</div>
+                        <small class="text-muted">14:23</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stock-movement movement-in">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="fw-bold">Battery 100Ah</div>
+                        <small class="text-muted">Purchase Order #PO-2025-001</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-success">+15</div>
+                        <small class="text-muted">12:45</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stock-movement movement-out">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="fw-bold">Inverter 1000W</div>
+                        <small class="text-muted">Sale - Terminal 2</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-danger">-1</div>
+                        <small class="text-muted">11:30</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stock-movement movement-in">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="fw-bold">Solar Cable 4mm²</div>
+                        <small class="text-muted">Stock Adjustment</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-success">+50m</div>
+                        <small class="text-muted">10:15</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="btn btn-outline-primary" onclick="openStockAdjustment()">
+                <i class="fas fa-edit me-1"></i>Adjust Stock
+            </button>
+            <button class="btn btn-outline-success" onclick="openReceiveStock()">
+                <i class="fas fa-truck me-1"></i>Receive Stock
+            </button>
+            <button class="btn btn-outline-warning" onclick="openStockTake()">
+                <i class="fas fa-clipboard-list me-1"></i>Stock Take
+            </button>
+            <button class="btn btn-outline-info" onclick="viewInventoryReports()">
+                <i class="fas fa-chart-bar me-1"></i>Reports
+            </button>
+        </div>
+        
+        <!-- Inventory Summary -->
+        <div class="mt-4">
+            <h6 class="mb-3">
+                <i class="fas fa-warehouse me-2"></i>Inventory Summary
+            </h6>
+            
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="h5 text-primary mb-0">127</div>
+                    <small class="text-muted">Total Products</small>
+                </div>
+                <div class="col-6">
+                    <div class="h5 text-success mb-0">KES 2.1M</div>
+                    <small class="text-muted">Total Value</small>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="h6 text-success mb-0">95</div>
+                    <small class="text-muted">In Stock</small>
+                </div>
+                <div class="col-4">
+                    <div class="h6 text-warning mb-0">28</div>
+                    <small class="text-muted">Low Stock</small>
+                </div>
+                <div class="col-4">
+                    <div class="h6 text-danger mb-0">4</div>
+                    <small class="text-muted">Out of Stock</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barcode Scanner Modal -->
+<div class="modal fade" id="barcodeScannerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Barcode Scanner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="scanner-preview" style="width: 100%; height: 300px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <div>
+                        <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Camera will appear here for barcode scanning</p>
+                        <small class="text-muted">Position barcode within the frame</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <input type="text" class="form-control" placeholder="Or enter barcode manually..." id="manualBarcode">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="searchByBarcode()">Search</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Stock Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockAdjustmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <select class="form-select" id="adjustmentProduct" required>
+                            <option value="">Select product...</option>
+                            <option value="1">Solar Panel 300W</option>
+                            <option value="2">Battery 100Ah</option>
+                            <option value="3">Inverter 1000W</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Type</label>
+                        <select class="form-select" id="adjustmentType" required>
+                            <option value="increase">Increase Stock</option>
+                            <option value="decrease">Decrease Stock</option>
+                            <option value="set">Set Stock Level</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="adjustmentQuantity" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <select class="form-select" id="adjustmentReason" required>
+                            <option value="">Select reason...</option>
+                            <option value="damaged">Damaged Goods</option>
+                            <option value="lost">Lost Inventory</option>
+                            <option value="found">Found Inventory</option>
+                            <option value="correction">Stock Count Correction</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="adjustmentNotes" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="processStockAdjustment()">Process Adjustment</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class InventoryManager {
+    constructor() {
+        this.products = [];
+        this.filteredProducts = [];
+        this.currentCategory = 'all';
+        
+        this.initializeEventListeners();
+        this.loadProducts();
+    }
+    
+    initializeEventListeners() {
+        // Search functionality
+        document.getElementById('productSearch').addEventListener('input', (e) => {
+            this.searchProducts(e.target.value);
+        });
+        
+        // Category filtering
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.filterByCategory(e.target.dataset.category);
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
+        // Real-time updates
+        this.startRealTimeUpdates();
+    }
+    
+    loadProducts() {
+        // Simulate loading products from API
+        this.products = [
+            { id: 1, name: 'Monocrystalline Solar Panel 300W', sku: 'SP-300-MONO', price: 25000, stock: 45, category: 'solar-panels' },
+            { id: 2, name: 'Deep Cycle Battery 100Ah', sku: 'BAT-100AH-DC', price: 18500, stock: 8, category: 'batteries' },
+            { id: 3, name: 'Pure Sine Wave Inverter 1000W', sku: 'INV-1000W-PSW', price: 15200, stock: 23, category: 'inverters' },
+            { id: 4, name: 'MPPT Charge Controller 60A', sku: 'CC-60A-MPPT', price: 8750, stock: 0, category: 'accessories' },
+            { id: 5, name: 'Solar Cable 4mm²', sku: 'CABLE-4MM-SOL', price: 75, stock: 250, category: 'accessories' },
+            { id: 6, name: 'Lithium Iron Phosphate Battery 200Ah', sku: 'LI-200AH-LFP', price: 85000, stock: 3, category: 'batteries' }
+        ];
+        
+        this.filteredProducts = [...this.products];
+        this.updateProductDisplay();
+    }
+    
+    searchProducts(query) {
+        if (!query) {
+            this.filteredProducts = [...this.products];
+        } else {
+            this.filteredProducts = this.products.filter(product =>
+                product.name.toLowerCase().includes(query.toLowerCase()) ||
+                product.sku.toLowerCase().includes(query.toLowerCase())
+            );
+        }
+        this.updateProductDisplay();
+    }
+    
+    filterByCategory(category) {
+        this.currentCategory = category;
+        
+        if (category === 'all') {
+            this.filteredProducts = [...this.products];
+        } else if (category === 'low-stock') {
+            this.filteredProducts = this.products.filter(product => product.stock <= 10 && product.stock > 0);
+        } else if (category === 'out-of-stock') {
+            this.filteredProducts = this.products.filter(product => product.stock === 0);
+        } else {
+            this.filteredProducts = this.products.filter(product => product.category === category);
+        }
+        
+        this.updateProductDisplay();
+    }
+    
+    updateProductDisplay() {
+        const grid = document.getElementById('productsGrid');
+        // In a real implementation, this would update the product cards
+        console.log('Updating product display:', this.filteredProducts);
+    }
+    
+    startRealTimeUpdates() {
+        // Simulate real-time inventory updates
+        setInterval(() => {
+            this.updateSyncTime();
+            // In real implementation, fetch updates from server
+        }, 5000);
+    }
+    
+    updateSyncTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        document.querySelector('.sync-status small').textContent = `Last sync: ${timeString}`;
+    }
+}
+
+// Global functions
+function addToCart(productId) {
+    // Add product to POS cart
+    console.log('Adding product to cart:', productId);
+    
+    // Show confirmation
+    const product = document.querySelector(`[data-product-id="${productId}"] .product-name`).textContent;
+    
+    // Create toast notification
+    showToast(`${product} added to cart`, 'success');
+}
+
+function openBarcodeScanner() {
+    const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
+    modal.show();
+}
+
+function searchByBarcode() {
+    const barcode = document.getElementById('manualBarcode').value;
+    if (barcode) {
+        // Simulate barcode search
+        console.log('Searching for barcode:', barcode);
+        bootstrap.Modal.getInstance(document.getElementById('barcodeScannerModal')).hide();
+        showToast(`Searching for product with barcode: ${barcode}`, 'info');
+    }
+}
+
+function reorderProduct(productId) {
+    // Navigate to procurement for reordering
+    showToast('Redirecting to procurement system...', 'info');
+    setTimeout(() => {
+        window.location.href = '/procurement/';
+    }, 1000);
+}
+
+function forceSyncInventory() {
+    // Force inventory synchronization
+    showToast('Syncing inventory...', 'info');
+    
+    // Simulate sync process
+    setTimeout(() => {
+        showToast('Inventory synchronized successfully', 'success');
+        document.querySelector('.sync-status small').textContent = `Last sync: ${new Date().toLocaleTimeString()}`;
+    }, 2000);
+}
+
+function openStockAdjustment() {
+    const modal = new bootstrap.Modal(document.getElementById('stockAdjustmentModal'));
+    modal.show();
+}
+
+function processStockAdjustment() {
+    const product = document.getElementById('adjustmentProduct').value;
+    const type = document.getElementById('adjustmentType').value;
+    const quantity = document.getElementById('adjustmentQuantity').value;
+    const reason = document.getElementById('adjustmentReason').value;
+    
+    if (!product || !type || !quantity || !reason) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Process adjustment
+    showToast('Stock adjustment processed successfully', 'success');
+    bootstrap.Modal.getInstance(document.getElementById('stockAdjustmentModal')).hide();
+    
+    // Reset form
+    document.getElementById('stockAdjustmentForm').reset();
+}
+
+function openReceiveStock() {
+    showToast('Receive stock feature coming soon', 'info');
+}
+
+function openStockTake() {
+    showToast('Stock take feature coming soon', 'info');
+}
+
+function viewInventoryReports() {
+    window.location.href = "{% url 'inventory:dashboard' %}";
+}
+
+function showToast(message, type = 'info') {
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+
+// Initialize inventory manager
+const inventoryManager = new InventoryManager();
+</script>
+{% endblock %}

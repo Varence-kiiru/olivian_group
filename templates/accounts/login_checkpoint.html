@@ -1,0 +1,356 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ company.name|default:"Olivian Group" }}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #{{ company.primary_color|default:"38b6ff" }};
+            --secondary-color: #{{ company.secondary_color|default:"ffffff" }};
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2c8fd6 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .card-body {
+            padding: 2rem;
+        }
+        
+        .user-type-selector {
+            margin-bottom: 2rem;
+        }
+        
+        .user-type-option {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .user-type-option:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(56, 182, 255, 0.2);
+        }
+        
+        .user-type-option.selected {
+            border-color: var(--primary-color);
+            background: rgba(56, 182, 255, 0.05);
+        }
+        
+        .user-type-option i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #loginFormContainer {
+            transition: all 0.5s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            padding: 0.75rem 1rem;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Fix button visibility issues */
+        .btn {
+            position: relative;
+            z-index: 5;
+            min-height: 48px;
+            border: none !important;
+        }
+        
+        .btn-primary:hover {
+            background: #2c8fd6 !important;
+            border-color: #2c8fd6 !important;
+        }
+        
+        /* Ensure form containers have proper spacing */
+        #loginFormContainer {
+            margin-top: 1rem;
+        }
+        
+        .d-grid {
+            margin-bottom: 1rem !important;
+        }
+        
+        /* Specific button fixes */
+        .btn-lg {
+            font-size: 1.1rem;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-lg:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Form styling improvements */
+        .form-control {
+            font-size: 1rem;
+            height: 48px;
+        }
+        
+        .input-group .btn {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Alert styling */
+        .alert {
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background-color: rgba(56, 182, 255, 0.1);
+            color: #0c5aa6;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="card-header position-relative">
+                <button class="back-button hidden" id="backButton" onclick="showUserTypeSelector()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                
+                {% if company.logo %}
+                    <img src="{{ company.logo.url }}" alt="{{ company.name }}" style="max-width: 120px; height: auto; margin-bottom: 1rem;">
+                {% else %}
+                    <i class="fas fa-solar-panel" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                {% endif %}
+                
+                <h3 class="mb-0" id="headerTitle">Welcome Back</h3>
+                <p class="mb-0 opacity-75" id="headerSubtitle">Please select how you'd like to sign in</p>
+            </div>
+            
+            <div class="card-body">
+                <!-- User Type Selector -->
+                <div id="userTypeSelector" class="user-type-selector">
+                    <div class="user-type-option" onclick="selectUserType('customer', this)">
+                        <div class="text-center">
+                            <i class="fas fa-user"></i>
+                            <h5 class="mb-2">Customer Portal</h5>
+                            <p class="mb-0 text-muted">Access your solar projects, quotations, and orders</p>
+                        </div>
+                    </div>
+                    
+                    <div class="user-type-option" onclick="selectUserType('staff', this)">
+                        <div class="text-center">
+                            <i class="fas fa-users-cog"></i>
+                            <h5 class="mb-2">Staff Portal</h5>
+                            <p class="mb-0 text-muted">Management dashboard and system administration</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Login Form Container -->
+                <div id="loginFormContainer" class="hidden">
+                    <!-- Customer Login Form -->
+                    <div id="customerLoginForm" class="hidden">
+                        {% include 'accounts/login_customer_form.html' %}
+                    </div>
+                    
+                    <!-- Staff Login Form -->
+                    <div id="staffLoginForm" class="hidden">
+                        {% include 'accounts/login_staff_form.html' %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let selectedUserType = null;
+        
+        // Check for user type in URL parameters or localStorage
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const staffParam = urlParams.get('staff');
+            const rememberedType = localStorage.getItem('userType');
+            
+            if (staffParam === '1' || staffParam === 'true') {
+                selectUserType('staff', null);
+            } else if (rememberedType && !staffParam) {
+                selectUserType(rememberedType, null);
+            }
+            
+            // If there are form errors (login failed), preserve the form state
+            const hasFormErrors = document.querySelector('.alert-danger, .alert-error');
+            if (hasFormErrors && staffParam === '1') {
+                // Ensure staff form is shown if there were errors in staff login
+                selectUserType('staff', null);
+            }
+        });
+        
+        function selectUserType(type, sourceElement) {
+            selectedUserType = type;
+            
+            // Visual feedback - mark option as selected
+            document.querySelectorAll('.user-type-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            if (sourceElement && sourceElement.classList) {
+                // If called from click handler with valid element
+                sourceElement.classList.add('selected');
+            }
+            
+            // Small delay to show selection, then proceed
+            setTimeout(() => {
+                // Remember user preference
+                localStorage.setItem('userType', type);
+                
+                // Hide user type selector
+                document.getElementById('userTypeSelector').classList.add('hidden');
+                document.getElementById('loginFormContainer').classList.remove('hidden');
+                document.getElementById('backButton').classList.remove('hidden');
+                
+                // Update header
+                if (type === 'staff') {
+                    document.getElementById('headerTitle').textContent = 'Staff Portal';
+                    document.getElementById('headerSubtitle').textContent = 'Sign in to access the management dashboard';
+                    document.getElementById('staffLoginForm').classList.remove('hidden');
+                    document.getElementById('customerLoginForm').classList.add('hidden');
+                    // Focus on staff username field
+                    setTimeout(() => document.getElementById('staff_username').focus(), 100);
+                } else {
+                    document.getElementById('headerTitle').textContent = 'Customer Portal';
+                    document.getElementById('headerSubtitle').textContent = 'Sign in to manage your solar projects';
+                    document.getElementById('customerLoginForm').classList.remove('hidden');
+                    document.getElementById('staffLoginForm').classList.add('hidden');
+                    // Focus on customer username field
+                    setTimeout(() => document.getElementById('username').focus(), 100);
+                }
+                
+                // Update URL without refresh
+                const newUrl = new URL(window.location);
+                if (type === 'staff') {
+                    newUrl.searchParams.set('staff', '1');
+                } else {
+                    newUrl.searchParams.delete('staff');
+                }
+                window.history.replaceState({}, '', newUrl);
+            }, 200);
+        }
+        
+        function showUserTypeSelector() {
+            // Clear any selected user type options
+            document.querySelectorAll('.user-type-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Show user type selector, hide login form
+            document.getElementById('userTypeSelector').classList.remove('hidden');
+            document.getElementById('loginFormContainer').classList.add('hidden');
+            document.getElementById('backButton').classList.add('hidden');
+            
+            // Hide both forms
+            document.getElementById('customerLoginForm').classList.add('hidden');
+            document.getElementById('staffLoginForm').classList.add('hidden');
+            
+            // Reset header
+            document.getElementById('headerTitle').textContent = 'Welcome Back';
+            document.getElementById('headerSubtitle').textContent = "Please select how you'd like to sign in";
+            
+            // Clear URL parameter
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('staff');
+            window.history.replaceState({}, '', newUrl);
+            
+            // Reset selected user type
+            selectedUserType = null;
+        }
+        
+        // Clear remembered type on logout
+        function clearUserTypePreference() {
+            localStorage.removeItem('userType');
+        }
+    </script>
+</body>
+</html>

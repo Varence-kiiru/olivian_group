@@ -1,0 +1,416 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Help & Support - {{ company.name }}{% endblock %}
+
+{% block meta_description %}Get help and support for {{ company.name }} solar products, services, and account management. Find answers to common questions and troubleshooting guides.{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+    <li class="breadcrumb-item active">Help & Support</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.help-hero {
+    background: linear-gradient(135deg, #38b6ff 0%, #2c5aa0 100%);
+    color: white;
+    padding: 100px 0;
+    text-align: center;
+}
+
+.help-search {
+    max-width: 600px;
+    margin: 0 auto 40px;
+}
+
+.help-search .input-group {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.help-search input {
+    border: none;
+    padding: 15px 25px;
+    font-size: 16px;
+}
+
+.help-search .btn {
+    border: none;
+    padding: 15px 30px;
+    background: #fff;
+    color: #38b6ff;
+    font-weight: 600;
+}
+
+.help-categories {
+    padding: 80px 0;
+}
+
+.category-card {
+    background: white;
+    border-radius: 15px;
+    padding: 40px 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 1px solid #f8f9fa;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+}
+
+.category-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #38b6ff 0%, #2c5aa0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 2rem;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #2c5aa0;
+}
+
+.category-description {
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c5aa0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.faq-item {
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.faq-question {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
+}
+
+.faq-question:hover {
+    background: #e9ecef;
+    color: #2c5aa0;
+}
+
+.faq-answer {
+    padding: 0 20px 20px;
+    color: #6c757d;
+    line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.faq-answer.show {
+    max-height: 500px;
+}
+
+.contact-support {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 80px 0;
+    text-align: center;
+}
+
+.contact-card {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.contact-title {
+    color: #2c5aa0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.contact-info {
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.contact-methods {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.contact-method {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #38b6ff;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.contact-method:hover {
+    background: #38b6ff;
+    color: white;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .help-hero {
+        padding: 60px 0;
+    }
+
+    .category-card {
+        padding: 30px 20px;
+    }
+
+    .contact-methods {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Help Hero Section -->
+<section class="help-hero">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-4">Help & Support Center</h1>
+        <p class="lead mb-5">Find answers to your questions and get the help you need</p>
+
+        <!-- Search Bar -->
+        <div class="help-search">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Search for help..." id="helpSearch">
+                <button class="btn" type="button" onclick="searchHelp()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+
+        <p class="mb-0">Can't find what you're looking for? <a href="#contact-support" class="text-white fw-bold">Contact our support team</a></p>
+    </div>
+</section>
+
+<!-- Help Categories -->
+<section class="help-categories">
+    <div class="container">
+        <div class="row">
+            {% for category in help_categories %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="category-card">
+                    <div class="category-icon">
+                        <i class="{{ category.icon }}"></i>
+                    </div>
+                    <h3 class="category-title">{{ category.title }}</h3>
+                    <p class="category-description">{{ category.description }}</p>
+
+                    {% for section in category.sections %}
+                    <div class="help-section mb-4">
+                        <h4 class="section-title">{{ section.title }}</h4>
+                        <div class="faq-list">
+                            {% for item in section.items %}
+                            <div class="faq-item">
+                                <button class="faq-question" onclick="toggleFAQ(this)">
+                                    {{ item.question }}
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </button>
+                                <div class="faq-answer">
+                                    <p>{{ item.answer }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Video Tutorials Section -->
+<section class="video-tutorials" style="padding: 80px 0; background: #f8f9fa;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold mb-3" style="color: #2c5aa0;">Video Tutorials</h2>
+            <p class="lead text-muted">Step-by-step video guides for complex workflows and processes</p>
+        </div>
+
+        <div class="row">
+            {% for tutorial in video_tutorials %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="video-card" style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.08); transition: all 0.3s ease;">
+                    {% if tutorial.get_thumbnail_url %}
+                    <img src="{{ tutorial.get_thumbnail_url }}" alt="{{ tutorial.title }}" style="width: 100%; height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div style="background: linear-gradient(135deg, #38b6ff 0%, #2c5aa0 100%); height: 200px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fas fa-play-circle" style="font-size: 3rem;"></i>
+                    </div>
+                    {% endif %}
+                    <div style="padding: 20px;">
+                        <h5 style="color: #2c5aa0; font-weight: 600;">{{ tutorial.title }}</h5>
+                        <p class="text-muted mb-3">{{ tutorial.description }}</p>
+                        {% if tutorial.duration %}
+                        <small class="text-muted"><i class="fas fa-clock me-1"></i>{{ tutorial.duration }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <!-- Fallback content if no tutorials are available -->
+            <div class="col-12 text-center">
+                <div class="py-5">
+                    <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Video Tutorials Coming Soon</h5>
+                    <p class="text-muted">We're preparing helpful video tutorials to make using our services even easier.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <p class="text-muted">More tutorials coming soon! <a href="{% url 'core:contact' %}" style="color: #38b6ff; text-decoration: none;">Request specific tutorials</a></p>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Support Section -->
+<section id="contact-support" class="contact-support">
+    <div class="container">
+        <div class="contact-card">
+            <h2 class="contact-title">Still Need Help?</h2>
+            <p class="contact-info">Our support team is here to help you with any questions or issues you may have.</p>
+
+            <div class="contact-methods">
+                {% if company.phone %}
+                <a href="tel:{{ company.phone }}" class="contact-method">
+                    <i class="fas fa-phone"></i>
+                    Call Us
+                </a>
+                {% endif %}
+
+                {% if company.email %}
+                <a href="mailto:{{ company.email }}" class="contact-method">
+                    <i class="fas fa-envelope"></i>
+                    Email Us
+                </a>
+                {% endif %}
+
+                <a href="{% url 'core:contact' %}" class="contact-method">
+                    <i class="fas fa-comments"></i>
+                    Contact Form
+                </a>
+            </div>
+
+            <div class="mt-4">
+                <p class="mb-2"><strong>Support Hours:</strong> Monday - Friday, {{ company.support_hours_weekday|default:"8:00 AM - 6:00 PM" }} EAT{% if company.support_hours_saturday and company.support_hours_saturday != "Closed" %}, Saturday {{ company.support_hours_saturday }} EAT{% endif %}{% if company.support_hours_sunday and company.support_hours_sunday != "Closed" %}, Sunday {{ company.support_hours_sunday }} EAT{% endif %}</p>
+                {% if company.emergency_support_available %}
+                <p class="mb-0"><strong>Emergency Support:</strong> {{ company.emergency_support_description|default:"24/7 for active projects" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// FAQ Toggle Functionality
+function toggleFAQ(button) {
+    const answer = button.nextElementSibling;
+    const icon = button.querySelector('i');
+
+    if (answer.classList.contains('show')) {
+        answer.classList.remove('show');
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        answer.classList.add('show');
+        icon.style.transform = 'rotate(180deg)';
+    }
+}
+
+// Search Functionality
+function searchHelp() {
+    const searchTerm = document.getElementById('helpSearch').value.toLowerCase();
+    const faqItems = document.querySelectorAll('.faq-item');
+
+    faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question').textContent.toLowerCase();
+        const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+
+        if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+            item.style.display = 'block';
+            // Auto-expand matching items
+            if (searchTerm && (question.includes(searchTerm) || answer.includes(searchTerm))) {
+                const answer = item.querySelector('.faq-answer');
+                const icon = item.querySelector('.faq-question i');
+                answer.classList.add('show');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Scroll to results
+    const firstVisible = document.querySelector('.faq-item[style*="block"]');
+    if (firstVisible) {
+        firstVisible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Search on Enter key
+document.getElementById('helpSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchHelp();
+    }
+});
+
+// URL Fragment Handling for Direct Links
+if (window.location.hash) {
+    const targetId = window.location.hash.substring(1);
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+        setTimeout(() => {
+            targetElement.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    }
+}
+</script>
+{% endblock %}

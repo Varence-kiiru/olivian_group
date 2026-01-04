@@ -1,0 +1,550 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Stock Movements - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item active">Stock Movements</li>
+{% endblock %}
+
+{% block page_name %}Stock Movements{% endblock %}
+{% block page_title %}Stock Movements{% endblock %}
+{% block page_subtitle %}Track all inventory stock movements and transactions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .movements-summary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .movement-type-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    
+    .movement-type-card:hover {
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .movement-type-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .filters-section {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .movement-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .movement-in { 
+        background-color: rgba(40, 167, 69, 0.1); 
+        color: #28a745; 
+        border: 2px solid rgba(40, 167, 69, 0.2);
+    }
+    .movement-out { 
+        background-color: rgba(220, 53, 69, 0.1); 
+        color: #dc3545; 
+        border: 2px solid rgba(220, 53, 69, 0.2);
+    }
+    .movement-transfer { 
+        background-color: rgba(23, 162, 184, 0.1); 
+        color: #17a2b8; 
+        border: 2px solid rgba(23, 162, 184, 0.2);
+    }
+    .movement-adjustment { 
+        background-color: rgba(255, 193, 7, 0.1); 
+        color: #ffc107; 
+        border: 2px solid rgba(255, 193, 7, 0.2);
+    }
+    .movement-return { 
+        background-color: rgba(108, 117, 125, 0.1); 
+        color: #6c757d; 
+        border: 2px solid rgba(108, 117, 125, 0.2);
+    }
+    
+    .movement-row {
+        transition: background-color 0.2s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .movement-row:hover {
+        background-color: rgba(56, 182, 255, 0.05);
+    }
+    
+    .movement-row.movement-in-row { border-left-color: #28a745; }
+    .movement-row.movement-out-row { border-left-color: #dc3545; }
+    .movement-row.movement-transfer-row { border-left-color: #17a2b8; }
+    .movement-row.movement-adjustment-row { border-left-color: #ffc107; }
+    .movement-row.movement-return-row { border-left-color: #6c757d; }
+    
+    .quantity-change {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .quantity-positive { color: #28a745; }
+    .quantity-negative { color: #dc3545; }
+    .quantity-neutral { color: #17a2b8; }
+    
+    .product-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .product-image {
+        width: 45px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        margin-right: 0.75rem;
+    }
+    
+    .product-placeholder {
+        width: 45px;
+        height: 45px;
+        background: #e9ecef;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .warehouse-badge {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .reference-link {
+        color: #38b6ff;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .reference-link:hover {
+        text-decoration: underline;
+    }
+    
+    .movements-table th {
+        background-color: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .quick-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    
+    .quick-filter-btn {
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #495057;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+    
+    .quick-filter-btn:hover,
+    .quick-filter-btn.active {
+        background: #38b6ff;
+        color: white;
+        border-color: #38b6ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Statistics -->
+<div class="movements-summary">
+    <div class="row">
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ total_movements|default:0 }}</span>
+                <small>Total Movements</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ in_movements|default:0 }}</span>
+                <small>Stock In</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ out_movements|default:0 }}</span>
+                <small>Stock Out</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ transfer_movements|default:0 }}</span>
+                <small>Transfers</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ adjustment_movements|default:0 }}</span>
+                <small>Adjustments</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="movement-type-card">
+                <span class="movement-type-number">{{ return_movements|default:0 }}</span>
+                <small>Returns</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <form method="get" id="filtersForm">
+        <!-- Quick Filters -->
+        <div class="quick-filters">
+            <button type="button" class="quick-filter-btn {% if not request.GET.movement_type %}active{% endif %}" 
+                    onclick="setFilter('movement_type', '')">All Types</button>
+            {% for type_code, type_name in movement_types %}
+            <button type="button" class="quick-filter-btn {% if request.GET.movement_type == type_code %}active{% endif %}" 
+                    onclick="setFilter('movement_type', '{{ type_code }}')">{{ type_name }}</button>
+            {% endfor %}
+        </div>
+        
+        <!-- Detailed Filters -->
+        <div class="row align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Warehouse</label>
+                <select name="warehouse" class="form-select">
+                    <option value="">All Warehouses</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.pk }}" {% if request.GET.warehouse == warehouse.pk|stringformat:'s' %}selected{% endif %}>
+                        {{ warehouse.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Product name, reference..." 
+                       value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'inventory:movement_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exportData('excel')">
+                                <i class="fas fa-file-excel me-2"></i>Excel
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportData('csv')">
+                                <i class="fas fa-file-csv me-2"></i>CSV
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hidden field for movement_type -->
+        <input type="hidden" name="movement_type" value="{{ request.GET.movement_type }}">
+    </form>
+</div>
+
+<!-- Movements Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title">
+            <i class="fas fa-exchange-alt me-2"></i>Stock Movements
+            <span class="badge bg-primary ms-2">{{ movements.count }}</span>
+        </h5>
+        <div class="d-flex align-items-center gap-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoRefresh">
+                <label class="form-check-label" for="autoRefresh">Auto Refresh</label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if movements %}
+        <div class="table-responsive">
+            <table class="table table-hover movements-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Type</th>
+                        <th>Product</th>
+                        <th>Warehouse</th>
+                        <th>Quantity Change</th>
+                        <th>Balance After</th>
+                        <th>Reference</th>
+                        <th>Performed By</th>
+                        <th>Date & Time</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr class="movement-row movement-{{ movement.movement_type }}-row">
+                        <td>
+                            <div class="movement-icon movement-{{ movement.movement_type }}">
+                                {% if movement.movement_type == 'in' %}
+                                    <i class="fas fa-arrow-up"></i>
+                                {% elif movement.movement_type == 'out' %}
+                                    <i class="fas fa-arrow-down"></i>
+                                {% elif movement.movement_type == 'transfer' %}
+                                    <i class="fas fa-exchange-alt"></i>
+                                {% elif movement.movement_type == 'adjustment' %}
+                                    <i class="fas fa-edit"></i>
+                                {% elif movement.movement_type == 'return' %}
+                                    <i class="fas fa-undo"></i>
+                                {% else %}
+                                    <i class="fas fa-question"></i>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="product-info">
+                                {% if movement.inventory_item.product.images.first %}
+                                <img src="{{ movement.inventory_item.product.images.first.image.url }}" 
+                                     alt="{{ movement.inventory_item.product.name }}" class="product-image">
+                                {% else %}
+                                <div class="product-placeholder">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ movement.inventory_item.product.name }}</div>
+                                    <small class="text-muted">{{ movement.inventory_item.product.sku }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="warehouse-badge">{{ movement.inventory_item.warehouse.name }}</span>
+                        </td>
+                        <td>
+                            <div class="quantity-change {% if movement.quantity_change > 0 %}quantity-positive{% elif movement.quantity_change < 0 %}quantity-negative{% else %}quantity-neutral{% endif %}">
+                                {% if movement.quantity_change > 0 %}+{% endif %}{{ movement.quantity_change }}
+                            </div>
+                            <small class="text-muted">{{ movement.inventory_item.product.unit|default:"units" }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ movement.balance_after }}</div>
+                            <small class="text-muted">after transaction</small>
+                        </td>
+                        <td>
+                            {% if movement.reference %}
+                            <a href="#" class="reference-link" onclick="viewReference('{{ movement.reference_type }}', '{{ movement.reference }}')">
+                                {{ movement.reference }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Manual</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ movement.performed_by.get_full_name|default:movement.performed_by.username }}</div>
+                            <small class="text-muted">{{ movement.performed_by.get_role_display|default:"User" }}</small>
+                        </td>
+                        <td>
+                            <div>{{ movement.created_at|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ movement.created_at|time:"g:i A" }}</small>
+                            <br><small class="text-muted">{{ movement.created_at|timesince }} ago</small>
+                        </td>
+                        <td>
+                            {% if movement.notes %}
+                            <div class="text-truncate" style="max-width: 150px;" title="{{ movement.notes }}">
+                                {{ movement.notes }}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No stock movements found.</p>
+            {% if request.GET.start_date or request.GET.end_date or request.GET.warehouse or request.GET.movement_type or request.GET.search %}
+            <p class="text-muted">Try adjusting your filters or date range.</p>
+            <a href="{% url 'inventory:movement_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-times me-2"></i>Clear Filters
+            </a>
+            {% else %}
+            <p class="text-muted">Stock movements will appear here as inventory transactions occur.</p>
+            <a href="{% url 'inventory:dashboard' %}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Inventory Dashboard
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Stock movements pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let autoRefreshInterval;
+
+// Quick filter functionality
+function setFilter(filterName, filterValue) {
+    const form = document.getElementById('filtersForm');
+    const input = form.querySelector(`input[name="${filterName}"]`);
+    if (input) {
+        input.value = filterValue;
+    }
+    form.submit();
+}
+
+// Auto-refresh functionality
+document.getElementById('autoRefresh').addEventListener('change', function() {
+    if (this.checked) {
+        autoRefreshInterval = setInterval(() => {
+            location.reload();
+        }, 30000); // Refresh every 30 seconds
+    } else {
+        clearInterval(autoRefreshInterval);
+    }
+});
+
+// Export functionality
+function exportData(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', format);
+    window.open(`${window.location.pathname}?${params.toString()}`, '_blank');
+}
+
+// View reference functionality
+function viewReference(referenceType, reference) {
+    let url;
+    switch (referenceType) {
+        case 'purchase_order':
+            url = `/inventory/purchase-orders/search/?po_number=${reference}`;
+            break;
+        case 'stock_adjustment':
+            url = `/inventory/adjustments/search/?adjustment_number=${reference}`;
+            break;
+        case 'stock_transfer':
+            url = `/inventory/transfers/search/?transfer_number=${reference}`;
+            break;
+        default:
+            console.log('Unknown reference type:', referenceType);
+            return;
+    }
+    window.open(url, '_blank');
+}
+
+// Real-time notifications (if WebSocket is available)
+function initializeRealTimeUpdates() {
+    if (typeof WebSocket !== 'undefined') {
+        // Initialize WebSocket connection for real-time movement updates
+        console.log('Real-time stock movement updates initialized');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeRealTimeUpdates();
+    
+    // Set default date range if none provided
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+    
+    if (!startDate.value && !endDate.value) {
+        const today = new Date();
+        const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        endDate.value = today.toISOString().split('T')[0];
+        startDate.value = oneWeekAgo.toISOString().split('T')[0];
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+});
+</script>
+{% endblock %}

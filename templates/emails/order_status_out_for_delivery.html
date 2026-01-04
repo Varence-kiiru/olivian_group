@@ -1,0 +1,88 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Out for Delivery #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[DELIVERY] Your Order is Out for Delivery!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Excellent news! Your solar equipment is now out for delivery and will arrive at your location today. Our delivery team is on their way to you.</p>
+
+<div class="highlight-box">
+    <h3>Delivery Information:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Current Status:</strong> {{ status_display }}</p>
+    <p><strong>Estimated Delivery:</strong> {{ estimated_delivery|date:"F d, Y" }}</p>
+    {% if tracking_number %}
+    <p><strong>Tracking Number:</strong> {{ tracking_number }}</p>
+    {% endif %}
+    <p><strong>Delivery Address:</strong></p>
+    <div style="background-color: #f8f9fa; padding: 10px; border-left: 4px solid #007bff;">
+        {{ order.shipping_address|linebreaks }}
+    </div>
+</div>
+
+<div class="status-box" style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #0c5460; margin: 0 0 10px 0;">[ACTIVE] Delivery in Progress</h4>
+    <p style="margin: 0; color: #0c5460;">
+        Our delivery team will contact you <strong>30 minutes before arrival</strong>. 
+        Please ensure someone is available to receive the delivery between <strong>8:00 AM - 6:00 PM</strong>.
+    </p>
+</div>
+
+{% if order.payment_method == 'cash_on_delivery' %}
+<div class="status-box" style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #856404; margin: 0 0 10px 0;">[PAYMENT] Cash on Delivery</h4>
+    <p style="margin: 0; color: #856404;">
+        <strong>Amount to Pay:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}<br>
+        Please have the exact amount ready, or we can provide change for cash payments.
+        Payment methods accepted: Cash, Mobile Money (M-Pesa, Airtel Money)
+    </p>
+</div>
+{% endif %}
+
+<h3>Delivery Instructions:</h3>
+<ul>
+    <li><strong>Be Available:</strong> Someone must be present to receive the delivery</li>
+    <li><strong>Valid ID:</strong> Have a valid ID ready for verification</li>
+    <li><strong>Inspection:</strong> Inspect all items before signing delivery receipt</li>
+    {% if order.payment_method == 'cash_on_delivery' %}
+    <li><strong>Payment Ready:</strong> Have payment ready (cash or mobile money)</li>
+    {% endif %}
+    <li><strong>Contact Info:</strong> Ensure your phone is reachable</li>
+</ul>
+
+<h3>Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'processing' %}
+            <li>[COMPLETE] <strong>Processing</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'packed_ready' %}
+            <li>[COMPLETE] <strong>Packed & Ready</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'shipped' %}
+            <li>[COMPLETE] <strong>Shipped</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[ACTIVE] <strong>Out for Delivery</strong> (Current Stage)</li>
+    <li>[PENDING] <strong>Delivered</strong> (Today)</li>
+    {% if installation_required %}
+    <li>[PENDING] <strong>Installation Scheduled</strong></li>
+    {% endif %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Track Your Delivery:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+    <a href="tel:{{ company_phone }}" class="btn-secondary">Call Delivery Team</a>
+</div>
+
+<p>We're excited to complete your delivery today. Thank you for choosing Olivian Group for your solar energy needs!</p>
+
+{% endblock %}

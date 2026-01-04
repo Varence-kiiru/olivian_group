@@ -1,0 +1,1339 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Customer Requirements Assessment{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+        <i class="fas fa-clipboard-check fa-2x"></i>
+    </div>
+    <div>
+        <h1 class="h3 mb-1">Customer Requirements Assessment</h1>
+        <p class="text-muted mb-0">Let's design your perfect solar system together</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_subtitle %}
+<div class="alert alert-info border-0 bg-light mt-3">
+    <div class="d-flex align-items-start">
+        <i class="fas fa-info-circle text-info me-2 mt-1"></i>
+        <div class="small">
+            <strong>Get Started:</strong> Complete this 3-step assessment to receive a personalized solar system quotation.
+            Estimated completion time: <strong>3-5 minutes</strong>.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'quotations:list' %}">Quotations</a></li>
+<li class="breadcrumb-item active">Assessment</li>
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/forms.css' %}" rel="stylesheet">
+<style>
+    /* Modern Professional Design */
+    .assessment-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(56, 182, 255, 0.2);
+    }
+
+    .welcome-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Enhanced Progress Indicator */
+    .progress-indicator {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(56, 182, 255, 0.1);
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .progress-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .progress-badge {
+        background: #e6f7ff;
+        color: #0066cc;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: 1px solid rgba(56, 182, 255, 0.2);
+    }
+
+    .progress-bar-container {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar-bg {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #38b6ff 0%, #2e96e6 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        width: 0%;
+        position: relative;
+    }
+
+    .progress-bar-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+    }
+
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .progress-step::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        right: -50%;
+        height: 2px;
+        background: #e2e8f0;
+        z-index: 1;
+    }
+
+    .progress-step:last-child::before {
+        display: none;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s ease;
+        border: 2px solid;
+    }
+
+    .progress-step.pending .step-circle {
+        background: #f7fafc;
+        color: #a0aec0;
+        border-color: #e2e8f0;
+    }
+
+    .progress-step.active .step-circle {
+        background: #38b6ff;
+        color: white;
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 4px rgba(56, 182, 255, 0.2);
+        transform: scale(1.1);
+    }
+
+    .progress-step.completed .step-circle {
+        background: #10b981;
+        color: white;
+        border-color: #10b981;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+    }
+
+    .progress-step.completed .step-circle::before {
+        content: '✓';
+        font-size: 1.1rem;
+    }
+
+    .progress-step.completed::before {
+        background: #10b981;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-align: center;
+        color: #4a5568;
+        transition: color 0.3s ease;
+    }
+
+    .progress-step.active .step-label {
+        color: #38b6ff;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-label {
+        color: #10b981;
+    }
+
+    /* Form Sections */
+    .form-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(56, 182, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .form-section:hover {
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .section-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1.5rem;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(56, 182, 255, 0.3);
+    }
+
+    .section-content h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    /* Smart Summary Panel */
+    .summary-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 100px;
+        border: 1px solid rgba(56, 182, 255, 0.1);
+    }
+
+    .summary-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .summary-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+    }
+
+    .summary-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin: 0;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+    }
+
+    .summary-item:hover {
+        background: rgba(56, 182, 255, 0.02);
+        border-radius: 8px;
+        margin: 0 -0.5rem;
+        padding: 1rem 0.5rem;
+    }
+
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+
+    .summary-label {
+        font-weight: 500;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .summary-value {
+        font-weight: 600;
+        color: #1a202c;
+        background: #f8fafc;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    .summary-placeholder {
+        color: #64748b;
+        font-style: italic;
+        background: #fef3c7;
+        color: #92400e;
+        font-weight: 500;
+    }
+
+    /* Enhanced Form Controls */
+    .radio-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .radio-option {
+        position: relative;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+        text-align: left;
+    }
+
+    .radio-option:hover {
+        border-color: #38b6ff;
+        box-shadow: 0 4px 16px rgba(56, 182, 255, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .radio-option.selected {
+        border-color: #38b6ff;
+        background: linear-gradient(135deg, rgba(56, 182, 255, 0.05) 0%, rgba(46, 150, 230, 0.05) 100%);
+        box-shadow: 0 4px 16px rgba(56, 182, 255, 0.2);
+    }
+
+    .radio-option.selected::before {
+        content: '✓';
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 24px;
+        height: 24px;
+        background: #38b6ff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .option-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .option-icon {
+        font-size: 2rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+        transition: color 0.3s ease;
+    }
+
+    .radio-option.selected .option-icon {
+        color: #38b6ff;
+    }
+
+    .option-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+    }
+
+    .option-description {
+        font-size: 0.9rem;
+        color: #64748b;
+        line-height: 1.4;
+    }
+
+    /* Navigation Buttons */
+    .navigation-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(56, 182, 255, 0.1);
+    }
+
+    .btn-navigation {
+        padding: 1rem 2rem;
+        font-weight: 600;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-prev {
+        background: #f1f5f9;
+        color: #475569;
+        margin-right: 1rem;
+    }
+
+    .btn-prev:hover {
+        background: #e2e8f0;
+        transform: translateX(-2px);
+    }
+
+    .btn-next {
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        color: white;
+        margin-left: auto;
+    }
+
+    .btn-next:hover {
+        transform: translateX(2px);
+        box-shadow: 0 4px 16px rgba(56, 182, 255, 0.4);
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .btn-submit:hover {
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+        transform: translateY(-2px);
+    }
+
+    /* Energy Calculator Enhancement */
+    .energy-calculator {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid rgba(56, 182, 255, 0.2);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+        text-align: center;
+    }
+
+    .calculator-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .calculator-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0c4a6e;
+        margin-bottom: 0.5rem;
+    }
+
+    .calculator-subtitle {
+        color: #0369a1;
+        font-size: 0.9rem;
+    }
+
+    .btn-calculate {
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(56, 182, 255, 0.3);
+    }
+
+    .btn-calculate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(56, 182, 255, 0.4);
+    }
+
+    /* System Estimate Display */
+    .system-estimate {
+        background: linear-gradient(135deg, #38b6ff 0%, #2e96e6 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        text-align: center;
+        box-shadow: 0 4px 16px rgba(56, 182, 255, 0.3);
+        display: none;
+    }
+
+    .system-estimate.show {
+        display: block;
+        animation: fadeInUp 0.5s ease;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .estimate-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+
+    .estimate-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Getting Started Guidance */
+    .getting-started {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid rgba(56, 182, 255, 0.2);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+        text-align: center;
+    }
+
+    .guidance-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0c4a6e;
+        margin-bottom: 1rem;
+    }
+
+    .guidance-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .guidance-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        color: #0369a1;
+        margin-bottom: 0.75rem;
+        font-weight: 500;
+    }
+
+    .guidance-icon {
+        width: 24px;
+        height: 24px;
+        background: #38b6ff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    /* Success Message Styling */
+    .completion-message {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2);
+    }
+
+    .completion-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .completion-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .completion-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+    }
+
+    /* Form Input Enhancements */
+    .form-group label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.1);
+    }
+
+    .input-group-text {
+        background: #f9fafb;
+        border-color: #e5e7eb;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .welcome-section {
+            padding: 2rem 1.5rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+        }
+
+        .progress-indicator {
+            padding: 1.5rem;
+        }
+
+        .form-section {
+            padding: 1.5rem;
+        }
+
+        .radio-group {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-steps {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .progress-step:last-child::before {
+            display: block;
+            left: -50%;
+            right: 50%;
+            top: -25px;
+            height: 50px;
+            width: 2px;
+            transform: rotate(90deg);
+        }
+
+        .navigation-section {
+            padding: 1.5rem;
+        }
+
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .section-icon {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="assessment-container">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <div class="welcome-icon">
+            <i class="fas fa-solar-panel fa-2x"></i>
+        </div>
+        <h1 class="welcome-title">Solar System Assessment</h1>
+        <p class="welcome-subtitle">
+            Let's design your perfect solar energy solution. Answer a few questions and we'll provide
+            a customized quotation with system specifications, costs, and expected savings.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Progress Indicator -->
+            <div class="progress-indicator">
+                <div class="progress-header">
+                    <h2 class="progress-title">Assessment Progress</h2>
+                    <span class="progress-badge">Step {{ current_step_number }} of {{ total_steps }}</span>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                </div>
+
+                <div class="progress-steps">
+                    <div class="progress-step{% if current_step_number >= 1 %} active{% endif %}{% if current_step_number > 1 %} completed{% endif %}">
+                        <div class="step-circle">1</div>
+                        <div class="step-label">Customer Info</div>
+                    </div>
+                    <div class="progress-step{% if current_step_number >= 2 %} active{% endif %}{% if current_step_number > 2 %} completed{% endif %}">
+                        <div class="step-circle">2</div>
+                        <div class="step-label">Property Details</div>
+                    </div>
+                    <div class="progress-step{% if current_step_number >= 3 %} active{% endif %}">
+                        <div class="step-circle">3</div>
+                        <div class="step-label">Energy Analysis</div>
+                    </div>
+                </div>
+            </div>
+
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if wizard.form %}
+            {{ wizard.management_form }}
+            {% if wizard.steps.current == 'step1' %}
+                <!-- Step 1: Customer Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Customer Information</div>
+                            <div class="section-subtitle">Basic contact and business details</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ wizard.form.customer_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.customer_email|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">+254</span>
+                                {{ wizard.form.customer_phone|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.customer_company|as_crispy_field }}
+                        </div>
+                        <div class="col-12">
+                            {{ wizard.form.customer_address|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.customer_city|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.customer_county|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+            {% elif wizard.steps.current == 'step2' %}
+                <!-- Step 2: Property Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Property Information</div>
+                            <div class="section-subtitle">Building and installation details</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">{{ wizard.form.property_type.label }}</label>
+                        {{ wizard.form.property_type|as_crispy_field }}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ wizard.form.building_age|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.floors|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ wizard.form.roof_type|as_crispy_field }}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                {{ wizard.form.roof_area|as_crispy_field }}
+                                <span class="input-group-text">m²</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ wizard.form.roof_orientation|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ wizard.form.shading_issues|as_crispy_field }}
+                </div>
+
+            {% elif wizard.steps.current == 'step3' %}
+                <!-- Step 3: Energy Consumption Analysis -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Energy Consumption Analysis</div>
+                            <div class="section-subtitle">Current electricity usage and bills</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">KES</span>
+                                {{ wizard.form.monthly_bill|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                {{ wizard.form.monthly_consumption|as_crispy_field }}
+                                <span class="input-group-text">kWh</span>
+                            </div>
+                            <small class="text-muted">Automatically calculated from your bill</small>
+                        </div>
+                    </div>
+
+                    <div class="energy-calculator">
+                        <h6><i class="fas fa-calculator me-2"></i>Energy Calculator</h6>
+                        <p class="text-muted">Get instant estimates for your solar system size</p>
+
+                        <button type="button" class="btn-calculate" onclick="showCurrentEstimate()">
+                            <i class="fas fa-calculator me-1"></i>Calculate System Size
+                        </button>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            {{ wizard.form.peak_usage_time|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ wizard.form.backup_needs|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ wizard.form.grid_connection|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Navigation Buttons -->
+            <div class="action-buttons">
+                {% if wizard.steps.prev %}
+                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}"
+                            class="btn btn-outline-secondary btn-action">
+                        <i class="fas fa-arrow-left me-2"></i>Previous
+                    </button>
+                {% endif %}
+
+                {% if wizard.steps.current != wizard.steps.last %}
+                    <button type="submit" class="btn btn-primary btn-action">
+                        Next<i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-success btn-action">
+                        <i class="fas fa-check me-2"></i>Complete Assessment
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+    </form>
+
+    <!-- Smart Summary Panel -->
+    <div class="summary-panel">
+        <div class="summary-header">
+            <div class="summary-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h4 class="summary-title">
+                {% if current_step_number == 1 %}
+                    Welcome to Your Solar Assessment
+                {% elif current_step_number == 2 %}
+                    Property Assessment Summary
+                {% elif current_step_number == 3 %}
+                    Energy Analysis Summary
+                {% else %}
+                    Assessment Complete
+                {% endif %}
+            </h4>
+        </div>
+
+        {% if current_step_number == 1 %}
+            <!-- Getting Started Guidance -->
+            <div class="getting-started">
+                <h5 class="guidance-title">
+                    <i class="fas fa-info-circle me-2"></i>Let's Get Started
+                </h5>
+                <ul class="guidance-list">
+                    <li class="guidance-item">
+                        <span class="guidance-icon">1</span>
+                        <span>Fill in your basic contact information</span>
+                    </li>
+                    <li class="guidance-item">
+                        <span class="guidance-icon">2</span>
+                        <span>Tell us about your property and installation needs</span>
+                    </li>
+                    <li class="guidance-item">
+                        <span class="guidance-icon">3</span>
+                        <span>Share your current energy usage for accurate sizing</span>
+                    </li>
+                    <li class="guidance-item">
+                        <span class="guidance-icon">✓</span>
+                        <span>Get your personalized solar quotation</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="summary-item">
+                <div class="summary-label">
+                    <i class="fas fa-clock text-info me-2"></i>
+                    Estimated Time
+                </div>
+                <div class="summary-value text-info">
+                    3-5 Minutes
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Progress-Based Summary -->
+            <div class="summary-item">
+                <div class="summary-label">
+                    <i class="fas fa-user text-primary me-2"></i>
+                    Customer
+                </div>
+                <div class="{% if wizard.form.customer_name.value %}summary-value{% else %}summary-placeholder{% endif %}">
+                    {% if wizard.form.customer_name.value %}
+                        {{ wizard.form.customer_name.value }}
+                    {% else %}
+                        Please complete customer information
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if current_step_number >= 2 %}
+                <div class="summary-item">
+                    <div class="summary-label">
+                        <i class="fas fa-home text-success me-2"></i>
+                        Property Type
+                    </div>
+                    <div class="{% if wizard.form.property_type.value %}summary-value{% else %}summary-placeholder{% endif %}">
+                        {% if wizard.form.property_type.value %}
+                            {% if wizard.form.property_type.value == 'residential' %}
+                                Residential Home
+                            {% elif wizard.form.property_type.value == 'commercial' %}
+                                Commercial Building
+                            {% elif wizard.form.property_type.value == 'industrial' %}
+                                Industrial Facility
+                            {% else %}
+                                {{ wizard.form.property_type.value|title }}
+                            {% endif %}
+                        {% else %}
+                            Please select your property type
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if wizard.form.roof_area.value %}
+                    <div class="summary-item">
+                        <div class="summary-label">
+                            <i class="fas fa-chart-area text-warning me-2"></i>
+                            Roof Area
+                        </div>
+                        <div class="summary-value">
+                            {{ wizard.form.roof_area.value }} m²
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if current_step_number >= 3 %}
+                {% if wizard.form.monthly_bill.value %}
+                    <div class="summary-item">
+                        <div class="summary-label">
+                            <i class="fas fa-money-bill-wave text-danger me-2"></i>
+                            Monthly Bill
+                        </div>
+                        <div class="summary-value">
+                            KES {{ wizard.form.monthly_bill.value|floatformat:0 }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if wizard.form.monthly_consumption.value %}
+                    <div class="summary-item">
+                        <div class="summary-label">
+                            <i class="fas fa-bolt text-warning me-2"></i>
+                            Monthly Usage
+                        </div>
+                        <div class="summary-value">
+                            {{ wizard.form.monthly_consumption.value|floatformat:0 }} kWh
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- System Estimate Display -->
+                <div id="system-estimate" class="system-estimate{% if wizard.form.monthly_consumption.value %} show{% endif %}">
+                    <div class="estimate-label">Recommended System Size</div>
+                    {% if wizard.form.monthly_consumption.value %}
+                        {% widthratio wizard.form.monthly_consumption.value 120 1 as system_size %}
+                        <div id="estimate-value" class="estimate-value">
+                            {% if system_size == 0 %}1{% else %}{{ system_size }}{% endif %} kW System
+                        </div>
+                        <small class="text-white-50">Based on your energy needs</small>
+                    {% else %}
+                        <div id="estimate-value" class="estimate-value">-- kW</div>
+                        <small class="text-white-50">Complete energy usage to see estimate</small>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- Next Steps Section -->
+        <div class="mt-4 p-3 bg-light rounded">
+            <h6 class="text-primary mb-3">
+                <i class="fas fa-road me-2"></i>
+                {% if current_step_number == 1 %}
+                    What happens next?
+                {% elif current_step_number == 2 %}
+                    What's next?
+                {% elif current_step_number == 3 %}
+                    Final Step
+                {% else %}
+                    Ready to proceed!
+                {% endif %}
+            </h6>
+            <div class="d-flex align-items-start">
+                {% if current_step_number == 1 %}
+                    <i class="fas fa-arrow-right text-primary me-2 mt-1"></i>
+                    <span>Complete your contact information to move to property details</span>
+                {% elif current_step_number == 2 %}
+                    <i class="fas fa-arrow-right text-success me-2 mt-1"></i>
+                    <span>Provide your energy usage details for accurate system sizing</span>
+                {% elif current_step_number == 3 %}
+                    <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                    <span>Get your personalized solar system quotation with pricing and timeline</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize the progress bar
+document.addEventListener('DOMContentLoaded', function() {
+    // Update progress bar dynamically
+    const currentStep = {{ current_step_number }};
+    const totalSteps = {{ total_steps }};
+
+    updateProgressBar(currentStep, totalSteps);
+    updateStepStates(currentStep);
+
+    // Auto-calculate when monthly bill changes
+    const billInput = document.querySelector('input[name="energy-monthly_bill"]');
+    if (billInput) {
+        billInput.addEventListener('input', function() {
+            // Debounce the calculation
+            clearTimeout(window.calculationTimeout);
+            window.calculationTimeout = setTimeout(calculateFromBill, 500);
+        });
+    }
+
+    // Auto-calculate when monthly consumption changes
+    const consumptionInput = document.querySelector('input[name="energy-monthly_consumption"]');
+    if (consumptionInput) {
+        consumptionInput.addEventListener('input', function() {
+            // Debounce the calculation
+            clearTimeout(window.calculationTimeout);
+            window.calculationTimeout = setTimeout(calculateFromConsumption, 500);
+        });
+    }
+
+    // Hide system estimate initially
+    const estimateDiv = document.getElementById('system-estimate');
+    if (estimateDiv) {
+        estimateDiv.style.display = 'none';
+    }
+});
+
+function calculateFromBill() {
+    const billInput = document.querySelector('input[name="energy-monthly_bill"]');
+    const consumptionInput = document.querySelector('input[name="energy-monthly_consumption"]');
+
+    if (billInput && billInput.value) {
+        const bill = parseFloat(billInput.value);
+        if (!isNaN(bill) && bill > 0) {
+            // Rough calculation: KES bill / 25 (average rate per kWh in Kenya)
+            const consumption = Math.round(bill / 25);
+            consumptionInput.value = consumption;
+
+            // Calculate system size
+            const systemSize = Math.ceil(consumption / 120); // kW
+            showSystemEstimate(systemSize);
+        }
+    }
+}
+
+function calculateFromConsumption() {
+    const consumptionInput = document.querySelector('input[name="energy-monthly_consumption"]');
+    const billInput = document.querySelector('input[name="energy-monthly_bill"]');
+
+    if (consumptionInput && consumptionInput.value) {
+        const consumption = parseFloat(consumptionInput.value);
+        if (!isNaN(consumption) && consumption > 0) {
+            // Rough calculation: kWh * 25 (average rate per kWh in Kenya)
+            const bill = Math.round(consumption * 25);
+            billInput.value = bill;
+
+            // Calculate system size
+            const systemSize = Math.ceil(consumption / 120); // kW
+            showSystemEstimate(systemSize);
+        }
+    }
+}
+
+function showSystemEstimate(size) {
+    const estimateDiv = document.getElementById('system-estimate');
+    const estimateValue = document.getElementById('estimate-value');
+
+    if (estimateDiv && estimateValue) {
+        estimateValue.textContent = size + ' kW';
+        estimateDiv.classList.add('show');
+
+        // Scroll to show the estimate
+        estimateDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function updateProgressBar(currentStep, totalSteps) {
+    const progressFill = document.querySelector('.progress-bar-fill');
+    if (progressFill) {
+        const percentage = (currentStep / totalSteps) * 100;
+        progressFill.style.width = percentage + '%';
+    }
+}
+
+function showCurrentEstimate() {
+    // Trigger calculations based on current field values
+    const billInput = document.querySelector('input[id*="monthly_bill"]');
+    const consumptionInput = document.querySelector('input[id*="monthly_consumption"]');
+
+    if (billInput && billInput.value) {
+        calculateFromBill();
+    } else if (consumptionInput && consumptionInput.value) {
+        calculateFromConsumption();
+    } else {
+        // Show default estimate
+        showSystemEstimate(1);
+    }
+}
+
+function updateStepStates(currentStep) {
+    // Reset all steps
+    const steps = document.querySelectorAll('.progress-step');
+    steps.forEach((step, index) => {
+        const stepNumber = index + 1;
+        step.classList.remove('pending', 'active', 'completed');
+
+        if (stepNumber < currentStep) {
+            step.classList.add('completed');
+        } else if (stepNumber === currentStep) {
+            step.classList.add('active');
+        } else {
+            step.classList.add('pending');
+        }
+    });
+}
+
+// Improved auto-calculation setup
+function setupAutoCalculation() {
+    // Get inputs by ID (more reliable than name)
+    const billInput = document.querySelector('input[id*="monthly_bill"]');
+    const consumptionInput = document.querySelector('input[id*="monthly_consumption"]');
+
+    if (billInput) {
+        billInput.addEventListener('input', function() {
+            clearTimeout(window.calculationTimeout);
+            window.calculationTimeout = setTimeout(() => calculateFromBill(), 500);
+        });
+    }
+
+    if (consumptionInput) {
+        consumptionInput.addEventListener('input', function() {
+            clearTimeout(window.calculationTimeout);
+            window.calculationTimeout = setTimeout(() => calculateFromConsumption(), 500);
+        });
+    }
+}
+
+// Update calculation functions to use ID selectors
+function calculateFromBill() {
+    const billInput = document.querySelector('input[id*="monthly_bill"]');
+    const consumptionInput = document.querySelector('input[id*="monthly_consumption"]');
+
+    if (billInput && billInput.value) {
+        const bill = parseFloat(billInput.value);
+        if (!isNaN(bill) && bill > 0) {
+            const consumption = Math.round(bill / 25);
+            if (consumptionInput) consumptionInput.value = consumption;
+            showSystemEstimate(Math.ceil(consumption / 120));
+        }
+    }
+}
+
+function calculateFromConsumption() {
+    const consumptionInput = document.querySelector('input[id*="monthly_consumption"]');
+    const billInput = document.querySelector('input[id*="monthly_bill"]');
+
+    if (consumptionInput && consumptionInput.value) {
+        const consumption = parseFloat(consumptionInput.value);
+        if (!isNaN(consumption) && consumption > 0) {
+            const bill = Math.round(consumption * 25);
+            if (billInput) billInput.value = bill;
+            showSystemEstimate(Math.ceil(consumption / 120));
+        }
+    }
+}
+</script>
+{% endblock %}
+</div>
+<task_progress>
+- [x] Create professional customer requirements assessment template
+- [x] Implement multi-step Vue.js form with progress indicator
+- [x] Add comprehensive solar system assessment features
+- [x] Include energy calculator with appliance tracking
+- [x] Add form validation and data persistence
+- [x] Design responsive UI with professional styling
+</task_progress>
+</replace_in_file>

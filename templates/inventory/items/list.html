@@ -1,0 +1,560 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Inventory Items - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item active">Items</li>
+{% endblock %}
+
+{% block page_name %}Inventory Items{% endblock %}
+{% block page_title %}Inventory Items{% endblock %}
+{% block page_subtitle %}Manage stock levels and inventory across all warehouses{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-card {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        margin-bottom: 1.5rem;
+    }
+    
+    .stock-level-bar {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #e9ecef;
+        overflow: hidden;
+        margin-top: 0.25rem;
+    }
+    
+    .stock-progress {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .stock-critical { background-color: #dc3545; }
+    .stock-low { background-color: #ffc107; }
+    .stock-good { background-color: #28a745; }
+    .stock-over { background-color: #17a2b8; }
+    
+    .item-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .product-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+    }
+    
+    .product-placeholder {
+        width: 50px;
+        height: 50px;
+        background: #e9ecef;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+    
+    .stock-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .warehouse-badge {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+    
+    .action-dropdown {
+        min-width: 160px;
+    }
+    
+    .summary-stats {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .view-toggle {
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+    
+    .view-toggle .btn {
+        border-radius: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Stats -->
+<div class="summary-stats">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-item">
+                <span class="stat-number">{{ items.count }}</span>
+                <small>Total Items</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <span class="stat-number">{{ total_quantity|default:0 }}</span>
+                <small>Total Quantity</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <span class="stat-number">{{ low_stock_count|default:0 }}</span>
+                <small>Low Stock</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <span class="stat-number">{{ company.default_currency|default:"KES" }} {{ total_value|default:0|floatformat:0 }}</span>
+                <small>Total Value</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="card filters-card">
+    <div class="card-body">
+        <form method="get" id="filtersForm">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Search Items</label>
+                    <input type="text" name="search" class="form-control" placeholder="Product name, SKU..." 
+                           value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Warehouse</label>
+                    <select name="warehouse" class="form-select">
+                        <option value="">All Warehouses</option>
+                        {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.pk }}" {% if request.GET.warehouse == warehouse.pk|stringformat:'s' %}selected{% endif %}>
+                            {{ warehouse.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Stock Status</label>
+                    <select name="stock_status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="low" {% if request.GET.stock_status == 'low' %}selected{% endif %}>Low Stock</option>
+                        <option value="out_of_stock" {% if request.GET.stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                        <option value="overstock" {% if request.GET.stock_status == 'overstock' %}selected{% endif %}>Overstock</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex justify-content-end gap-2">
+                        <div class="btn-group view-toggle" role="group">
+                            <button type="button" class="btn btn-outline-primary active" onclick="switchView('table')">
+                                <i class="fas fa-table"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="switchView('cards')">
+                                <i class="fas fa-th"></i>
+                            </button>
+                        </div>
+                        <a href="{% url 'inventory:item_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Item
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-plus me-1"></i>Actions
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="bulkAdjustment()">
+                                    <i class="fas fa-edit me-2"></i>Bulk Adjustment
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportData()">
+                                    <i class="fas fa-download me-2"></i>Export Data
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'inventory:valuation_create' %}">
+                                    <i class="fas fa-calculator me-2"></i>Inventory Valuation
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Items Table View -->
+<div id="tableView" class="card">
+    <div class="card-body p-0">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Warehouse</th>
+                        <th>Location</th>
+                        <th>Stock Level</th>
+                        <th>Status</th>
+                        <th>Value</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="item-checkbox" value="{{ item.pk }}">
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if item.product.images.first %}
+                                <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" class="product-image me-2">
+                                {% else %}
+                                <div class="product-placeholder me-2">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ item.product.name }}</div>
+                                    <small class="text-muted">{{ item.product.category }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <code>{{ item.product.sku }}</code>
+                        </td>
+                        <td>
+                            <span class="badge warehouse-badge">{{ item.warehouse.name }}</span>
+                        </td>
+                        <td>
+                            {% if item.bin_location %}
+                                <span class="badge bg-light text-dark">{{ item.bin_location }}</span>
+                                {% if item.row or item.shelf %}
+                                <br><small class="text-muted">
+                                    {% if item.row %}Row: {{ item.row }}{% endif %}
+                                    {% if item.shelf %} Shelf: {{ item.shelf }}{% endif %}
+                                </small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-2">
+                                    <div class="fw-bold">{{ item.quantity_on_hand }}</div>
+                                    <small class="text-muted">Available: {{ item.available_quantity }}</small>
+                                </div>
+                                <div style="width: 60px;">
+                                    <div class="stock-level-bar">
+                                        {% with percentage=item.quantity_on_hand|floatformat:0|add:0 max_stock=item.maximum_stock|floatformat:0|add:0 %}
+                                        {% if max_stock > 0 %}
+                                            {% widthratio percentage max_stock 100 as progress_width %}
+                                            <div class="stock-progress 
+                                                {% if item.quantity_on_hand == 0 %}stock-critical
+                                                {% elif item.needs_reorder %}stock-low
+                                                {% elif item.is_overstocked %}stock-over
+                                                {% else %}stock-good{% endif %}" 
+                                                 style="width: {{ progress_width }}%"></div>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if item.quantity_on_hand == 0 %}
+                                <span class="stock-badge badge bg-danger">Out of Stock</span>
+                            {% elif item.needs_reorder %}
+                                <span class="stock-badge badge bg-warning">Low Stock</span>
+                            {% elif item.is_overstocked %}
+                                <span class="stock-badge badge bg-info">Overstock</span>
+                            {% else %}
+                                <span class="stock-badge badge bg-success">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% widthratio item.quantity_on_hand 1 item.average_cost as stock_value %}
+                            <div class="fw-bold">{{ company.default_currency|default:"KES" }} {{ stock_value|floatformat:2 }}</div>
+                            <small class="text-muted">@ {{ company.default_currency|default:"KES" }}{{ item.average_cost|floatformat:2 }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ item.updated_at|timesince }} ago</small>
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Actions
+                                </button>
+                                <ul class="dropdown-menu action-dropdown">
+                                    <li><a class="dropdown-item" href="{% url 'inventory:item_detail' item.pk %}">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:item_edit' item.pk %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Item
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="quickAdjustment({{ item.pk }})">
+                                        <i class="fas fa-plus-minus me-2"></i>Quick Adjustment
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:transfer_create' %}?item={{ item.pk }}">
+                                        <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="viewMovements({{ item.pk }})">
+                                        <i class="fas fa-history me-2"></i>View Movements
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No inventory items found.</p>
+            {% if request.GET.search or request.GET.warehouse or request.GET.stock_status %}
+            <p class="text-muted">Try adjusting your filters or search terms.</p>
+            <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-times me-2"></i>Clear Filters
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cards View (Hidden by default) -->
+<div id="cardsView" class="row g-3" style="display: none;">
+    {% for item in items %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="card item-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    {% if item.product.images.first %}
+                    <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" class="product-image me-3">
+                    {% else %}
+                    <div class="product-placeholder me-3">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <h6 class="card-title mb-1">{{ item.product.name }}</h6>
+                        <p class="text-muted small mb-1">{{ item.product.category }}</p>
+                        <code class="small">{{ item.product.sku }}</code>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'inventory:item_detail' item.pk %}">View Details</a></li>
+                            <li><a class="dropdown-item" href="{% url 'inventory:item_edit' item.pk %}">Edit</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="h5 mb-0">{{ item.quantity_on_hand }}</div>
+                        <small class="text-muted">On Hand</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0">{{ item.available_quantity }}</div>
+                        <small class="text-muted">Available</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0">{{ item.reorder_point }}</div>
+                        <small class="text-muted">Reorder</small>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Stock Level</small>
+                        <small>{{ item.quantity_on_hand }} / {{ item.maximum_stock }}</small>
+                    </div>
+                    <div class="stock-level-bar">
+                        {% with percentage=item.quantity_on_hand|floatformat:0|add:0 max_stock=item.maximum_stock|floatformat:0|add:0 %}
+                        {% if max_stock > 0 %}
+                            {% widthratio percentage max_stock 100 as progress_width %}
+                            <div class="stock-progress 
+                                {% if item.quantity_on_hand == 0 %}stock-critical
+                                {% elif item.needs_reorder %}stock-low
+                                {% elif item.is_overstocked %}stock-over
+                                {% else %}stock-good{% endif %}" 
+                                 style="width: {{ progress_width }}%"></div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge warehouse-badge">{{ item.warehouse.name }}</span>
+                        {% if item.quantity_on_hand == 0 %}
+                            <span class="stock-badge badge bg-danger ms-1">Out</span>
+                        {% elif item.needs_reorder %}
+                            <span class="stock-badge badge bg-warning ms-1">Low</span>
+                        {% elif item.is_overstocked %}
+                            <span class="stock-badge badge bg-info ms-1">Over</span>
+                        {% else %}
+                            <span class="stock-badge badge bg-success ms-1">Good</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        {% widthratio item.quantity_on_hand 1 item.average_cost as stock_value %}
+                        <div class="fw-bold">{{ company.default_currency|default:"KES" }} {{ stock_value|floatformat:0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Items pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.stock_status %}&stock_status={{ request.GET.stock_status }}{% endif %}">First</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.stock_status %}&stock_status={{ request.GET.stock_status }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.stock_status %}&stock_status={{ request.GET.stock_status }}{% endif %}">Next</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}{% if request.GET.stock_status %}&stock_status={{ request.GET.stock_status }}{% endif %}">Last</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// View switching
+function switchView(view) {
+    const tableView = document.getElementById('tableView');
+    const cardsView = document.getElementById('cardsView');
+    const buttons = document.querySelectorAll('.view-toggle .btn');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (view === 'cards') {
+        tableView.style.display = 'none';
+        cardsView.style.display = 'flex';
+        event.target.classList.add('active');
+    } else {
+        tableView.style.display = 'block';
+        cardsView.style.display = 'none';
+        document.querySelector('.view-toggle .btn:first-child').classList.add('active');
+    }
+    
+    localStorage.setItem('inventoryView', view);
+}
+
+// Select all functionality
+function toggleSelectAll(checkbox) {
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    itemCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+// Quick adjustment modal
+function quickAdjustment(itemId) {
+    // Implementation for quick stock adjustment
+    console.log('Quick adjustment for item:', itemId);
+}
+
+// Bulk operations
+function bulkAdjustment() {
+    const selected = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        alert('Please select items to adjust.');
+        return;
+    }
+    console.log('Bulk adjustment for items:', selected);
+}
+
+function exportData() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'excel');
+    window.open(`${window.location.pathname}?${params.toString()}`, '_blank');
+}
+
+function viewMovements(itemId) {
+    window.open(`/inventory/items/${itemId}/movements/`, '_blank');
+}
+
+// Auto-submit filters
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore view preference
+    const savedView = localStorage.getItem('inventoryView');
+    if (savedView === 'cards') {
+        switchView('cards');
+    }
+    
+    // Auto-submit on filter changes
+    const filterSelects = document.querySelectorAll('select[name="warehouse"], select[name="stock_status"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filtersForm').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

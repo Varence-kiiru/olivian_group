@@ -1,0 +1,867 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Invoice Management - Financial Management{% endblock %}
+
+{% block page_title %}Invoice Management{% endblock %}
+{% block page_subtitle %}Create, track, and manage customer invoices and billing{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial</a></li>
+<li class="breadcrumb-item active">Invoice Management</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .invoice-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .invoice-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .invoice-card.draft { border-left-color: #6c757d; }
+    .invoice-card.sent { border-left-color: #17a2b8; }
+    .invoice-card.paid { border-left-color: #28a745; }
+    .invoice-card.overdue { border-left-color: #dc3545; }
+    .invoice-card.cancelled { border-left-color: #6f42c1; }
+    
+    .invoice-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-draft { background: #f8f9fa; color: #6c757d; }
+    .status-sent { background: #d1ecf1; color: #0c5460; }
+    .status-paid { background: #d4edda; color: #155724; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-cancelled { background: #e2e3f1; color: #383d47; }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        border-bottom: 3px solid var(--primary-color);
+    }
+    
+    .metric-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .filters-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .invoice-preview {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .action-buttons .btn {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .customer-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .payment-status {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .payment-status.pending { background: #fff3cd; }
+    .payment-status.partial { background: #d1ecf1; }
+    .payment-status.paid { background: #d4edda; }
+    .payment-status.overdue { background: #f8d7da; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Invoice Management Header -->
+<div class="invoice-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-file-invoice-dollar fa-3x me-3"></i>
+                <div>
+                    <h1 class="mb-1">Invoice Management</h1>
+                    <p class="mb-0 opacity-75">Create, send, and track customer invoices with integrated payment processing</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="#" class="btn btn-light btn-lg" onclick="createInvoice()">
+                <i class="fas fa-plus me-2"></i>Create New Invoice
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Metrics -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-number">127</div>
+            <div class="text-muted">Total Invoices</div>
+            <div class="small text-success mt-2">
+                <i class="fas fa-arrow-up me-1"></i>12% this month
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-number text-success">KES 2.4M</div>
+            <div class="text-muted">Total Invoiced</div>
+            <div class="small text-success mt-2">
+                <i class="fas fa-arrow-up me-1"></i>8% this month
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-number text-warning">KES 320K</div>
+            <div class="text-muted">Outstanding</div>
+            <div class="small text-warning mt-2">
+                <i class="fas fa-clock me-1"></i>23 invoices
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-number text-danger">KES 85K</div>
+            <div class="text-muted">Overdue</div>
+            <div class="small text-danger mt-2">
+                <i class="fas fa-exclamation-triangle me-1"></i>7 invoices
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="filters-panel">
+    <div class="row">
+        <div class="col-md-3">
+            <label for="invoiceStatus" class="form-label">Status</label>
+            <select class="form-select" id="invoiceStatus">
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="customerFilter" class="form-label">Customer</label>
+            <select class="form-select" id="customerFilter">
+                <option value="">All Customers</option>
+                <option value="1">Olivian Group Ltd</option>
+                <option value="2">Kenya Power</option>
+                <option value="3">Solar Tech Solutions</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="dateRange" class="form-label">Date Range</label>
+            <select class="form-select" id="dateRange">
+                <option value="this_month">This Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="this_quarter">This Quarter</option>
+                <option value="this_year">This Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="searchInvoice" class="form-label">Search</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="searchInvoice" placeholder="Invoice number, customer...">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoice List -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Invoice List
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="viewMode" id="listView" checked>
+                <label class="btn btn-outline-primary" for="listView">
+                    <i class="fas fa-list"></i>
+                </label>
+                
+                <input type="radio" class="btn-check" name="viewMode" id="gridView">
+                <label class="btn btn-outline-primary" for="gridView">
+                    <i class="fas fa-th"></i>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Sample Invoice Items -->
+        <div class="invoice-card paid" onclick="viewInvoice('INV-2024-001')">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="fw-bold">INV-2024-001</div>
+                    <div class="small text-muted">Jan 15, 2024</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-medium">Olivian Group Ltd</div>
+                    <div class="small text-muted">Solar Panel Installation</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-success">KES 125,000</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-paid">Paid</span>
+                </div>
+                <div class="col-md-2 text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="event.stopPropagation(); viewInvoice('INV-2024-001')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="event.stopPropagation(); downloadInvoice('INV-2024-001')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="invoice-card sent" onclick="viewInvoice('INV-2024-002')">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="fw-bold">INV-2024-002</div>
+                    <div class="small text-muted">Jan 18, 2024</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-medium">Kenya Power</div>
+                    <div class="small text-muted">Maintenance Services</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-info">KES 45,000</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-sent">Sent</span>
+                </div>
+                <div class="col-md-2 text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="event.stopPropagation(); viewInvoice('INV-2024-002')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="event.stopPropagation(); sendReminder('INV-2024-002')">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="invoice-card overdue" onclick="viewInvoice('INV-2024-003')">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="fw-bold">INV-2024-003</div>
+                    <div class="small text-muted">Dec 20, 2023</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-medium">Solar Tech Solutions</div>
+                    <div class="small text-muted">Equipment Supply</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-danger">KES 85,000</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-overdue">Overdue</span>
+                </div>
+                <div class="col-md-2 text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="event.stopPropagation(); viewInvoice('INV-2024-003')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="event.stopPropagation(); sendReminder('INV-2024-003')">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="invoice-card draft" onclick="viewInvoice('INV-2024-004')">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="fw-bold">INV-2024-004</div>
+                    <div class="small text-muted">Jan 22, 2024</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-medium">Green Energy Co.</div>
+                    <div class="small text-muted">Consultation Services</div>
+                </div>
+                <div class="col-md-2">
+                    <div class="fw-bold text-secondary">KES 25,000</div>
+                </div>
+                <div class="col-md-2">
+                    <span class="status-badge status-draft">Draft</span>
+                </div>
+                <div class="col-md-2 text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="event.stopPropagation(); editInvoice('INV-2024-004')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-success" onclick="event.stopPropagation(); sendInvoice('INV-2024-004')">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Invoice pagination">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">1</span>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="createInvoice()">
+                        <i class="fas fa-plus me-2"></i>Create New Invoice
+                    </button>
+                    <button class="btn btn-success" onclick="importInvoices()">
+                        <i class="fas fa-upload me-2"></i>Import Invoices
+                    </button>
+                    <button class="btn btn-info" onclick="exportInvoices()">
+                        <i class="fas fa-download me-2"></i>Export Invoices
+                    </button>
+                    <button class="btn btn-warning" onclick="sendBulkReminders()">
+                        <i class="fas fa-bell me-2"></i>Send Bulk Reminders
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>INV-2024-001 paid</span>
+                        <span class="text-muted">2 hours ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>INV-2024-002 sent</span>
+                        <span class="text-muted">1 day ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>INV-2024-003 reminder sent</span>
+                        <span class="text-muted">2 days ago</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>INV-2024-004 created</span>
+                        <span class="text-muted">3 days ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Methods -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-credit-card me-2"></i>Payment Methods
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-mobile-alt text-success me-2"></i>
+                        <span>M-Pesa Integration</span>
+                        <span class="badge bg-success ms-auto">Active</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-university text-primary me-2"></i>
+                        <span>Bank Transfer</span>
+                        <span class="badge bg-primary ms-auto">Active</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-credit-card text-info me-2"></i>
+                        <span>Card Payment</span>
+                        <span class="badge bg-secondary ms-auto">Coming Soon</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-money-bill text-warning me-2"></i>
+                        <span>Cash Payment</span>
+                        <span class="badge bg-warning ms-auto">Manual</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Creation/Edit Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="invoiceForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="customer-info">
+                                <h6>Customer Information</h6>
+                                <div class="mb-3">
+                                    <label for="customer" class="form-label">Customer</label>
+                                    <div class="input-group">
+                                        <select class="form-select" id="customer" required>
+                                            <option value="">Select Customer</option>
+                                            <option value="1">Olivian Group Ltd</option>
+                                            <option value="2">Kenya Power</option>
+                                            <option value="3">Solar Tech Solutions</option>
+                                        </select>
+                                        <button type="button" class="btn btn-outline-primary" onclick="openFinancialCustomerModal()" title="Add New Customer">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="customerEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="customerEmail">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="customerAddress" class="form-label">Billing Address</label>
+                                    <textarea class="form-control" id="customerAddress" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="customer-info">
+                                <h6>Invoice Details</h6>
+                                <div class="mb-3">
+                                    <label for="invoiceDate" class="form-label">Invoice Date</label>
+                                    <input type="date" class="form-control" id="invoiceDate" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="dueDate" class="form-label">Due Date</label>
+                                    <input type="date" class="form-control" id="dueDate" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="currency" class="form-label">Currency</label>
+                                    <select class="form-select" id="currency">
+                                        <option value="KES" selected>Kenyan Shilling (KES)</option>
+                                        <option value="USD">US Dollar (USD)</option>
+                                        <option value="EUR">Euro (EUR)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="paymentTerms" class="form-label">Payment Terms</label>
+                                    <select class="form-select" id="paymentTerms">
+                                        <option value="net_30">Net 30 days</option>
+                                        <option value="net_15">Net 15 days</option>
+                                        <option value="net_7">Net 7 days</option>
+                                        <option value="due_on_receipt">Due on receipt</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Invoice Items -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Invoice Items</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addInvoiceItem()">
+                                <i class="fas fa-plus me-1"></i>Add Item
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th width="100">Quantity</th>
+                                        <th width="120">Unit Price</th>
+                                        <th width="100">Tax (%)</th>
+                                        <th width="120">Total</th>
+                                        <th width="50">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoiceItems">
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" placeholder="Item description">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" value="1" min="1">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" step="0.01" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" value="16" min="0" max="100">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" readonly>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Invoice Totals -->
+                        <div class="row mt-3">
+                            <div class="col-md-6"></div>
+                            <div class="col-md-6">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Subtotal:</td>
+                                        <td class="text-end" id="subtotal">KES 0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td>VAT (16%):</td>
+                                        <td class="text-end" id="vatAmount">KES 0.00</td>
+                                    </tr>
+                                    <tr class="fw-bold">
+                                        <td>Total:</td>
+                                        <td class="text-end" id="totalAmount">KES 0.00</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes and Terms -->
+                    <div class="mt-4">
+                        <div class="mb-3">
+                            <label for="invoiceNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="invoiceNotes" rows="3" placeholder="Additional notes or instructions"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="invoiceTerms" class="form-label">Terms & Conditions</label>
+                            <textarea class="form-control" id="invoiceTerms" rows="3" placeholder="Payment terms and conditions"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="saveAsDraft()">Save as Draft</button>
+                <button type="button" class="btn btn-success" onclick="sendInvoiceNow()">Send Invoice</button>
+                <button type="button" class="btn btn-primary" onclick="saveInvoice()">Save & Preview</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+    
+    // Set default invoice date to today
+    document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+    
+    // Set default due date to 30 days from now
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+    document.getElementById('dueDate').value = dueDate.toISOString().split('T')[0];
+});
+
+function createInvoice() {
+    const modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+    modal.show();
+}
+
+function viewInvoice(invoiceId) {
+    // Open invoice detail view
+    window.location.href = `/financial/invoices/${invoiceId}/`;
+}
+
+function editInvoice(invoiceId) {
+    // Load invoice data into modal for editing
+    createInvoice();
+    // TODO: Load existing invoice data
+}
+
+function sendInvoice(invoiceId) {
+    if (confirm(`Send invoice ${invoiceId} to customer?`)) {
+        // TODO: Implement send invoice functionality
+        alert('Invoice sent successfully!');
+    }
+}
+
+function sendReminder(invoiceId) {
+    if (confirm(`Send payment reminder for invoice ${invoiceId}?`)) {
+        // TODO: Implement send reminder functionality
+        alert('Reminder sent successfully!');
+    }
+}
+
+function downloadInvoice(invoiceId) {
+    // TODO: Implement download invoice functionality
+    window.open(`/financial/invoices/${invoiceId}/download/`, '_blank');
+}
+
+function addInvoiceItem() {
+    const tbody = document.getElementById('invoiceItems');
+    const newRow = tbody.rows[0].cloneNode(true);
+    
+    // Clear values in the new row
+    const inputs = newRow.querySelectorAll('input');
+    inputs.forEach(input => {
+        if (input.type !== 'number' || input.placeholder !== 'Item description') {
+            input.value = input.type === 'number' && input.min === '0' && input.max === '100' ? '16' : 
+                         input.type === 'number' && input.min === '1' ? '1' : '';
+        }
+    });
+    
+    tbody.appendChild(newRow);
+    calculateInvoiceTotal();
+}
+
+function removeInvoiceItem(button) {
+    const tbody = document.getElementById('invoiceItems');
+    if (tbody.rows.length > 1) {
+        button.closest('tr').remove();
+        calculateInvoiceTotal();
+    }
+}
+
+function calculateInvoiceTotal() {
+    const rows = document.getElementById('invoiceItems').rows;
+    let subtotal = 0;
+    
+    for (let row of rows) {
+        const quantity = parseFloat(row.cells[1].querySelector('input').value) || 0;
+        const unitPrice = parseFloat(row.cells[2].querySelector('input').value) || 0;
+        const lineTotal = quantity * unitPrice;
+        
+        row.cells[4].querySelector('input').value = `KES ${lineTotal.toFixed(2)}`;
+        subtotal += lineTotal;
+    }
+    
+    const vatRate = 0.16; // 16% VAT
+    const vatAmount = subtotal * vatRate;
+    const total = subtotal + vatAmount;
+    
+    document.getElementById('subtotal').textContent = `KES ${subtotal.toFixed(2)}`;
+    document.getElementById('vatAmount').textContent = `KES ${vatAmount.toFixed(2)}`;
+    document.getElementById('totalAmount').textContent = `KES ${total.toFixed(2)}`;
+}
+
+function saveAsDraft() {
+    // TODO: Implement save as draft functionality
+    alert('Invoice saved as draft!');
+    bootstrap.Modal.getInstance(document.getElementById('invoiceModal')).hide();
+}
+
+function sendInvoiceNow() {
+    if (validateInvoiceForm()) {
+        // TODO: Implement send invoice functionality
+        alert('Invoice sent successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('invoiceModal')).hide();
+    }
+}
+
+function saveInvoice() {
+    if (validateInvoiceForm()) {
+        // TODO: Implement save invoice functionality
+        alert('Invoice saved successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('invoiceModal')).hide();
+    }
+}
+
+function validateInvoiceForm() {
+    const customer = document.getElementById('customer').value;
+    const invoiceDate = document.getElementById('invoiceDate').value;
+    const dueDate = document.getElementById('dueDate').value;
+    
+    if (!customer) {
+        alert('Please select a customer');
+        return false;
+    }
+    
+    if (!invoiceDate) {
+        alert('Please select an invoice date');
+        return false;
+    }
+    
+    if (!dueDate) {
+        alert('Please select a due date');
+        return false;
+    }
+    
+    // Check if there are invoice items
+    const firstRow = document.getElementById('invoiceItems').rows[0];
+    const description = firstRow.cells[0].querySelector('input').value;
+    const unitPrice = firstRow.cells[2].querySelector('input').value;
+    
+    if (!description || !unitPrice) {
+        alert('Please add at least one invoice item');
+        return false;
+    }
+    
+    return true;
+}
+
+function importInvoices() {
+    // TODO: Implement import functionality
+    alert('Import functionality coming soon!');
+}
+
+function exportInvoices() {
+    // TODO: Implement export functionality
+    alert('Export functionality coming soon!');
+}
+
+function sendBulkReminders() {
+    // TODO: Implement bulk reminder functionality
+    alert('Bulk reminder functionality coming soon!');
+}
+
+// Add event listeners for invoice item calculations
+document.addEventListener('input', function(e) {
+    if (e.target.closest('#invoiceItems')) {
+        calculateInvoiceTotal();
+    }
+});
+
+// Financial Customer Modal
+function openFinancialCustomerModal() {
+    openCustomerModal({
+        targetSelectId: 'customer',
+        includeBusinessFields: true,
+        includeSolarFields: false,
+        onCustomerCreated: function(customer) {
+            // Update customer dropdown and related fields
+            const customerSelect = document.getElementById('customer');
+            const customerEmail = document.getElementById('customerEmail');
+            const customerAddress = document.getElementById('customerAddress');
+            
+            if (customerSelect) {
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.display_name;
+                option.selected = true;
+                customerSelect.appendChild(option);
+            }
+            
+            // Auto-fill customer email and address
+            if (customerEmail) customerEmail.value = customer.email || '';
+            if (customerAddress) {
+                let address = customer.address || '';
+                if (customer.city) address += (address ? ', ' : '') + customer.city;
+                if (customer.country) address += (address ? ', ' : '') + customer.country;
+                customerAddress.value = address;
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+
+<!-- Universal Customer Modal -->
+{% include "components/customer_modal.html" %}
+
+{% block extra_css %}
+{{ block.super }}
+{% include "components/customer_modal_css.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% include "components/customer_modal_js.html" %}
+{% endblock %}

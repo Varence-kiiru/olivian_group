@@ -1,0 +1,450 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Staff Details - {{ staff_user.get_full_name|default:staff_user.username }}{% endblock %}
+{% block page_subtitle %}View staff member information and account details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Staff Profile Card -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="user-avatar mx-auto mb-3" 
+                     style="width: 100px; height: 100px; background: {{ company.primary_color|default:'#38b6ff' }}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold;">
+                    {% if staff_user.first_name %}{{ staff_user.first_name.0|upper }}{% elif staff_user.username %}{{ staff_user.username.0|upper }}{% else %}U{% endif %}
+                </div>
+                
+                <h4>{{ staff_user.get_full_name|default:staff_user.username }}</h4>
+                <p class="text-muted">{{ staff_user.get_role_display }}</p>
+                
+                <div class="mb-3">
+                    {% if staff_user.is_active_employee %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-circle me-1"></i>Active Employee
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">
+                            <i class="fas fa-pause-circle me-1"></i>Inactive
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <!-- Edit Staff Details -->
+                    <a href="{% url 'accounts:staff_edit' staff_user.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Details
+                    </a>
+                    
+                    <!-- Password Reset -->
+                    <form method="post" action="{% url 'accounts:staff_reset_password' staff_user.pk %}" 
+                          onsubmit="return confirm('Are you sure you want to send a password reset link to {{ staff_user.get_full_name }}? They will receive an email with instructions to reset their password.')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-key me-2"></i>Send Reset Link
+                        </button>
+                    </form>
+                    
+                    <!-- Account Reset -->
+                    {% if staff_user.role != 'super_admin' or staff_user == user %}
+                        <form method="post" action="{% url 'accounts:staff_reset_account' staff_user.pk %}" 
+                              onsubmit="return confirm('Are you sure you want to reset the account for {{ staff_user.get_full_name }}? This will reactivate the account and clear any restrictions.')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-refresh me-2"></i>Reset Account
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    <!-- Admin Access Toggle -->
+                    {% if staff_user.role != 'super_admin' or staff_user == user %}
+                        <form method="post" action="{% url 'accounts:staff_toggle_staff_status' staff_user.pk %}"
+                              onsubmit="return confirm('Are you sure you want to {% if staff_user.is_staff %}revoke{% else %}grant{% endif %} Django admin access for {{ staff_user.get_full_name }}? This controls access to the Django administration interface.')">
+                            {% csrf_token %}
+                            {% if staff_user.is_staff %}
+                                <button type="submit" class="btn btn-outline-warning">
+                                    <i class="fas fa-shield-alt me-2"></i>Revoke Admin Access
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-outline-info">
+                                    <i class="fas fa-shield-alt me-2"></i>Grant Admin Access
+                                </button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
+
+                    <!-- Superuser Status Toggle -->
+                    {% if staff_user != user %}
+                        <form method="post" action="{% url 'accounts:staff_toggle_superuser_status' staff_user.pk %}"
+                              onsubmit="return confirm('Are you sure you want to {% if staff_user.is_superuser %}revoke{% else %}grant{% endif %} superuser privileges for {{ staff_user.get_full_name }}? Superusers have full system access.')">
+                            {% csrf_token %}
+                            {% if staff_user.is_superuser %}
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="fas fa-crown me-2"></i>Revoke Superuser Status
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="fas fa-crown me-2"></i>Grant Superuser Status
+                                </button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
+                    
+                    <!-- Activate/Deactivate -->
+                    {% if staff_user.role != 'super_admin' %}
+                        <form method="post" action="{% url 'accounts:staff_toggle_active' staff_user.pk %}" 
+                              onsubmit="return confirm('Are you sure you want to {% if staff_user.is_active_employee %}deactivate{% else %}activate{% endif %} this staff member?')">
+                            {% csrf_token %}
+                            {% if staff_user.is_active_employee %}
+                                <button type="submit" class="btn btn-outline-warning">
+                                    <i class="fas fa-pause me-2"></i>Deactivate Account
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-play me-2"></i>Activate Account
+                                </button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <a href="{% url 'accounts:staff_management' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Staff List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Staff Information -->
+    <div class="col-lg-8">
+        <div class="row">
+            <!-- Personal Information -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user me-2"></i>Personal Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th class="text-muted small">Full Name:</th>
+                                        <td>{{ staff_user.get_full_name|default:staff_user.username }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Username:</th>
+                                        <td><code>{{ staff_user.username }}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Email:</th>
+                                        <td>
+                                            <a href="mailto:{{ staff_user.email }}">{{ staff_user.email }}</a>
+                                            {% if staff_user.email_verified %}
+                                                <i class="fas fa-check-circle text-success ms-1" title="Verified"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Phone:</th>
+                                        <td>
+                                            {% if staff_user.phone %}
+                                                <a href="tel:{{ staff_user.phone }}">{{ staff_user.phone }}</a>
+                                            {% else %}
+                                                <span class="text-muted">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th class="text-muted small">Role:</th>
+                                        <td><span class="badge bg-primary">{{ staff_user.get_role_display }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Admin Access:</th>
+                                        <td>
+                                            {% if staff_user.is_staff %}
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-shield-alt me-1"></i>Django Admin
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-user me-1"></i>No Admin Access
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Superuser Status:</th>
+                                        <td>
+                                            {% if staff_user.is_superuser %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-crown me-1"></i>Superuser
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-outline-secondary">
+                                                    <i class="fas fa-user me-1"></i>Standard
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Employee ID:</th>
+                                        <td>
+                                            {% if staff_user.employee_id %}
+                                                <code>{{ staff_user.employee_id }}</code>
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Department:</th>
+                                        <td>{{ staff_user.department|default:"Not specified" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Hire Date:</th>
+                                        <td>
+                                            {% if staff_user.hire_date %}
+                                                {{ staff_user.hire_date|date:"F d, Y" }}
+                                            {% else %}
+                                                <span class="text-muted">Not specified</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Information -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>Account Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th class="text-muted small">Account Status:</th>
+                                        <td>
+                                            {% if staff_user.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Employee Status:</th>
+                                        <td>
+                                            {% if staff_user.is_active_employee %}
+                                                <span class="badge bg-success">Active Employee</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Inactive Employee</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Email Verified:</th>
+                                        <td>
+                                            {% if staff_user.email_verified %}
+                                                <span class="text-success">
+                                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                                </span>
+                                            {% else %}
+                                                <span class="text-warning">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>Not Verified
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th class="text-muted small">Joined:</th>
+                                        <td>{{ staff_user.date_joined|date:"F d, Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Last Login:</th>
+                                        <td>
+                                            {% if staff_user.last_login %}
+                                                {{ staff_user.last_login|date:"F d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Never logged in</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted small">Profile Updated:</th>
+                                        <td>
+                                            {% if staff_user.updated_at %}
+                                                {{ staff_user.updated_at|date:"F d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Role Permissions -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Role Permissions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if staff_user.role == 'super_admin' %}
+                                <div class="col-12">
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-crown me-2"></i>
+                                        <strong>Super Administrator:</strong> Full system access with all privileges.
+                                    </div>
+                                </div>
+                            {% elif staff_user.role == 'manager' %}
+                                <div class="col-md-6">
+                                    <h6>System Access:</h6>
+                                    <ul>
+                                        <li>View all reports</li>
+                                        <li>Manage projects</li>
+                                        <li>Approve budgets</li>
+                                        <li>Staff oversight</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Management Features:</h6>
+                                    <ul>
+                                        <li>Financial management</li>
+                                        <li>Customer management</li>
+                                        <li>Inventory oversight</li>
+                                        <li>System configuration</li>
+                                    </ul>
+                                </div>
+                            {% elif 'sales' in staff_user.role %}
+                                <div class="col-md-6">
+                                    <h6>Sales Features:</h6>
+                                    <ul>
+                                        <li>Customer management</li>
+                                        <li>Quotation creation</li>
+                                        <li>Lead management</li>
+                                        <li>Sales reporting</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Access Level:</h6>
+                                    <ul>
+                                        <li>Product catalog</li>
+                                        <li>Customer database</li>
+                                        <li>Sales dashboard</li>
+                                        {% if staff_user.role == 'sales_manager' %}
+                                            <li>Team management</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% elif staff_user.role == 'project_manager' %}
+                                <div class="col-md-6">
+                                    <h6>Project Features:</h6>
+                                    <ul>
+                                        <li>Project management</li>
+                                        <li>Task assignment</li>
+                                        <li>Budget tracking</li>
+                                        <li>Team coordination</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Access Level:</h6>
+                                    <ul>
+                                        <li>Project dashboard</li>
+                                        <li>Resource management</li>
+                                        <li>Progress tracking</li>
+                                        <li>Client communication</li>
+                                    </ul>
+                                </div>
+                            {% elif staff_user.role == 'inventory_manager' %}
+                                <div class="col-md-6">
+                                    <h6>Inventory Features:</h6>
+                                    <ul>
+                                        <li>Stock management</li>
+                                        <li>Purchase orders</li>
+                                        <li>Supplier management</li>
+                                        <li>Inventory reports</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Access Level:</h6>
+                                    <ul>
+                                        <li>Inventory dashboard</li>
+                                        <li>Warehouse management</li>
+                                        <li>Stock movements</li>
+                                        <li>Procurement system</li>
+                                    </ul>
+                                </div>
+                            {% elif staff_user.role == 'cashier' %}
+                                <div class="col-md-6">
+                                    <h6>POS Features:</h6>
+                                    <ul>
+                                        <li>Point of sale</li>
+                                        <li>Customer service</li>
+                                        <li>Payment processing</li>
+                                        <li>Transaction reports</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Access Level:</h6>
+                                    <ul>
+                                        <li>POS terminal</li>
+                                        <li>Product catalog</li>
+                                        <li>Customer database</li>
+                                        <li>Sales dashboard</li>
+                                    </ul>
+                                </div>
+                            {% elif staff_user.role == 'technician' %}
+                                <div class="col-md-6">
+                                    <h6>Technical Features:</h6>
+                                    <ul>
+                                        <li>Project tasks</li>
+                                        <li>Installation support</li>
+                                        <li>Maintenance records</li>
+                                        <li>Technical documentation</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Access Level:</h6>
+                                    <ul>
+                                        <li>Project dashboard</li>
+                                        <li>Task management</li>
+                                        <li>Technical resources</li>
+                                        <li>Equipment tracking</li>
+                                    </ul>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

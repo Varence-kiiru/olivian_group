@@ -1,0 +1,427 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Payment Schedules - {{ block.super }}{% endblock %}
+
+{% block page_title %}Payment Schedules{% endblock %}
+{% block page_subtitle %}Track project payments and milestones{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item active">Payment Schedules</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .schedule-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .schedule-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .schedule-card.status-paid { border-left-color: #28a745; }
+    .schedule-card.status-pending { border-left-color: #ffc107; }
+    .schedule-card.status-overdue { border-left-color: #dc3545; }
+    
+    .payment-amount {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .due-date {
+        font-weight: 500;
+    }
+    
+    .due-date.overdue {
+        color: #dc3545;
+    }
+    
+    .due-date.today {
+        color: #ffc107;
+    }
+    
+    .due-date.upcoming {
+        color: #17a2b8;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .timeline-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    
+    .milestone-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value text-primary">{{ schedules.count }}</div>
+        <div class="text-muted">Total Schedules</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-success">{{ schedules|length|default:0 }}</div>
+        <div class="text-muted">Paid</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-warning">{{ schedules|length|default:0 }}</div>
+        <div class="text-muted">Pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-danger">{{ schedules|length|default:0 }}</div>
+        <div class="text-muted">Overdue</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Project</label>
+            <select class="form-select" name="project">
+                <option value="">All Projects</option>
+                <!-- Project options will be populated by the view -->
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>Paid</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Overdue</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Due Date Range</label>
+            <input type="date" class="form-control" name="due_date_from" value="{{ request.GET.due_date_from }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Payment Schedules</h5>
+    <div class="btn-group">
+        <a href="{% url 'budget:payment_schedule_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Schedule
+        </a>
+        <a href="{% url 'budget:list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Budgets
+        </a>
+    </div>
+</div>
+
+<!-- Payment Schedules -->
+<div class="row">
+    {% for schedule in schedules %}
+    <div class="col-12">
+        <div class="schedule-card status-{% if schedule.is_paid %}paid{% elif schedule.is_overdue %}overdue{% else %}pending{% endif %}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="timeline-indicator 
+                            {% if schedule.is_paid %}bg-success{% elif schedule.is_overdue %}bg-danger{% else %}bg-warning{% endif %}">
+                        </div>
+                        <h6 class="mb-0">{{ schedule.description }}</h6>
+                        {% if schedule.milestone %}
+                        <span class="milestone-badge ms-2">
+                            <i class="fas fa-flag"></i> {{ schedule.milestone.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-auto">
+                            <div class="small text-muted">Project</div>
+                            <div class="fw-semibold">
+                                <a href="{% url 'projects:detail' schedule.project.pk %}" class="text-decoration-none">
+                                    {{ schedule.project.project_number }} - {{ schedule.project.name }}
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-auto">
+                            <div class="small text-muted">Due Date</div>
+                            <div class="fw-semibold due-date {% if schedule.is_overdue %}overdue{% elif schedule.due_date == today %}today{% else %}upcoming{% endif %}">
+                                {{ schedule.due_date|date:"M d, Y" }}
+                                {% if schedule.is_overdue %}
+                                <i class="fas fa-exclamation-triangle ms-1"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if schedule.budget_category %}
+                        <div class="col-auto">
+                            <div class="small text-muted">Budget Category</div>
+                            <div class="fw-semibold">{{ schedule.budget_category.name }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-auto">
+                            <div class="small text-muted">Percentage</div>
+                            <div class="fw-semibold">{{ schedule.percentage }}%</div>
+                        </div>
+                    </div>
+                    
+                    {% if schedule.is_paid %}
+                    <div class="row g-3 small text-muted">
+                        {% if schedule.payment_date %}
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Paid on {{ schedule.payment_date|date:"M d, Y" }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if schedule.invoice_number %}
+                        <div class="col-auto">
+                            <i class="fas fa-file-invoice"></i>
+                            Invoice: {{ schedule.invoice_number }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if schedule.payment_reference %}
+                        <div class="col-auto">
+                            <i class="fas fa-hashtag"></i>
+                            Ref: {{ schedule.payment_reference }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="small text-muted">
+                        <i class="fas fa-clock"></i>
+                        {% if schedule.is_overdue %}
+                        Payment is {{ schedule.days_overdue }} days overdue
+                        {% else %}
+                        Payment due in {{ schedule.days_until_due }} days
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-end">
+                        <div class="payment-amount mb-2 {% if schedule.is_paid %}text-success{% elif schedule.is_overdue %}text-danger{% else %}text-primary{% endif %}">
+                            KES {{ schedule.amount|floatformat:0 }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% if schedule.is_paid %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> Paid
+                            </span>
+                            {% elif schedule.is_overdue %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Overdue
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-clock"></i> Pending
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="btn-group">
+                            <a href="{% url 'budget:payment_schedule_edit' schedule.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if not schedule.is_paid %}
+                            <button type="button" class="btn btn-sm btn-success" onclick="markAsPaid({{ schedule.pk }})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            {% endif %}
+                            <a href="{% url 'budget:payment_schedule_delete' schedule.pk %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No payment schedules found</h5>
+            <p class="text-muted">Create payment schedules to track project milestones and payments.</p>
+            <a href="{% url 'budget:payment_schedule_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Schedule
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Schedule pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Mark as Paid Modal -->
+<div class="modal fade" id="markPaidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark Payment as Paid</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="markPaidForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Payment Date</label>
+                        <input type="date" class="form-control" id="paymentDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Invoice Number</label>
+                        <input type="text" class="form-control" id="invoiceNumber" placeholder="Optional">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Reference</label>
+                        <input type="text" class="form-control" id="paymentReference" placeholder="Transaction ID, check number, etc.">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Mark as Paid</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentScheduleId = null;
+
+function markAsPaid(scheduleId) {
+    currentScheduleId = scheduleId;
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+    new bootstrap.Modal(document.getElementById('markPaidModal')).show();
+}
+
+document.getElementById('markPaidForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!currentScheduleId) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    formData.append('is_paid', 'true');
+    formData.append('payment_date', document.getElementById('paymentDate').value);
+    formData.append('invoice_number', document.getElementById('invoiceNumber').value);
+    formData.append('payment_reference', document.getElementById('paymentReference').value);
+    
+    fetch(`/budget/payment-schedules/${currentScheduleId}/edit/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error updating payment status');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating payment status');
+    });
+});
+
+// Confirmation for delete actions
+document.querySelectorAll('a[href*="delete"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to delete this payment schedule? This action cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

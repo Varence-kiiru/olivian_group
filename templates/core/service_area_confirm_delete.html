@@ -1,0 +1,162 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Delete Service Area: {{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-trash-alt text-danger mr-2"></i>
+                        Delete Service Area
+                    </h3>
+                </div>
+
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Are you sure you want to delete this service area?
+                        </h4>
+                        <p>This action cannot be undone. Deleting this service area will permanently remove it from the system.</p>
+                        <hr>
+                        <p class="mb-0">Please confirm that you want to delete the service area "<strong>{{ object.name }}</strong>".</p>
+                    </div>
+
+                    <!-- Service Area Details -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Service Area Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold" width="140">Name:</td>
+                                    <td>{{ object.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Area Type:</td>
+                                    <td>
+                                        <span class="badge bg-{{ object.area_type|default:'secondary' }}">
+                                            {{ object.get_area_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">County:</td>
+                                    <td>{{ object.county|default:'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Coverage Type:</td>
+                                    <td>
+                                        <span class="badge bg-{{ object.coverage_type|default:'primary' }}">
+                                            {{ object.get_coverage_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Status:</td>
+                                    <td>
+                                        {% if object.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5>Contact Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold" width="140">Contact Person:</td>
+                                    <td>{{ object.contact_person|default:'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Phone:</td>
+                                    <td>{{ object.contact_phone|default:'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Response Time:</td>
+                                    <td>{{ object.estimated_response_time|default:'Not specified' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if object.latitude and object.longitude %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Geographic Information</h5>
+                            <p><strong>Coordinates:</strong> {{ object.latitude|floatformat:6 }}, {{ object.longitude|floatformat:6 }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{% url 'core:service_area_detail' object.pk %}" class="btn btn-info">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a href="{% url 'core:service_area_edit' object.pk %}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> Edit Area
+                            </a>
+                        </div>
+                        <div>
+                            <a href="{% url 'core:service_area_list' %}" class="btn btn-secondary me-2">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="button" class="btn btn-danger" id="confirm-delete-btn">
+                                <i class="fas fa-trash"></i> Yes, Delete Service Area
+                            </button>
+                            <form method="post" id="delete-form" class="d-none">
+                                {% csrf_token %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table-borderless td {
+    border: none;
+    padding: 0.25rem 0;
+}
+
+.alert-danger {
+    border-left: 4px solid #dc3545;
+}
+
+.alert-heading {
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this! This will permanently delete the service area '{{ object.name }}'.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete-form').submit();
+        }
+    });
+});
+</script>
+{% endblock %}

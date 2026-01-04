@@ -1,0 +1,936 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Payment Processing - {{ block.super }}{% endblock %}
+
+{% block page_title %}Payment Processing{% endblock %}
+{% block page_subtitle %}M-Pesa, Card, and Cash payment management{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Payment Processing</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-container {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        height: calc(100vh - 200px);
+    }
+    
+    .payment-methods {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+    }
+    
+    .payment-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .method-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .payment-method-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #dee2e6;
+        border-radius: 15px;
+        padding: 2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .payment-method-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        border-color: #38b6ff;
+    }
+    
+    .payment-method-card.selected {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border-color: #38b6ff;
+    }
+    
+    .payment-method-card.mpesa {
+        background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+        color: white;
+    }
+    
+    .payment-method-card.card {
+        background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+        color: white;
+    }
+    
+    .payment-method-card.cash {
+        background: linear-gradient(135deg, #f57c00 0%, #ff9800 100%);
+        color: white;
+    }
+    
+    .payment-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+    
+    .payment-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .payment-description {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .amount-display {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .amount-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .amount-value {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .amount-breakdown {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .payment-form {
+        flex-grow: 1;
+        display: none;
+    }
+    
+    .payment-form.active {
+        display: block;
+    }
+    
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .mpesa-phone-input {
+        background: #f8f9fa;
+        border: 2px solid #2e7d32;
+        border-radius: 10px;
+        font-size: 1.2rem;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .card-input {
+        background: #f8f9fa;
+        border: 2px solid #1976d2;
+        border-radius: 10px;
+        font-size: 1.1rem;
+    }
+    
+    .cash-calculator {
+        background: #fff3e0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .cash-input {
+        background: white;
+        border: 2px solid #f57c00;
+        border-radius: 10px;
+        font-size: 1.5rem;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .change-display {
+        background: #e8f5e8;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        margin-top: 1rem;
+    }
+    
+    .change-amount {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2e7d32;
+    }
+    
+    .payment-buttons {
+        margin-top: auto;
+        padding-top: 2rem;
+    }
+    
+    .process-btn {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        width: 100%;
+        margin-bottom: 1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .process-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    }
+    
+    .quick-amounts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .quick-amount-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .quick-amount-btn:hover {
+        background: #38b6ff;
+        color: white;
+        border-color: #38b6ff;
+    }
+    
+    .payment-status {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 1rem;
+    }
+    
+    .status-processing {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-success {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-failed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .payment-animation {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    .mpesa-flow {
+        background: #e8f5e8;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .flow-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 8px;
+    }
+    
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #2e7d32;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .card-preview {
+        background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .card-number {
+        font-size: 1.3rem;
+        letter-spacing: 2px;
+        margin-bottom: 1rem;
+    }
+    
+    .card-details {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <!-- Payment Methods Section -->
+    <div class="payment-methods">
+        <h4 class="mb-4">
+            <i class="fas fa-credit-card me-2"></i>Select Payment Method
+        </h4>
+        
+        <!-- Payment Method Cards -->
+        <div class="method-grid">
+            <!-- M-Pesa -->
+            <div class="payment-method-card mpesa" data-method="mpesa" onclick="selectPaymentMethod('mpesa')">
+                <div class="payment-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div class="payment-title">M-Pesa</div>
+                <div class="payment-description">Mobile money payment</div>
+                <div class="mt-3">
+                    <small>Most popular in Kenya</small>
+                </div>
+            </div>
+            
+            <!-- Card Payment -->
+            <div class="payment-method-card card" data-method="card" onclick="selectPaymentMethod('card')">
+                <div class="payment-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="payment-title">Card Payment</div>
+                <div class="payment-description">Credit/Debit card</div>
+                <div class="mt-3">
+                    <small>Visa, Mastercard, Amex</small>
+                </div>
+            </div>
+            
+            <!-- Cash -->
+            <div class="payment-method-card cash" data-method="cash" onclick="selectPaymentMethod('cash')">
+                <div class="payment-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="payment-title">Cash</div>
+                <div class="payment-description">Physical currency</div>
+                <div class="mt-3">
+                    <small>Kenyan Shillings (KES)</small>
+                </div>
+            </div>
+            
+            <!-- Bank Transfer -->
+            <div class="payment-method-card" data-method="bank" onclick="selectPaymentMethod('bank')">
+                <div class="payment-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="payment-title">Bank Transfer</div>
+                <div class="payment-description">Direct bank payment</div>
+                <div class="mt-3">
+                    <small>Real-time transfer</small>
+                </div>
+            </div>
+            
+            <!-- Split Payment -->
+            <div class="payment-method-card" data-method="split" onclick="selectPaymentMethod('split')">
+                <div class="payment-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <div class="payment-title">Split Payment</div>
+                <div class="payment-description">Multiple payment methods</div>
+                <div class="mt-3">
+                    <small>Combine methods</small>
+                </div>
+            </div>
+            
+            <!-- Credit -->
+            <div class="payment-method-card" data-method="credit" onclick="selectPaymentMethod('credit')">
+                <div class="payment-icon">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div class="payment-title">Store Credit</div>
+                <div class="payment-description">Customer credit account</div>
+                <div class="mt-3">
+                    <small>For registered customers</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Transactions -->
+        <div class="mt-4">
+            <h6 class="mb-3">
+                <i class="fas fa-history me-2"></i>Recent Transactions
+            </h6>
+            
+            <div class="list-group">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">M-Pesa Payment</div>
+                        <small class="text-muted">Transaction ID: MT2025011512345</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-success">KES 25,000.00</div>
+                        <small class="text-muted">14:23</small>
+                    </div>
+                </div>
+                
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">Cash Payment</div>
+                        <small class="text-muted">Change given: KES 500.00</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-success">KES 18,500.00</div>
+                        <small class="text-muted">13:45</small>
+                    </div>
+                </div>
+                
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">Card Payment</div>
+                        <small class="text-muted">**** **** **** 1234</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-success">KES 15,200.00</div>
+                        <small class="text-muted">12:30</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Processing Panel -->
+    <div class="payment-panel">
+        <!-- Amount Display -->
+        <div class="amount-display">
+            <div class="amount-label">Total Amount</div>
+            <div class="amount-value" id="totalAmount">KES 0.00</div>
+            <div class="amount-breakdown">
+                Subtotal: KES <span id="subtotal">0.00</span> + 
+                Tax: KES <span id="taxAmount">0.00</span>
+            </div>
+        </div>
+        
+        <!-- Payment Status -->
+        <div id="paymentStatus" class="payment-status" style="display: none;">
+            <div class="payment-animation">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <div class="h5 mb-2">Processing Payment...</div>
+            <div class="text-muted">Please wait while we process your payment</div>
+        </div>
+        
+        <!-- M-Pesa Form -->
+        <div id="mpesaForm" class="payment-form">
+            <h5 class="mb-3">
+                <i class="fas fa-mobile-alt text-success me-2"></i>M-Pesa Payment
+            </h5>
+            
+            <div class="mpesa-flow">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div>Enter customer's M-Pesa phone number</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div>Customer receives STK push notification</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div>Customer enters M-Pesa PIN</div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <div>Payment confirmed automatically</div>
+                </div>
+            </div>
+            
+            <div class="form-floating mb-3">
+                <input type="tel" class="form-control mpesa-phone-input" id="mpesaPhone" 
+                       placeholder="254712345678" pattern="[0-9]{12}">
+                <label for="mpesaPhone">
+                    <i class="fas fa-phone me-2"></i>M-Pesa Phone Number
+                </label>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                The customer will receive an STK push notification on their phone to complete the payment.
+            </div>
+        </div>
+        
+        <!-- Card Form -->
+        <div id="cardForm" class="payment-form">
+            <h5 class="mb-3">
+                <i class="fas fa-credit-card text-primary me-2"></i>Card Payment
+            </h5>
+            
+            <div class="card-preview">
+                <div class="card-number" id="cardDisplay">**** **** **** ****</div>
+                <div class="card-details">
+                    <div>
+                        <div>CARD HOLDER</div>
+                        <div id="cardHolder">NAME ON CARD</div>
+                    </div>
+                    <div>
+                        <div>EXPIRES</div>
+                        <div id="cardExpiry">MM/YY</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control card-input" id="cardNumber" 
+                       placeholder="1234 5678 9012 3456" maxlength="19">
+                <label for="cardNumber">Card Number</label>
+            </div>
+            
+            <div class="row g-3 mb-3">
+                <div class="col-8">
+                    <div class="form-floating">
+                        <input type="text" class="form-control card-input" id="cardExpiry" 
+                               placeholder="MM/YY" maxlength="5">
+                        <label for="cardExpiry">Expiry Date</label>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="form-floating">
+                        <input type="text" class="form-control card-input" id="cardCVC" 
+                               placeholder="123" maxlength="4">
+                        <label for="cardCVC">CVC</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control card-input" id="cardName" 
+                       placeholder="John Doe">
+                <label for="cardName">Cardholder Name</label>
+            </div>
+        </div>
+        
+        <!-- Cash Form -->
+        <div id="cashForm" class="payment-form">
+            <h5 class="mb-3">
+                <i class="fas fa-money-bill-wave text-warning me-2"></i>Cash Payment
+            </h5>
+            
+            <div class="cash-calculator">
+                <label class="form-label">Amount Received</label>
+                <input type="number" class="form-control cash-input" id="cashReceived" 
+                       placeholder="0.00" step="0.01" min="0">
+                
+                <div class="quick-amounts">
+                    <button class="quick-amount-btn" onclick="setCashAmount('exact')">Exact</button>
+                    <button class="quick-amount-btn" onclick="setCashAmount('50000')">50,000</button>
+                    <button class="quick-amount-btn" onclick="setCashAmount('20000')">20,000</button>
+                    <button class="quick-amount-btn" onclick="setCashAmount('10000')">10,000</button>
+                    <button class="quick-amount-btn" onclick="setCashAmount('5000')">5,000</button>
+                    <button class="quick-amount-btn" onclick="setCashAmount('1000')">1,000</button>
+                </div>
+                
+                <div class="change-display" id="changeDisplay" style="display: none;">
+                    <div class="text-muted mb-1">Change to Give</div>
+                    <div class="change-amount" id="changeAmount">KES 0.00</div>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Ensure you have sufficient change in the cash drawer before completing the transaction.
+            </div>
+        </div>
+        
+        <!-- Bank Transfer Form -->
+        <div id="bankForm" class="payment-form">
+            <h5 class="mb-3">
+                <i class="fas fa-university text-info me-2"></i>Bank Transfer
+            </h5>
+            
+            <div class="alert alert-info">
+                <h6>Bank Transfer Instructions</h6>
+                <p class="mb-2"><strong>Bank:</strong> Equity Bank Kenya</p>
+                <p class="mb-2"><strong>Account Name:</strong> The Olivian Group Limited</p>
+                <p class="mb-2"><strong>Account Number:</strong> 0123456789</p>
+                <p class="mb-0"><strong>Reference:</strong> {{ sale_reference|default:"POS-2025-001" }}</p>
+            </div>
+            
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="bankReference" 
+                       placeholder="Transaction reference">
+                <label for="bankReference">Bank Transaction Reference</label>
+            </div>
+        </div>
+        
+        <!-- Payment Buttons -->
+        <div class="payment-buttons">
+            <button class="process-btn" id="processPaymentBtn" onclick="processPayment()" disabled>
+                <i class="fas fa-lock me-2"></i>Select Payment Method
+            </button>
+            
+            <button class="btn btn-outline-secondary w-100" onclick="cancelPayment()">
+                <i class="fas fa-times me-2"></i>Cancel Payment
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Success Modal -->
+<div class="modal fade" id="paymentSuccessModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="text-success mb-4">
+                    <i class="fas fa-check-circle fa-4x"></i>
+                </div>
+                <h4 class="mb-3">Payment Successful!</h4>
+                <p class="mb-4">Transaction completed successfully</p>
+                
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <div class="text-muted">Amount</div>
+                        <div class="h5" id="successAmount">KES 0.00</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Reference</div>
+                        <div class="h5" id="successReference">-</div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="printReceipt()">
+                        <i class="fas fa-print me-2"></i>Print Receipt
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="newTransaction()">
+                        <i class="fas fa-plus me-2"></i>New Transaction
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class PaymentProcessor {
+    constructor() {
+        this.selectedMethod = null;
+        this.totalAmount = 25000.00; // Sample amount
+        this.subtotal = 21551.72;
+        this.taxAmount = 3448.28;
+        
+        this.initializePayment();
+    }
+    
+    initializePayment() {
+        // Set amounts
+        document.getElementById('totalAmount').textContent = `KES ${this.totalAmount.toLocaleString('en-KE', {minimumFractionDigits: 2})}`;
+        document.getElementById('subtotal').textContent = this.subtotal.toLocaleString('en-KE', {minimumFractionDigits: 2});
+        document.getElementById('taxAmount').textContent = this.taxAmount.toLocaleString('en-KE', {minimumFractionDigits: 2});
+        
+        // Initialize cash calculator
+        document.getElementById('cashReceived').addEventListener('input', this.calculateChange.bind(this));
+        
+        // Initialize card formatting
+        this.initializeCardFormatting();
+    }
+    
+    selectMethod(method) {
+        this.selectedMethod = method;
+        
+        // Update UI
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        document.querySelector(`[data-method="${method}"]`).classList.add('selected');
+        
+        // Hide all forms
+        document.querySelectorAll('.payment-form').forEach(form => {
+            form.classList.remove('active');
+        });
+        
+        // Show selected form
+        const formId = method + 'Form';
+        const form = document.getElementById(formId);
+        if (form) {
+            form.classList.add('active');
+        }
+        
+        // Update button
+        const btn = document.getElementById('processPaymentBtn');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-credit-card me-2"></i>Process ${this.getMethodName(method)} Payment`;
+    }
+    
+    getMethodName(method) {
+        const names = {
+            'mpesa': 'M-Pesa',
+            'card': 'Card',
+            'cash': 'Cash',
+            'bank': 'Bank Transfer',
+            'split': 'Split',
+            'credit': 'Credit'
+        };
+        return names[method] || method;
+    }
+    
+    processPayment() {
+        if (!this.selectedMethod) {
+            alert('Please select a payment method');
+            return;
+        }
+        
+        // Validate payment details
+        if (!this.validatePayment()) {
+            return;
+        }
+        
+        // Show processing status
+        this.showProcessingStatus();
+        
+        // Simulate payment processing
+        setTimeout(() => {
+            this.completePayment();
+        }, 3000);
+    }
+    
+    validatePayment() {
+        switch (this.selectedMethod) {
+            case 'mpesa':
+                const phone = document.getElementById('mpesaPhone').value;
+                if (!phone || phone.length !== 12) {
+                    alert('Please enter a valid M-Pesa phone number (12 digits)');
+                    return false;
+                }
+                break;
+                
+            case 'card':
+                const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
+                const expiry = document.getElementById('cardExpiry').value;
+                const cvc = document.getElementById('cardCVC').value;
+                const name = document.getElementById('cardName').value;
+                
+                if (!cardNumber || cardNumber.length < 13) {
+                    alert('Please enter a valid card number');
+                    return false;
+                }
+                if (!expiry || !expiry.match(/^\d{2}\/\d{2}$/)) {
+                    alert('Please enter a valid expiry date (MM/YY)');
+                    return false;
+                }
+                if (!cvc || cvc.length < 3) {
+                    alert('Please enter a valid CVC');
+                    return false;
+                }
+                if (!name) {
+                    alert('Please enter the cardholder name');
+                    return false;
+                }
+                break;
+                
+            case 'cash':
+                const received = parseFloat(document.getElementById('cashReceived').value);
+                if (!received || received < this.totalAmount) {
+                    alert('Cash received must be at least the total amount');
+                    return false;
+                }
+                break;
+                
+            case 'bank':
+                const reference = document.getElementById('bankReference').value;
+                if (!reference) {
+                    alert('Please enter the bank transaction reference');
+                    return false;
+                }
+                break;
+        }
+        
+        return true;
+    }
+    
+    showProcessingStatus() {
+        document.getElementById('paymentStatus').style.display = 'block';
+        document.getElementById('paymentStatus').className = 'payment-status status-processing';
+        document.querySelector('#paymentStatus .payment-animation i').className = 'fas fa-spinner fa-spin';
+        document.querySelector('#paymentStatus .h5').textContent = 'Processing Payment...';
+        document.querySelector('#paymentStatus .text-muted').textContent = 'Please wait while we process your payment';
+    }
+    
+    completePayment() {
+        // Hide processing status
+        document.getElementById('paymentStatus').style.display = 'none';
+        
+        // Generate transaction reference
+        const reference = this.generateTransactionReference();
+        
+        // Show success modal
+        document.getElementById('successAmount').textContent = `KES ${this.totalAmount.toLocaleString('en-KE', {minimumFractionDigits: 2})}`;
+        document.getElementById('successReference').textContent = reference;
+        
+        const modal = new bootstrap.Modal(document.getElementById('paymentSuccessModal'));
+        modal.show();
+        
+        // In real implementation, this would save the transaction
+        console.log('Payment completed:', {
+            method: this.selectedMethod,
+            amount: this.totalAmount,
+            reference: reference
+        });
+    }
+    
+    generateTransactionReference() {
+        const prefixes = {
+            'mpesa': 'MT',
+            'card': 'CD',
+            'cash': 'CA',
+            'bank': 'BT',
+            'split': 'SP',
+            'credit': 'CR'
+        };
+        
+        const prefix = prefixes[this.selectedMethod] || 'TX';
+        const timestamp = new Date().toISOString().replace(/[-:.]/g, '').substring(0, 14);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        
+        return `${prefix}${timestamp}${random}`;
+    }
+    
+    calculateChange() {
+        const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+        const change = received - this.totalAmount;
+        
+        const changeDisplay = document.getElementById('changeDisplay');
+        const changeAmount = document.getElementById('changeAmount');
+        
+        if (change >= 0) {
+            changeDisplay.style.display = 'block';
+            changeAmount.textContent = `KES ${change.toLocaleString('en-KE', {minimumFractionDigits: 2})}`;
+            changeAmount.className = 'change-amount';
+        } else {
+            changeDisplay.style.display = 'none';
+        }
+    }
+    
+    initializeCardFormatting() {
+        const cardNumberInput = document.getElementById('cardNumber');
+        const cardExpiryInput = document.getElementById('cardExpiry');
+        const cardNameInput = document.getElementById('cardName');
+        
+        // Format card number
+        cardNumberInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+            e.target.value = value;
+            
+            // Update card display
+            const display = value || '**** **** **** ****';
+            document.getElementById('cardDisplay').textContent = display;
+        });
+        
+        // Format expiry date
+        cardExpiryInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            e.target.value = value;
+            
+            // Update card display
+            const display = value || 'MM/YY';
+            document.getElementById('cardExpiry').textContent = display;
+        });
+        
+        // Update cardholder name
+        cardNameInput.addEventListener('input', (e) => {
+            const display = e.target.value.toUpperCase() || 'NAME ON CARD';
+            document.getElementById('cardHolder').textContent = display;
+        });
+    }
+}
+
+// Global functions
+function selectPaymentMethod(method) {
+    paymentProcessor.selectMethod(method);
+}
+
+function processPayment() {
+    paymentProcessor.processPayment();
+}
+
+function setCashAmount(amount) {
+    const input = document.getElementById('cashReceived');
+    if (amount === 'exact') {
+        input.value = paymentProcessor.totalAmount.toFixed(2);
+    } else {
+        input.value = parseInt(amount).toFixed(2);
+    }
+    paymentProcessor.calculateChange();
+}
+
+function cancelPayment() {
+    if (confirm('Are you sure you want to cancel this payment?')) {
+        // Redirect back to POS terminal
+        window.location.href = "{% url 'pos:terminal' 1 %}";
+    }
+}
+
+function printReceipt() {
+    alert('Printing receipt...');
+    // In real implementation, this would trigger receipt printing
+}
+
+function newTransaction() {
+    // Clear current transaction and start new one
+    window.location.href = "{% url 'pos:terminal' 1 %}";
+}
+
+// Initialize payment processor
+const paymentProcessor = new PaymentProcessor();
+</script>
+{% endblock %}

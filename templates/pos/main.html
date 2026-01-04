@@ -1,0 +1,469 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Point of Sale - {{ block.super }}{% endblock %}
+
+{% block page_title %}Point of Sale System{% endblock %}
+{% block page_subtitle %}Retail operations and transaction management{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">POS</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .pos-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .pos-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border-color: var(--primary-color);
+    }
+    
+    .pos-card .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .pos-card h4 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    
+    .pos-card p {
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+    
+    .pos-card .btn {
+        min-width: 150px;
+    }
+    
+    .status-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .metric-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .terminal-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-online {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .status-offline {
+        background: #ffebee;
+        color: #c62828;
+    }
+    
+    .status-maintenance {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Current Session Status -->
+{% if current_session %}
+<div class="status-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h5 class="mb-1">
+                <i class="fas fa-cash-register text-success me-2"></i>
+                Active Session: {{ current_session.session_id }}
+            </h5>
+            <p class="mb-0 text-muted">
+                Started: {{ current_session.start_time|date:"M d, Y H:i" }} • 
+                Terminal: {{ current_session.terminal.name }} • 
+                Opening Cash: KES {{ current_session.opening_cash|floatformat:2 }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'pos:terminal' current_session.terminal.id %}" class="btn btn-success me-2">
+                <i class="fas fa-shopping-cart me-2"></i>Continue Sales
+            </a>
+            <a href="{% url 'pos:close_session' current_session.id %}" class="btn btn-outline-danger">
+                <i class="fas fa-power-off me-2"></i>Close Session
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ today_sales|default:"0" }}</div>
+                    <div class="metric-label">Today's Sales</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-chart-line fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">KES {{ today_revenue|floatformat:0|default:"0" }}</div>
+                    <div class="metric-label">Today's Revenue</div>
+                </div>
+                <div class="text-primary">
+                    <i class="fas fa-money-bill-wave fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ active_terminals|default:"0" }}</div>
+                    <div class="metric-label">Active Terminals</div>
+                </div>
+                <div class="text-info">
+                    <i class="fas fa-desktop fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ total_customers|default:"0" }}</div>
+                    <div class="metric-label">Registered Customers</div>
+                </div>
+                <div class="text-warning">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main POS Functions -->
+<div class="pos-grid">
+    <!-- Start New Session -->
+    {% if not current_session %}
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-play-circle"></i>
+        </div>
+        <h4>Start New Session</h4>
+        <p>Begin a new sales session on a terminal with opening cash count</p>
+        <a href="{% url 'pos:start_session' %}" class="btn btn-primary">
+            <i class="fas fa-play me-2"></i>Start Session
+        </a>
+    </div>
+    {% endif %}
+    
+    <!-- POS Terminal -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-cash-register"></i>
+        </div>
+        <h4>POS Terminal</h4>
+        <p>Process sales transactions, scan barcodes, and handle payments</p>
+        {% if current_session %}
+        <a href="{% url 'pos:terminal' current_session.terminal.id %}" class="btn btn-success">
+            <i class="fas fa-shopping-cart me-2"></i>Open Terminal
+        </a>
+        {% else %}
+        <button class="btn btn-secondary" disabled>
+            <i class="fas fa-lock me-2"></i>Start Session First
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- Sales Management -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-receipt"></i>
+        </div>
+        <h4>Sales Management</h4>
+        <p>View, search, and manage all sales transactions and receipts</p>
+        <a href="{% url 'pos:sale_list' %}" class="btn btn-info">
+            <i class="fas fa-list me-2"></i>View Sales
+        </a>
+    </div>
+    
+    <!-- Customer Management -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-address-book"></i>
+        </div>
+        <h4>Customer Management</h4>
+        <p>Manage customer database, loyalty programs, and purchase history</p>
+        <a href="{% url 'pos:customer_list' %}" class="btn btn-warning">
+            <i class="fas fa-users me-2"></i>Manage Customers
+        </a>
+    </div>
+    
+    <!-- Inventory Integration -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-boxes"></i>
+        </div>
+        <h4>Inventory Integration</h4>
+        <p>Real-time stock levels, product management, and automatic updates</p>
+        <a href="{% url 'products:manage' %}" class="btn btn-secondary">
+            <i class="fas fa-warehouse me-2"></i>View Inventory
+        </a>
+    </div>
+    
+    <!-- Reports & Analytics -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h4>Reports & Analytics</h4>
+        <p>Sales reports, performance analytics, and business insights</p>
+        <a href="{% url 'pos:reports' %}" class="btn btn-dark">
+            <i class="fas fa-analytics me-2"></i>View Reports
+        </a>
+    </div>
+    
+    <!-- Store Management -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-store"></i>
+        </div>
+        <h4>Store Management</h4>
+        <p>Manage store locations, addresses, and business settings</p>
+        <a href="{% url 'pos:store_management' %}" class="btn btn-success">
+            <i class="fas fa-store me-2"></i>Manage Stores
+        </a>
+    </div>
+    
+    <!-- Terminal Management -->
+    <div class="pos-card">
+        <div class="icon">
+            <i class="fas fa-cog"></i>
+        </div>
+        <h4>Terminal Management</h4>
+        <p>Configure terminals, manage cash registers, and hardware settings</p>
+        <a href="{% url 'pos:terminal_management' %}" class="btn btn-primary">
+            <i class="fas fa-desktop me-2"></i>Manage Terminals
+        </a>
+    </div>
+</div>
+
+<!-- Terminal Status -->
+<div class="row">
+    <div class="col-12">
+        <div class="status-card">
+            <h5 class="mb-3">
+                <i class="fas fa-desktop me-2"></i>Terminal Status
+            </h5>
+            
+            {% if terminals %}
+            <div class="row">
+                {% for terminal in terminals %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="card-title">{{ terminal.name }}</h6>
+                                    <p class="card-text small text-muted">
+                                        {{ terminal.store.name }}<br>
+                                        {{ terminal.location }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="terminal-status status-{{ terminal.status }}">
+                                        {{ terminal.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {% if terminal.current_session %}
+                            <div class="small text-muted mt-2">
+                                <i class="fas fa-user me-1"></i>{{ terminal.current_session.cashier.get_full_name }}<br>
+                                <i class="fas fa-clock me-1"></i>{{ terminal.current_session.start_time|date:"H:i" }}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mt-3">
+                                {% if terminal.status == 'online' and not terminal.current_session %}
+                                <a href="{% url 'pos:start_session' %}?terminal={{ terminal.id }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-play me-1"></i>Start Session
+                                </a>
+                                {% elif terminal.current_session %}
+                                <a href="{% url 'pos:terminal' terminal.id %}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-shopping-cart me-1"></i>Use Terminal
+                                </a>
+                                {% else %}
+                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                    <i class="fas fa-tools me-1"></i>Maintenance
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-desktop fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No terminals configured</h6>
+                <p class="text-muted">Contact your administrator to set up POS terminals</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sales -->
+{% if recent_sales %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="status-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Sales
+                </h5>
+                <a href="{% url 'pos:sale_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All Sales
+                </a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Receipt #</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Time</th>
+                            <th>Cashier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in recent_sales %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'pos:sale_detail' sale.id %}" class="text-decoration-none">
+                                    {{ sale.receipt_number }}
+                                </a>
+                            </td>
+                            <td>{{ sale.customer.name|default:"Walk-in Customer" }}</td>
+                            <td>{{ sale.items.count }} item{{ sale.items.count|pluralize }}</td>
+                            <td>KES {{ sale.total_amount|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge bg-{{ sale.payment_method|lower }}">
+                                    {{ sale.get_payment_method_display }}
+                                </span>
+                            </td>
+                            <td>{{ sale.created_at|date:"H:i" }}</td>
+                            <td>{{ sale.cashier.get_full_name }}</td>
+                            <td>
+                                <a href="{% url 'pos:print_receipt' sale.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh metrics every 30 seconds
+    setInterval(function() {
+        // Refresh metrics without full page reload
+        fetch(window.location.href, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => {
+            if (response.ok) {
+                // Update metrics if needed
+                console.log('Metrics refreshed');
+            }
+        });
+    }, 30000);
+    
+    // Terminal status indicators
+    const terminals = document.querySelectorAll('.terminal-status');
+    terminals.forEach(function(status) {
+        const statusText = status.textContent.trim().toLowerCase();
+        if (statusText === 'online') {
+            status.classList.add('status-online');
+        } else if (statusText === 'offline') {
+            status.classList.add('status-offline');
+        } else {
+            status.classList.add('status-maintenance');
+        }
+    });
+});
+</script>
+{% endblock %}

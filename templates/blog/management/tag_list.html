@@ -1,0 +1,132 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Manage Tags - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Tags{% endblock %}
+{% block page_subtitle %}Create and manage blog tags{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-hashtag me-2"></i>
+                    All Tags
+                </h5>
+                <a href="{% url 'blog:tag_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>
+                    New Tag
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <form method="GET" class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <input type="text" name="search" class="form-control" placeholder="Search tags by name or slug..." value="{{ search }}">
+                            </div>
+                            <select name="sort" class="form-select" style="width: auto;">
+                                <option value="">Sort by...</option>
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                                <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                                <option value="posts" {% if sort_by == 'posts' %}selected{% endif %}>Most Posts</option>
+                                <option value="-posts" {% if sort_by == '-posts' %}selected{% endif %}>Least Posts</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if tags %}
+                            <a href="{% url 'blog:tag_export' %}?{% if search %}search={{ search }}{% if sort_by %}&{% endif %}{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-download me-1"></i>
+                                Export
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Tags Grid -->
+                <div class="row">
+                    {% for tag in tags %}
+                        <div class="col-md-4 col-lg-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-primary fs-6">#{{ tag.name }}</span>
+                                        <small class="text-muted ms-1">{{ tag.post_set.count }} posts</small>
+                                    </div>
+                                    <div class="btn-group dropstart" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'blog:tag_edit' tag.pk %}">
+                                                    <i class="fas fa-edit me-2"></i>Edit
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="{% url 'blog:tag_delete' tag.pk %}">
+                                                    <i class="fas fa-trash me-2"></i>Delete
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="col-12">
+                            <div class="text-center py-5">
+                                <i class="fas fa-hashtag fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No tags found</h5>
+                                <p class="text-muted">Create your first tag to organize your blog posts.</p>
+                                <a href="{% url 'blog:tag_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Create First Tag
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if tags.has_other_pages %}
+                    <nav aria-label="Tags pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if tags.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ tags.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in tags.paginator.page_range %}
+                                {% if page_num >= tags.number|add:-2 and page_num <= tags.number|add:2 %}
+                                    <li class="page-item {% if page_num == tags.number %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if tags.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ tags.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

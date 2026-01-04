@@ -1,0 +1,475 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Inventory Dashboard - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Inventory</li>
+{% endblock %}
+
+{% block page_name %}Inventory{% endblock %}
+{% block page_title %}Inventory Dashboard{% endblock %}
+{% block page_subtitle %}Real-time stock overview and inventory management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inventory-stats {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .alert-card {
+        border-left: 4px solid;
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+    }
+    
+    .alert-critical {
+        border-left-color: var(--danger-color);
+        background-color: #fdf2f2;
+    }
+    
+    .alert-warning {
+        border-left-color: var(--warning-color);
+        background-color: #fefdf0;
+    }
+    
+    .stock-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e3e6f0;
+        transition: background-color 0.2s;
+    }
+    
+    .stock-item:hover {
+        background-color: rgba(56, 182, 255, 0.05);
+    }
+    
+    .stock-level {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #e3e6f0;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .stock-progress {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .stock-critical { background-color: var(--danger-color); }
+    .stock-low { background-color: var(--warning-color); }
+    .stock-good { background-color: var(--success-color); }
+    
+    .quick-action-btn {
+        background: white;
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        height: 120px;
+    }
+    
+    .quick-action-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .quick-action-btn i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .recent-activity {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .activity-in { background-color: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+    .activity-out { background-color: rgba(220, 53, 69, 0.1); color: var(--danger-color); }
+    .activity-transfer { background-color: rgba(23, 162, 184, 0.1); color: var(--info-color); }
+    .activity-adjustment { background-color: rgba(255, 193, 7, 0.1); color: var(--warning-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Inventory Summary Stats -->
+<div class="inventory-stats">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="text-center">
+                <h3 class="mb-1">{{ total_products|default:0 }}</h3>
+                <small>Total Products</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h3 class="mb-1">KES {{ total_stock_value|default:0|floatformat:0 }}</h3>
+                <small>Total Value</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h3 class="mb-1">{{ low_stock_items_count|default:0 }}</h3>
+                <small>Low Stock Items</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h3 class="mb-1">{{ out_of_stock_items|default:0 }}</h3>
+                <small>Out of Stock</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'inventory:item_list' %}" class="quick-action-btn">
+                            <i class="fas fa-boxes"></i>
+                            <span>View Stock</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'inventory:purchase_order_list' %}" class="quick-action-btn">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Purchase Orders</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'inventory:movement_list' %}" class="quick-action-btn">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Stock Movements</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="quick-action-btn" data-bs-toggle="modal" data-bs-target="#stockAdjustmentModal">
+                            <i class="fas fa-edit"></i>
+                            <span>Stock Adjustment</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Level Alerts -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Stock Alerts
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshAlerts()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="stockAlerts">
+                    {% if low_stock_items %}
+                        {% for item in low_stock_items %}
+                        <div class="alert-card {% if item.quantity_on_hand == 0 %}alert-critical{% else %}alert-warning{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center p-3">
+                                <div>
+                                    <h6 class="mb-1 {% if item.quantity_on_hand == 0 %}text-danger{% else %}text-warning{% endif %}">
+                                        {{ item.product.name }}
+                                    </h6>
+                                    <small class="text-muted">SKU: {{ item.product.sku }}</small>
+                                    <br><small class="text-muted">{{ item.warehouse.name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {% if item.quantity_on_hand == 0 %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ item.quantity_on_hand|floatformat:0 }} units
+                                    </span>
+                                    <div class="stock-level mt-2">
+                                        {% if item.maximum_stock > 0 %}
+                                            {% widthratio item.quantity_on_hand item.maximum_stock 100 as stock_percentage %}
+                                        {% else %}
+                                            {% widthratio item.quantity_on_hand item.reorder_point 100 as stock_percentage %}
+                                        {% endif %}
+                                        <div class="stock-progress {% if item.quantity_on_hand == 0 %}stock-critical{% else %}stock-low{% endif %}" 
+                                             style="width: {{ stock_percentage|default:0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h6 class="text-muted">All stock levels are healthy!</h6>
+                            <small class="text-muted">No low stock alerts at this time.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Top Products -->
+    <div class="col-lg-4">
+        <!-- Recent Stock Movements -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-history me-2"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="recent-activity">
+                    {% if recent_movements %}
+                        {% for movement in recent_movements %}
+                        <div class="activity-item">
+                            <div class="activity-icon activity-{% if movement.movement_type == 'in' %}in{% elif movement.movement_type == 'out' %}out{% elif movement.movement_type == 'transfer' %}transfer{% else %}adjustment{% endif %}">
+                                {% if movement.movement_type == 'in' %}
+                                    <i class="fas fa-arrow-up"></i>
+                                {% elif movement.movement_type == 'out' %}
+                                    <i class="fas fa-arrow-down"></i>
+                                {% elif movement.movement_type == 'transfer' %}
+                                    <i class="fas fa-exchange-alt"></i>
+                                {% else %}
+                                    <i class="fas fa-edit"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ movement.get_movement_type_display }}</div>
+                                <small class="text-muted">
+                                    {{ movement.inventory_item.product.name }}
+                                    {% if movement.quantity_change > 0 %}+{% endif %}{{ movement.quantity_change|floatformat:0 }} units
+                                </small>
+                                <div class="text-muted small">{{ movement.created_at|timesince }} ago</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No recent stock movements</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Inventory Status -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-boxes me-2"></i>Current Inventory
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% for item in recent_movements|slice:":5" %}
+                {% if item.inventory_item %}
+                <div class="stock-item">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="fw-bold">{{ item.inventory_item.product.name }}</div>
+                            <small class="text-muted">{{ item.inventory_item.warehouse.name }}</small>
+                        </div>
+                        <span class="badge {% if item.inventory_item.quantity_on_hand > item.inventory_item.reorder_point %}bg-success{% elif item.inventory_item.quantity_on_hand > 0 %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ item.inventory_item.quantity_on_hand|floatformat:0 }} units
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No inventory items available</p>
+                    <a href="{% url 'inventory:item_create' %}" class="btn btn-sm btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>Add Inventory Item
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Stock Adjustment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="stockAdjustmentForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <select class="form-control" name="product" required>
+                            <option value="">Select Product</option>
+                            <option value="1">Solar Panel 400W Monocrystalline</option>
+                            <option value="2">Inverter 5kW MPPT</option>
+                            <option value="3">Lithium Battery 100Ah</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Type</label>
+                        <select class="form-control" name="adjustment_type" required>
+                            <option value="">Select Type</option>
+                            <option value="increase">Increase Stock</option>
+                            <option value="decrease">Decrease Stock</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" name="quantity" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="reason" rows="3" placeholder="Reason for adjustment..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Adjustment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh stock alerts every 5 minutes
+    setInterval(refreshAlerts, 300000);
+    
+    // Stock adjustment form handler
+    document.getElementById('stockAdjustmentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        submitBtn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(function() {
+            // Reset form
+            document.getElementById('stockAdjustmentForm').reset();
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('stockAdjustmentModal')).hide();
+            
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            
+            // Show success message
+            showAlert('Stock adjustment saved successfully!', 'success');
+            
+            // Refresh alerts
+            refreshAlerts();
+        }, 2000);
+    });
+    
+    // Barcode scanner shortcut
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'b') {
+            e.preventDefault();
+            openBarcodeScanner();
+        }
+    });
+});
+
+function refreshAlerts() {
+    const alertsContainer = document.getElementById('stockAlerts');
+    alertsContainer.innerHTML = '<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Loading alerts...</div>';
+    
+    // Simulate API call to refresh alerts
+    setTimeout(function() {
+        // Reset to original content (would be replaced with actual data)
+        location.reload();
+    }, 1000);
+}
+
+function openBarcodeScanner() {
+    // Placeholder for barcode scanner functionality
+    showAlert('Barcode scanner feature coming soon!', 'info');
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 90px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(function() {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Real-time stock updates via WebSocket (placeholder)
+function initializeWebSocket() {
+    // This would connect to a WebSocket for real-time updates
+    console.log('WebSocket connection initialized for real-time stock updates');
+}
+
+// Export functionality
+function exportInventoryReport() {
+    window.open('/inventory/export/?format=excel', '_blank');
+}
+
+function printInventoryReport() {
+    window.open('/inventory/export/?format=pdf', '_blank');
+}
+</script>
+{% endblock %}

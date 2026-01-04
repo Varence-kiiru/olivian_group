@@ -1,0 +1,165 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Manage Comments - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Comments{% endblock %}
+{% block page_subtitle %}Review and manage user comments{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-comments me-2"></i>
+                    All Comments
+                </h5>
+                <div>
+                    <span class="badge fs-6 me-2">
+                        {% widthratio pending_comments comments|length 1 %} pending of {{ comments|length }} total
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <form method="GET" class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <input type="text" name="search" class="form-control" placeholder="Search comments (name, email, content)..." value="{{ search }}">
+                            </div>
+                            <select name="status" class="form-select" style="width: auto;">
+                                <option value="">All Comments</option>
+                                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            </select>
+                            <select name="post" class="form-select" style="width: auto;">
+                                <option value="">All Posts</option>
+                                {% for post in posts %}
+                                    <option value="{{ post.pk }}" {% if post_filter == post.pk|stringformat:'s' %}selected{% endif %}>{{ post.title|truncatechars:30 }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Comments Table -->
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Comment</th>
+                                <th>Post</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comment in comments %}
+                                <tr {% if not comment.is_approved %}class="table-warning"{% endif %}>
+                                    <td>
+                                        <div class="comment-content">
+                                            <div class="comment-text">
+                                                "{{ comment.content|truncatechars:100 }}"
+                                            </div>
+                                            <div class="small text-muted">
+                                                On: {{ comment.post.title }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <a href="{% url 'blog:post_detail' comment.post.slug %}" target="_blank"
+                                               class="text-decoration-none">
+                                                {{ comment.post.title|truncatechars:30 }}
+                                            </a>
+                                            <div class="small text-muted">by {{ comment.post.author.get_full_name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ comment.name }}</td>
+                                    <td>
+                                        <a href="mailto:{{ comment.email }}" class="text-decoration-none">
+                                            {{ comment.email }}
+                                        </a>
+                                    </td>
+                                    <td>{{ comment.created_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if comment.is_approved %}
+                                            <span class="badge bg-success">Approved</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if not comment.is_approved %}
+                                                <a href="{% url 'blog:approve_comment' comment.pk %}" class="btn btn-sm btn-success"
+                                                   title="Approve Comment">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'blog:post_detail' comment.post.slug %}#comment-{{ comment.id }}"
+                                               class="btn btn-sm btn-outline-info" target="_blank" title="View in Post">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'blog:delete_comment' comment.pk %}" class="btn btn-sm btn-danger"
+                                               title="Delete Comment"
+                                               onclick="return confirm('Delete this comment?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No comments found.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if comments.has_other_pages %}
+                    <nav aria-label="Comments pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if comments.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ comments.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if post_filter %}&post={{ post_filter }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in comments.paginator.page_range %}
+                                {% if page_num >= comments.number|add:-2 and page_num <= comments.number|add:2 %}
+                                    <li class="page-item {% if page_num == comments.number %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if post_filter %}&post={{ post_filter }}{% endif %}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if comments.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ comments.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if post_filter %}&post={{ post_filter }}{% endif %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

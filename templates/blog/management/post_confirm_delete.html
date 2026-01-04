@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Delete Blog Post - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Blog Post{% endblock %}
+{% block page_subtitle %}Confirm deletion of "{{ post.title }}"{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-4">
+                    Are you sure you want to delete the blog post <strong>"{{ post.title }}"</strong>?
+                    This action cannot be undone.
+                </p>
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6>Post Details:</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li><strong>Title:</strong> {{ post.title }}</li>
+                            <li><strong>Author:</strong> {{ post.author.get_full_name }}</li>
+                            <li><strong>Category:</strong> {{ post.category.name }}</li>
+                            <li><strong>Status:</strong>
+                                {% if post.status == 'published' %}
+                                    <span class="badge bg-success">Published</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Draft</span>
+                                {% endif %}
+                            </li>
+                            <li><strong>Created:</strong> {{ post.created_at|date:"M d, Y H:i" }}</li>
+                            <li><strong>Views:</strong> {{ post.views }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'blog:post_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Cancel
+                </a>
+                {% if post.status == 'published' %}
+                    <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-outline-primary" target="_blank">
+                        <i class="fas fa-eye me-1"></i>
+                        View Post
+                    </a>
+                {% endif %}
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>
+                        Delete Post
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

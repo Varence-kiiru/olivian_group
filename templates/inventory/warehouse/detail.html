@@ -1,0 +1,414 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ warehouse.name }} - Warehouse Details - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_list' %}">Warehouses</a></li>
+<li class="breadcrumb-item active">{{ warehouse.name }}</li>
+{% endblock %}
+
+{% block page_name %}Warehouse Details{% endblock %}
+{% block page_title %}{{ warehouse.name }} ({{ warehouse.code }}){% endblock %}
+{% block page_subtitle %}Warehouse overview and inventory management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .warehouse-header {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .capacity-meter {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    
+    .capacity-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .capacity-good { background-color: #28a745; }
+    .capacity-warning { background-color: #ffc107; }
+    .capacity-danger { background-color: #dc3545; }
+    
+    .stat-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #38b6ff;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .inventory-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e3e6f0;
+        transition: background-color 0.2s;
+    }
+    
+    .inventory-item:hover {
+        background-color: rgba(56, 182, 255, 0.05);
+    }
+    
+    .stock-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .manager-card {
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .location-card {
+        border-left: 4px solid #28a745;
+    }
+    
+    .actions-card {
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Warehouse Header -->
+<div class="warehouse-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-2">{{ warehouse.name }} <small class="text-white-50">({{ warehouse.code }})</small></h2>
+            <p class="mb-3">{{ warehouse.address }}</p>
+            
+            <div class="d-flex align-items-center">
+                <span class="badge {% if warehouse.is_active %}bg-success{% else %}bg-secondary{% endif %} me-3 fs-6">
+                    {% if warehouse.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+                {% if warehouse.manager %}
+                <span class="text-white-50">
+                    <i class="fas fa-user me-1"></i>Managed by {{ warehouse.manager.get_full_name }}
+                </span>
+                {% endif %}
+            </div>
+            
+            <!-- Capacity Meter -->
+            <div class="mt-3">
+                <div class="d-flex justify-content-between text-white-50 small">
+                    <span>Capacity Utilization</span>
+                    <span>{{ capacity_utilization|floatformat:1 }}%</span>
+                </div>
+                <div class="capacity-meter">
+                    <div class="capacity-fill {% if capacity_utilization < 70 %}capacity-good{% elif capacity_utilization < 90 %}capacity-warning{% else %}capacity-danger{% endif %}" 
+                         style="width: {{ capacity_utilization }}%"></div>
+                </div>
+                <div class="d-flex justify-content-between text-white-50 small mt-1">
+                    <span>Used: {{ warehouse.used_capacity }} m²</span>
+                    <span>Total: {{ warehouse.total_capacity }} m²</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ total_items }}</span>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ low_stock_count }}</span>
+                        <div class="stat-label">Low Stock</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Inventory Items -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">
+                    <i class="fas fa-boxes me-2"></i>Inventory Items
+                    <span class="badge bg-primary ms-2">{{ total_items }}</span>
+                </h5>
+                <div class="d-flex gap-2">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <input type="text" class="form-control" placeholder="Search items..." id="searchItems">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <a href="{% url 'inventory:item_list' %}?warehouse={{ warehouse.pk }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if inventory_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Location</th>
+                                <th>Stock Level</th>
+                                <th>Status</th>
+                                <th>Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory_items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.image %}
+                                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" 
+                                             class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-box text-muted"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ item.product.name }}</div>
+                                            <small class="text-muted">{{ item.product.category }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code>{{ item.product.sku }}</code>
+                                </td>
+                                <td>
+                                    {% if item.bin_location %}
+                                        <span class="badge bg-light text-dark">{{ item.bin_location }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ item.quantity_on_hand }}</span>
+                                        <div class="progress" style="width: 60px; height: 6px;">
+                                            {% widthratio item.quantity_on_hand item.maximum_stock 100 as percentage %}
+                                            <div class="progress-bar {% if item.needs_reorder %}bg-danger{% elif percentage < 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                                            style="width: {{ percentage }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.quantity_on_hand == 0 %}
+                                        <span class="stock-badge badge bg-danger">Out of Stock</span>
+                                    {% elif item.needs_reorder %}
+                                        <span class="stock-badge badge bg-warning">Low Stock</span>
+                                    {% elif item.is_overstocked %}
+                                        <span class="stock-badge badge bg-info">Overstock</span>
+                                    {% else %}
+                                        <span class="stock-badge badge bg-success">In Stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% widthratio item.quantity_on_hand 1 item.average_cost as stock_value %}
+                                    <span class="fw-bold">{{ company.default_currency|default:"KES" }} {{ stock_value|floatformat:2 }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'inventory:item_detail' item.pk %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'inventory:item_edit' item.pk %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No inventory items in this warehouse.</p>
+                    <a href="{% url 'inventory:item_create' %}?warehouse={{ warehouse.pk }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add First Item
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Warehouse Information -->
+    <div class="col-lg-4">
+        <!-- Manager Information -->
+        {% if warehouse.manager %}
+        <div class="card manager-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-user-tie me-2"></i>Warehouse Manager
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    {% if warehouse.manager.profile.profile_picture %}
+                    <img src="{{ warehouse.manager.profile.profile_picture.url }}" alt="{{ warehouse.manager.get_full_name }}" 
+                         class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center text-white" 
+                         style="width: 50px; height: 50px;">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="fw-bold">{{ warehouse.manager.get_full_name }}</div>
+                        <small class="text-muted">{{ warehouse.manager.email }}</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3 d-grid gap-2">
+                    <a href="mailto:{{ warehouse.manager.email }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-envelope me-1"></i>Send Email
+                    </a>
+                    {% if warehouse.manager.phone %}
+                    <a href="tel:{{ warehouse.manager.phone }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-phone me-1"></i>Call
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Location Details -->
+        <div class="card location-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-map-marker-alt me-2"></i>Location Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Address</label>
+                    <div>{{ warehouse.address }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Total Capacity</label>
+                    <div class="h5">{{ warehouse.total_capacity }} m²</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Used Capacity</label>
+                    <div class="h5">{{ warehouse.used_capacity }} m²</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Available Space</label>
+                    <div class="h5 text-success">{{ warehouse.capacity_utilization|floatformat:0 }}% utilized</div>
+                    <small class="text-muted">{{ warehouse.used_capacity }} / {{ warehouse.total_capacity }} m²</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Total Stock Value</label>
+                    <div class="h5 text-primary">{{ company.default_currency|default:"KES" }} {{ total_stock_value|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card actions-card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:transfer_create' %}?from_warehouse={{ warehouse.pk }}" class="btn btn-primary">
+                        <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+                    </a>
+                    
+                    <a href="{% url 'inventory:adjustment_create' %}?warehouse={{ warehouse.pk }}" class="btn btn-outline-warning">
+                        <i class="fas fa-edit me-2"></i>Stock Adjustment
+                    </a>
+                    
+                    <a href="{% url 'inventory:valuation_create' %}?warehouse={{ warehouse.pk }}" class="btn btn-outline-info">
+                        <i class="fas fa-calculator me-2"></i>Inventory Valuation
+                    </a>
+                    
+                    <a href="{% url 'inventory:warehouse_edit' warehouse.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-edit me-2"></i>Edit Warehouse
+                    </a>
+                    
+                    <a href="#" onclick="generateReport()" class="btn btn-outline-dark">
+                        <i class="fas fa-file-pdf me-2"></i>Generate Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search functionality
+document.getElementById('searchItems').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+function generateReport() {
+    window.open(`/inventory/warehouses/{{ warehouse.pk }}/report/`, '_blank');
+}
+
+// Initialize capacity utilization animation
+document.addEventListener('DOMContentLoaded', function() {
+    const capacityFill = document.querySelector('.capacity-fill');
+    if (capacityFill) {
+        setTimeout(() => {
+            capacityFill.style.width = '{{ capacity_utilization }}%';
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_name %}Staff Help{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="page-title">Staff Help & Support Center</h1>
+                <p class="page-subtitle">Internal procedures and system documentation for {{ user_role|title }}s</p>
+            </div>
+            <div class="card-body">
+                <!-- Search Bar -->
+                <div class="row mb-4">
+                    <div class="col-lg-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Search staff procedures..." id="staffSearch">
+                            <button class="btn btn-primary" type="button" onclick="searchStaffHelp()">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Categories -->
+                <div class="row">
+                    {% for category in help_categories %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-{{ category.icon }} text-primary me-3 fs-4"></i>
+                                    <h5 class="card-title mb-0">{{ category.title }}</h5>
+                                </div>
+                                <small class="text-muted">{{ category.description }}</small>
+                            </div>
+                            <div class="card-body">
+                                {% for section in category.sections %}
+                                <div class="mb-4">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-chevron-right me-2"></i>{{ section.title }}
+                                    </h6>
+                                    <div class="faq-list">
+                                        {% for item in section.items %}
+                                        <div class="faq-item mb-3 border-bottom pb-3">
+                                            <button class="btn btn-link text-decoration-none p-0 w-100 text-start fw-bold" onclick="toggleStaffFAQ(this)">
+                                                <i class="fas fa-plus-circle me-2 text-primary"></i>
+                                                {{ item.question }}
+                                            </button>
+                                            <div class="faq-answer mt-2 text-muted" style="display: none;">
+                                                <div class="ms-3 ps-4 border-start border-primary">
+                                                    {{ item.answer }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Contact Support -->
+                <div class="row mt-5">
+                    <div class="col-12">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <i class="fas fa-headset text-info fs-1 mb-3"></i>
+                                <h4 class="card-title text-info">Need Additional Help?</h4>
+                                <p class="card-text">Contact our internal support team for assistance with system issues or procedures.</p>
+                                <div class="row justify-content-center">
+                                    {% if company.support_email %}
+                                    <div class="col-md-6 mb-3">
+                                        <a href="mailto:{{ company.support_email }}" class="btn btn-outline-primary w-100">
+                                            <i class="fas fa-envelope me-2"></i>Email Support
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                    {% if company.support_phone %}
+                                    <div class="col-md-6 mb-3">
+                                        <a href="tel:{{ company.support_phone }}" class="btn btn-outline-success w-100">
+                                            <i class="fas fa-phone me-2"></i>Call Support
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                Support Hours:<br>
+                                Monday - Friday: {{ company.support_hours_weekday }}<br>
+                                {% if company.support_hours_saturday and company.support_hours_saturday != "Closed" %}Saturday: {{ company.support_hours_saturday }}<br>{% endif %}
+                                {% if company.support_hours_sunday and company.support_hours_sunday != "Closed" %}Sunday: {{ company.support_hours_sunday }}{% endif %}
+                                {% if company.emergency_support_available %}<br>Emergency Support: {{ company.emergency_support_description|default:"24/7 for active projects" }}{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// FAQ Toggle Functionality for Staff Help
+function toggleStaffFAQ(button) {
+    const answer = button.nextElementSibling;
+    const icon = button.querySelector('i');
+
+    if (answer.style.display === 'none' || answer.style.display === '') {
+        answer.style.display = 'block';
+        icon.className = 'fas fa-minus-circle me-2 text-primary';
+    } else {
+        answer.style.display = 'none';
+        icon.className = 'fas fa-plus-circle me-2 text-primary';
+    }
+}
+
+// Search Functionality for Staff Help
+function searchStaffHelp() {
+    const searchTerm = document.getElementById('staffSearch').value.toLowerCase();
+    const faqItems = document.querySelectorAll('.faq-item');
+
+    faqItems.forEach(item => {
+        const question = item.querySelector('button').textContent.toLowerCase();
+        const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+
+        if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+            item.style.display = 'block';
+            // Auto-expand matching items
+            if (searchTerm && (question.includes(searchTerm) || answer.includes(searchTerm))) {
+                const answer = item.querySelector('.faq-answer');
+                const icon = item.querySelector('button i');
+                answer.style.display = 'block';
+                icon.className = 'fas fa-minus-circle me-2 text-primary';
+            }
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Scroll to results
+    const firstVisible = document.querySelector('.faq-item[style*="block"]');
+    if (firstVisible) {
+        firstVisible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Search on Enter key
+document.getElementById('staffSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchStaffHelp();
+    }
+});
+
+// URL Fragment Handling for Direct Links
+if (window.location.hash) {
+    const targetId = window.location.hash.substring(1);
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+        setTimeout(() => {
+            targetElement.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    }
+}
+</script>
+{% endblock %}

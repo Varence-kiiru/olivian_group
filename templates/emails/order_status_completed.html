@@ -1,0 +1,106 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Completed #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[COMPLETED] Your Order Has Been Completed!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Congratulations! Your solar energy system has been successfully delivered, installed, and is now operational. Welcome to the future of clean, renewable energy!</p>
+
+<div class="highlight-box">
+    <h3>Order Completion Summary:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Completion Status:</strong> {{ status_display }}</p>
+    <p><strong>Installation Date:</strong> {{ installation_date|date:"F d, Y" }}</p>
+    <p><strong>System Value:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+</div>
+
+<div class="status-box" style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #155724; margin: 0 0 10px 0;">[SUCCESS] Installation Complete</h4>
+    <p style="margin: 0; color: #155724;">
+        Your solar energy system is now <strong>fully operational</strong> and generating clean electricity. 
+        All components have been tested and commissioned by our certified technicians.
+    </p>
+</div>
+
+<h3>System Details:</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Component</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Quantity</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.product_name }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.quantity }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd; color: #28a745;">[INSTALLED]</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Important Information:</h3>
+<div class="status-box" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4>[WARRANTY] Warranty Coverage</h4>
+    <ul>
+        <li><strong>Solar Panels:</strong> 25 years performance warranty</li>
+        <li><strong>Inverter:</strong> 5-10 years manufacturer warranty</li>
+        <li><strong>Battery (if applicable):</strong> 5 years warranty</li>
+        <li><strong>Installation:</strong> 2 years workmanship warranty</li>
+    </ul>
+</div>
+
+<h3>Next Steps & Recommendations:</h3>
+<ul>
+    <li><strong>Monitor Performance:</strong> Check your system's daily energy production</li>
+    <li><strong>Keep Documentation:</strong> Store all warranty cards and installation certificates</li>
+    <li><strong>Schedule Maintenance:</strong> Annual cleaning and inspection recommended</li>
+    <li><strong>Energy Monitoring:</strong> Track your electricity bill savings</li>
+    <li><strong>Expansion:</strong> Contact us for future system upgrades</li>
+</ul>
+
+<h3>Support & Maintenance:</h3>
+<div class="status-box" style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #0c5460; margin: 0 0 10px 0;">[SUPPORT] Ongoing Service</h4>
+    <p style="margin: 0; color: #0c5460;">
+        Our support team is available for any technical questions or maintenance needs. 
+        We offer <strong>annual maintenance packages</strong> to keep your system running at peak efficiency.
+    </p>
+</div>
+
+<h3>Final Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'processing' %}
+            <li>[COMPLETE] <strong>Processing</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'packed_ready' %}
+            <li>[COMPLETE] <strong>Packed & Ready</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'shipped' %}
+            <li>[COMPLETE] <strong>Shipped</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'delivered' %}
+            <li>[COMPLETE] <strong>Delivered</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Need Support?</strong></p>
+    <a href="tel:{{ company_phone }}" class="btn-primary">Technical Support: {{ company_phone }}</a>
+    <a href="mailto:{{ company_email }}" class="btn-secondary">Email Support</a>
+</div>
+
+<p>Thank you for choosing Olivian Group for your solar energy journey. Enjoy your clean, renewable electricity and the savings it brings!</p>
+
+{% endblock %}

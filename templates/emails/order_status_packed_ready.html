@@ -1,0 +1,73 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Packed & Ready #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[PACKED] Your Order is Packed & Ready!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Great news! Your solar equipment has been carefully packed and is ready for dispatch. All items have been quality-checked and prepared for safe delivery.</p>
+
+<div class="highlight-box">
+    <h3>Dispatch Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Current Status:</strong> {{ status_display }}</p>
+    <p><strong>Packed Items:</strong> {{ items.count }} item{{ items.count|pluralize }}</p>
+    <p><strong>Total Value:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+</div>
+
+<div class="status-box" style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #155724; margin: 0 0 10px 0;">[READY] Ready for Dispatch</h4>
+    <p style="margin: 0; color: #155724;">
+        Your order will be handed over to our logistics team and dispatched within the next <strong>24 hours</strong>.
+        You'll receive a separate shipping notification email with tracking details once your order ships.
+    </p>
+</div>
+
+<h3>What's Packed:</h3>
+<ul>
+    {% for item in items %}
+    <li><strong>{{ item.quantity }}x {{ item.product_name }}</strong></li>
+    {% endfor %}
+</ul>
+
+<h3>Next Steps:</h3>
+<ul>
+    <li><strong>Dispatch:</strong> Order will be shipped within 24 hours</li>
+    <li><strong>Tracking:</strong> You'll receive tracking information via email when shipped</li>
+    <li><strong>Delivery:</strong> Estimated delivery in 2-3 business days</li>
+    {% if installation_required %}
+    <li><strong>Installation:</strong> Our team will contact you to schedule installation</li>
+    {% endif %}
+</ul>
+
+<h3>Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'paid' %}
+            <li>[COMPLETE] <strong>Payment Confirmed</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% elif status_code == 'processing' %}
+            <li>[COMPLETE] <strong>Processing</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[COMPLETE] <strong>Packed & Ready</strong> (Current Stage)</li>
+    <li>[PENDING] <strong>Shipped</strong> (Next - within 24 hours)</li>
+    <li>[PENDING] <strong>Delivered</strong></li>
+    {% if installation_required %}
+    <li>[PENDING] <strong>Installation Scheduled</strong></li>
+    {% endif %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>Thank you for your patience. We're excited to get your solar equipment to you soon!</p>
+
+{% endblock %}

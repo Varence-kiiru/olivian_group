@@ -1,0 +1,263 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Company - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Company{% endblock %}
+{% block page_subtitle %}Confirm deletion of company: {{ company.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:company_list' %}">Companies</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:company_detail' company.pk %}">{{ company.name|truncatechars:30 }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <!-- Warning Header -->
+                <div class="alert alert-danger" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-building fa-3x"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">⚠️ Danger Zone</h4>
+                            <p class="mb-0">You are about to permanently delete this company and all associated data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Company Information -->
+                <div class="card border-warning mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="company-logo me-3" style="width: 60px; height: 60px; background-color: #dc3545; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold;">
+                                {{ company.name.0|upper }}
+                            </div>
+                            <div>
+                                <h5 class="mb-1">{{ company.name }}</h5>
+                                <span class="badge bg-info">{{ company.get_company_type_display }}</span>
+                                {% if company.industry %}
+                                    <span class="badge bg-secondary ms-1">{{ company.industry }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Email:</strong></p>
+                                <p>{{ company.email|default:"Not provided" }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Phone:</strong></p>
+                                <p>{{ company.phone|default:"Not provided" }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Location:</strong></p>
+                                <p>
+                                    {% if company.city %} {{ company.city }}{% endif %}
+                                    {% if company.county %}{% if company.city %}, {% endif %}{{ company.county }}{% endif %}
+                                    {% if company.registration_number %}
+                                        <br><small class="text-muted">Registration: {{ company.registration_number }}</small>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-sm-6">
+                                {% if company.employee_count %}
+                                <p class="mb-1"><strong>Employees:</strong></p>
+                                <p>{{ company.employee_count }}</p>
+                                {% endif %}
+                                {% if company.annual_revenue %}
+                                <p class="mb-1"><strong>Annual Revenue:</strong></p>
+                                <p class="text-success">KES {{ company.annual_revenue|floatformat:0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if company.website %}
+                        <div class="mt-3">
+                            <p class="mb-1"><strong>Website:</strong></p>
+                            <p><a href="{{ company.website }}" target="_blank">{{ company.website }}</a></p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Related Data Warning -->
+                <div class="alert alert-warning" role="alert">
+                    <h6 class="mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Critical Data That Will Be Affected:
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card border-danger text-center p-3">
+                                <div class="stat-number text-danger">{{ company.contacts.count }}</div>
+                                <div class="stat-label">Contacts</div>
+                                <div class="small">Will be deleted or unlinked</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning text-center p-3">
+                                <div class="stat-number text-warning">{{ company.leads.count }}</div>
+                                <div class="stat-label">Leads</div>
+                                <div class="small">Will be unlinked</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info text-center p-3">
+                                <div class="stat-number text-info">{{ company.activities.count }}</div>
+                                <div class="stat-label">Activities</div>
+                                <div class="small">Will be unlinked</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6 class="mb-2">Detailed Breakdown:</h6>
+                        <ul class="mb-0 small">
+                            {% if company.contacts.exists %}
+                            <li>{{ company.contacts.count }} contact{{ company.contacts.count|pluralize }} will be <strong>permanently deleted</strong></li>
+                            {% endif %}
+                            {% if company.leads.exists %}
+                            <li>{{ company.leads.count }} lead{{ company.leads.count|pluralize }} will lose their company reference</li>
+                            {% endif %}
+                            {% if company.activities.exists %}
+                            <li>{{ company.activities.count }} activity{{ company.activities.count|pluralize }} will lose their company reference</li>
+                            {% endif %}
+                            {% if company.opportunities.exists %}
+                            <li>{{ company.opportunities.count }} opportunity{{ company.opportunities.count|pluralize }} will lose their company reference</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Impact Assessment -->
+                <div class="alert alert-info" role="alert">
+                    <h6 class="mb-2">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Business Impact Assessment:
+                    </h6>
+                    <ul class="mb-0 small">
+                        {% if company.contacts.exists %}
+                        <li>This will disconnect you from all contact persons at this company</li>
+                        {% endif %}
+                        {% if company.leads.exists %}
+                        <li>All sales opportunities from this company will be orphaned</li>
+                        {% endif %}
+                        <li>Historical sales activity data will remain but become harder to analyze</li>
+                        <li>The company cannot be restored once deleted</li>
+                    </ul>
+                </div>
+
+                <!-- Confirmation Question -->
+                <div class="mb-4">
+                    <h5 class="mb-3">Are you absolutely sure you want to delete "{{ company.name }}"?</h5>
+                    <p class="text-muted">
+                        This is a <strong>destructive action</strong> that cannot be undone.
+                        Consider exporting the company data first for preservation.
+                    </p>
+                </div>
+
+                <!-- Alternatives -->
+                <div class="alert alert-secondary" role="alert">
+                    <h6 class="mb-2">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Consider Alternative Actions:
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{% url 'crm:company_export' company.pk %}?format=csv"
+                               class="btn btn-outline-primary btn-sm w-100"
+                               onclick="event.preventDefault(); alert('Export functionality available in detail view');">
+                                <i class="fas fa-download me-1"></i>Export Data First
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'crm:company_update' company.pk %}"
+                               class="btn btn-outline-info btn-sm w-100">
+                                <i class="fas fa-edit me-1"></i>Update Company Info
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'crm:company_detail' company.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel - Go Back
+                    </a>
+                    <button type="submit" class="btn btn-danger btn-lg" onclick="confirmDelete()">
+                        <i class="fas fa-trash-alt fa-lg me-2"></i>I Understand, Delete Company
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteConfirmModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>FINAL CONFIRMATION
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger mb-3">
+          <strong>WARNING:</strong> This action cannot be reversed. All company data will be permanently deleted.
+        </div>
+
+        <p class="mb-3">
+          To confirm deletion of company <strong>"{{ company.name }}"</strong>, please type the exact company name in the box below:
+        </p>
+
+        <input type="text" id="deleteConfirmationInput" class="form-control form-control-lg"
+               placeholder="Type: {{ company.name }}" autocorrect="off" autocapitalize="off">
+
+        <div class="form-text mt-2">
+          <i class="fas fa-info-circle me-1"></i>
+          This must match exactly: <strong>{{ company.name }}</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-lg" id="confirmDeleteBtn" disabled>
+            <i class="fas fa-trash-alt me-2"></i>Delete "{{ company.name }}"
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+}
+
+document.getElementById('deleteConfirmationInput').addEventListener('input', function() {
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    const expectedText = '{{ company.name }}';
+    deleteBtn.disabled = this.value.trim() !== expectedText;
+});
+
+// Auto-focus on input when modal opens
+document.getElementById('deleteConfirmModal').addEventListener('shown.bs.modal', function () {
+    document.getElementById('deleteConfirmationInput').focus();
+});
+</script>
+{% endblock %}

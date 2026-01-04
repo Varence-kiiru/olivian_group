@@ -1,0 +1,177 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Email Templates - CRM - {{ block.super }}{% endblock %}
+
+{% block page_title %}Email Templates{% endblock %}
+{% block page_subtitle %}Manage and customize email templates for automated communications{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Email Templates</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Email Template Styles */
+    :root {
+        --email-primary: #6366f1;
+        --email-success: #10b981;
+        --email-warning: #f59e0b;
+        --email-danger: #ef4444;
+        --email-secondary: #64748b;
+        --border-radius: 10px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .template-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .template-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--email-primary);
+        transition: background-color 0.3s ease;
+    }
+
+    .template-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--email-primary);
+    }
+
+    .template-card.system::before { background: var(--email-success); }
+    .template-card.custom::before { background: var(--email-warning); }
+    .template-card.draft::before { background: var(--email-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="fas fa-envelope me-2" style="color: var(--email-primary);"></i>
+                Email Templates
+            </h4>
+            <p class="text-muted mb-0">Create, manage and customize email templates for automated communications</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="openVariablesModal()">
+                <i class="fas fa-code me-2"></i>Template Variables
+            </button>
+            <a href="{% url 'crm:email_template_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Template
+            </a>
+        </div>
+    </div>
+
+    <!-- Templates Grid -->
+    <div class="row">
+        {% for template in email_templates %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="template-card {% if template.is_system %}system{% else %}{% if template.is_draft %}draft{% else %}custom{% endif %}{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">{{ template.name }}</h5>
+                        <p class="text-muted mb-2">{{ template.description|default:"No description provided" }}</p>
+                        {% if template.category %}
+                            <span class="badge bg-primary">{{ template.get_category_display }}</span>
+                        {% endif %}
+                    </div>
+                    {% if template.usage_count %}
+                    <div class="text-end">
+                        <div class="badge bg-success">{{ template.usage_count }} uses</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="template-preview mb-3">
+                    <strong>Subject: </strong>{{ template.subject }}<br><br>
+                    {{ template.body_html|striptags|truncatewords:30 }}
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'crm:email_template_detail' template.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                    <a href="{% url 'crm:email_template_edit' template.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <button class="btn btn-outline-success btn-sm" onclick="duplicateTemplate({{ template.pk }}, '{{ template.name }}')">
+                        <i class="fas fa-copy me-1"></i>Duplicate
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Email Templates Found</h5>
+                <p class="text-muted mb-4">Get started by creating your first email template.</p>
+                <a href="{% url 'crm:email_template_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create First Template
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Template Variables Modal -->
+<div class="modal fade" id="variablesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-code me-2" style="color: var(--email-primary);"></i>
+                    Template Variables
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Use these variables in your email templates:</p>
+                <div class="alert alert-info">
+                    <strong>{{ contact.first_name }}</strong>,
+                    <strong>{{ contact.last_name }}</strong>,
+                    <strong>{{ contact.email }}</strong>,
+                    <strong>{{ company.name }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openVariablesModal() {
+    const modal = new bootstrap.Modal(document.getElementById('variablesModal'));
+    modal.show();
+}
+
+function duplicateTemplate(templateId, templateName) {
+    if (confirm(`Create a copy of "${templateName}"?`)) {
+        console.log(`Duplicating template: ${templateId}`);
+        // Add duplication logic here
+    }
+}
+</script>
+{% endblock %}

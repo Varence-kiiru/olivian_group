@@ -1,0 +1,632 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Financial Reports - Financial Management{% endblock %}
+
+{% block page_title %}Financial Reports{% endblock %}
+{% block page_subtitle %}Comprehensive financial analysis and reporting suite{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial</a></li>
+<li class="breadcrumb-item active">Reports</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        height: 100%;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary-color);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .report-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .report-icon.primary { background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); }
+    .report-icon.success { background: linear-gradient(135deg, #28a745, #20c997); }
+    .report-icon.warning { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+    .report-icon.info { background: linear-gradient(135deg, #17a2b8, #6f42c1); }
+    .report-icon.danger { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+    
+    .report-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-available { background: #d4edda; color: #155724; }
+    .status-coming-soon { background: #fff3cd; color: #856404; }
+    .status-beta { background: #d1ecf1; color: #0c5460; }
+    
+    .filters-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .quick-report-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        margin: 0.25rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .quick-report-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .chart-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        min-height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Report Filters -->
+<div class="filters-panel">
+    <h5 class="mb-3">
+        <i class="fas fa-filter me-2"></i>Report Filters
+    </h5>
+    
+    <form id="reportFilters">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="dateRange" class="form-label">Date Range</label>
+                <select class="form-select" id="dateRange" name="dateRange">
+                    <option value="current_month">Current Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="current_quarter">Current Quarter</option>
+                    <option value="last_quarter">Last Quarter</option>
+                    <option value="current_year" selected>Current Year</option>
+                    <option value="last_year">Last Year</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="currency" class="form-label">Currency</label>
+                <select class="form-select" id="currency" name="currency">
+                    <option value="">All Currencies</option>
+                    <option value="KES" selected>Kenyan Shilling (KES)</option>
+                    <option value="USD">US Dollar (USD)</option>
+                    <option value="EUR">Euro (EUR)</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="bankAccount" class="form-label">Bank Account</label>
+                <select class="form-select" id="bankAccount" name="bankAccount">
+                    <option value="">All Accounts</option>
+                    {% for account in bank_accounts %}
+                    <option value="{{ account.pk }}">{{ account.account_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="format" class="form-label">Export Format</label>
+                <select class="form-select" id="format" name="format">
+                    <option value="pdf">PDF Report</option>
+                    <option value="excel">Excel Spreadsheet</option>
+                    <option value="csv">CSV Data</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="row mt-3" id="customDateRange" style="display: none;">
+            <div class="col-md-3">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="startDate" name="startDate">
+            </div>
+            <div class="col-md-3">
+                <label for="endDate" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="endDate" name="endDate">
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Financial Statement Reports -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="fas fa-chart-line me-2"></i>Financial Statements
+        </h3>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon primary">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h5>Profit & Loss Statement</h5>
+            <p class="text-muted">Comprehensive income statement showing revenue, expenses, and net profit over a specified period.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <i class="fas fa-chart-line fa-2x"></i>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('profit_loss')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon success">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <h5>Balance Sheet</h5>
+            <p class="text-muted">Statement of assets, liabilities, and equity showing the company's financial position.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <i class="fas fa-chart-pie fa-2x"></i>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('balance_sheet')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon info">
+                <i class="fas fa-tint"></i>
+            </div>
+            <h5>Cash Flow Statement</h5>
+            <p class="text-muted">Analysis of cash inflows and outflows from operating, investing, and financing activities.</p>
+            <span class="report-status status-beta">Beta</span>
+            
+            <div class="chart-preview">
+                <i class="fas fa-chart-area fa-2x"></i>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('cash_flow')">
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bank & Transaction Reports -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="fas fa-university me-2"></i>Banking & Transactions
+        </h3>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon primary">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <h5>Bank Reconciliation Report</h5>
+            <p class="text-muted">Summary of bank reconciliations showing variances and outstanding items.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'financial:reconciliation_list' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('bank_reconciliation')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon warning">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <h5>Transaction Analysis</h5>
+            <p class="text-muted">Detailed analysis of all financial transactions with trends and patterns.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'financial:transaction_list' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('transaction_analysis')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon info">
+                <i class="fas fa-money-check-alt"></i>
+            </div>
+            <h5>Account Statements</h5>
+            <p class="text-muted">Generate detailed account statements for any date range and account.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateAccountStatement()">
+                    <i class="fas fa-file-pdf me-2"></i>Generate Statement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Asset & Tax Reports -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="fas fa-building me-2"></i>Assets & Compliance
+        </h3>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon success">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h5>Fixed Asset Register</h5>
+            <p class="text-muted">Complete listing of all fixed assets with depreciation schedules and valuations.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'financial:asset_list' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('asset_register')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon danger">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <h5>VAT Report (KRA)</h5>
+            <p class="text-muted">VAT computation report for KRA submission with input and output VAT breakdown.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <div class="text-center">
+                    <div class="h6">VAT Rate: 16%</div>
+                    <small class="text-muted">Kenya Revenue Authority</small>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('vat_report')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon warning">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <h5>Tax Summary</h5>
+            <p class="text-muted">Comprehensive tax summary including PAYE, VAT, and other statutory deductions.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <i class="fas fa-percentage fa-2x"></i>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('tax_summary')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget & Analysis Reports -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="fas fa-chart-pie me-2"></i>Budget & Analysis
+        </h3>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon primary">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h5>Budget vs Actual</h5>
+            <p class="text-muted">Compare actual spending against budgeted amounts with variance analysis.</p>
+            <span class="report-status status-beta">Beta</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'budget:report_list' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('budget_vs_actual')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon info">
+                <i class="fas fa-money-bill-trend-up"></i>
+            </div>
+            <h5>Expense Analysis</h5>
+            <p class="text-muted">Detailed breakdown of expenses by category, department, and time period.</p>
+            <span class="report-status status-beta">Beta</span>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('expense_analysis')">
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon success">
+                <i class="fas fa-coins"></i>
+            </div>
+            <h5>Currency Exchange Report</h5>
+            <p class="text-muted">Exchange rate movements and multi-currency transaction analysis.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'financial:exchange_rate_list' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('exchange_rate')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audit & Compliance Reports -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="fas fa-shield-alt me-2"></i>Audit & Compliance
+        </h3>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon danger">
+                <i class="fas fa-list-check"></i>
+            </div>
+            <h5>Audit Trail Report</h5>
+            <p class="text-muted">Complete audit log of all financial system activities and user actions.</p>
+            <span class="report-status status-available">Available</span>
+            
+            <div class="mt-3">
+                <a href="{% url 'financial:audit_trail' %}" class="quick-report-btn">
+                    <i class="fas fa-eye me-2"></i>View Report
+                </a>
+                <button class="quick-report-btn" onclick="generateReport('audit_trail')">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h5>Exception Report</h5>
+            <p class="text-muted">Identify unusual transactions, variances, and potential issues requiring attention.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <i class="fas fa-search fa-2x"></i>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('exception_report')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6">
+        <div class="report-card">
+            <div class="report-icon info">
+                <i class="fas fa-file-contract"></i>
+            </div>
+            <h5>Compliance Summary</h5>
+            <p class="text-muted">Overview of regulatory compliance status and key financial metrics.</p>
+            <span class="report-status status-coming-soon">Coming Soon</span>
+            
+            <div class="chart-preview">
+                <div class="text-center">
+                    <small class="text-muted">KRA • CBK • IFRS</small>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <button class="quick-report-btn" onclick="generateReport('compliance_summary')" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Generation Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating report...</span>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Generating Report</h6>
+                        <p class="text-muted">Please wait while we prepare your financial report...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle date range change
+    document.getElementById('dateRange').addEventListener('change', function() {
+        const customRange = document.getElementById('customDateRange');
+        if (this.value === 'custom') {
+            customRange.style.display = 'block';
+        } else {
+            customRange.style.display = 'none';
+        }
+    });
+});
+
+function generateReport(reportType) {
+    const filters = getReportFilters();
+    
+    // Show loading modal
+    const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+    modal.show();
+    
+    // Simulate report generation (replace with actual API call)
+    setTimeout(() => {
+        modal.hide();
+        
+        // Build URL with parameters
+        const params = new URLSearchParams({
+            type: reportType,
+            ...filters
+        });
+        
+        // Open report in new tab
+        window.open(`/financial/reports/generate/?${params.toString()}`, '_blank');
+    }, 2000);
+}
+
+function generateAccountStatement() {
+    const accountId = document.getElementById('bankAccount').value;
+    if (!accountId) {
+        alert('Please select a bank account first.');
+        return;
+    }
+    
+    const filters = getReportFilters();
+    const params = new URLSearchParams({
+        account: accountId,
+        ...filters
+    });
+    
+    window.open(`/financial/accounts/${accountId}/statement/?${params.toString()}`, '_blank');
+}
+
+function getReportFilters() {
+    const form = document.getElementById('reportFilters');
+    const formData = new FormData(form);
+    const filters = {};
+    
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            filters[key] = value;
+        }
+    }
+    
+    return filters;
+}
+
+// Auto-save filter preferences
+document.getElementById('reportFilters').addEventListener('change', function() {
+    const filters = getReportFilters();
+    localStorage.setItem('financial_report_filters', JSON.stringify(filters));
+});
+
+// Load saved filter preferences
+window.addEventListener('load', function() {
+    const savedFilters = localStorage.getItem('financial_report_filters');
+    if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        Object.keys(filters).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                element.value = filters[key];
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

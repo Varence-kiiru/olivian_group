@@ -1,0 +1,154 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Newsletter Unsubscribe - {{ company.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_subscribe' %}">Newsletter</a></li>
+<li class="breadcrumb-item active">Unsubscribe</li>
+{% endblock %}
+
+{% block content %}
+<section class="section hero-unsubscribe">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-6">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-5 text-center">
+                        {% if success %}
+                        <!-- Success State -->
+                        <div class="mb-4">
+                            <i class="fas fa-check-circle text-success success-icon-large"></i>
+                        </div>
+                        <h2 class="h3 mb-3">Successfully Unsubscribed</h2>
+                        <p class="text-muted mb-4">
+                            {{ message }}
+                        </p>
+                        {% if subscriber %}
+                        <div class="alert alert-info" role="alert">
+                            <strong>{{ subscriber.email }}</strong> has been removed from our newsletter list.
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">We're sorry to see you go!</h5>
+                            <p class="text-muted small">
+                                If you unsubscribed by mistake or would like to resubscribe in the future, 
+                                you can always sign up again on our website.
+                            </p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'core:home' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Return to Homepage
+                            </a>
+                            <a href="{% url 'core:newsletter_subscribe' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-envelope me-2"></i>Resubscribe to Newsletter
+                            </a>
+                        </div>
+                        
+                        {% else %}
+                        <!-- Error State -->
+                        <div class="mb-4">
+                            <i class="fas fa-exclamation-triangle text-warning warning-icon-large"></i>
+                        </div>
+                        <h2 class="h3 mb-3">Unsubscribe Failed</h2>
+                        <p class="text-muted mb-4">
+                            {{ message }}
+                        </p>
+                        
+                        <div class="alert alert-warning" role="alert">
+                            <strong>Possible reasons:</strong>
+                            <ul class="mb-0 mt-2 text-start">
+                                <li>The unsubscribe link has expired</li>
+                                <li>You're already unsubscribed</li>
+                                <li>The email address is not in our system</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'core:home' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Return to Homepage
+                            </a>
+                            <a href="{% url 'core:contact' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-envelope me-2"></i>Contact Support
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Feedback Section -->
+                        <div class="mt-5 pt-4 border-top">
+                            <h6 class="text-muted mb-3">Help us improve</h6>
+                            <p class="small text-muted mb-3">
+                                We'd love to know why you're unsubscribing. Your feedback helps us create better content.
+                            </p>
+                            <div class="d-grid">
+                                <a href="{% url 'core:contact' %}?subject=Newsletter%20Feedback" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-comment me-2"></i>Share Feedback
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Related Content -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h3 class="mb-4">Stay Connected with {{ company.name }}</h3>
+                <p class="text-muted mb-4">
+                    Even if you don't want our newsletter, you can still stay updated with our latest solar solutions and services.
+                </p>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-0">
+                            <div class="card-body text-center">
+                                <i class="fas fa-globe text-primary mb-3 globe-icon-large"></i>
+                                <h5>Visit Our Website</h5>
+                                <p class="small text-muted">Browse our latest solar products and services</p>
+                                <a href="{% url 'core:home' %}" class="btn btn-sm btn-outline-primary">Visit Site</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-0">
+                            <div class="card-body text-center">
+                                <i class="fas fa-share-alt text-primary mb-3 share-icon-large"></i>
+                                <h5>Follow on Social</h5>
+                                <p class="small text-muted">Get updates on our social media channels</p>
+                                <div class="social-links">
+                                    {% if social_media.facebook %}
+                                    <a href="{{ social_media.facebook }}" target="_blank" class="me-2"><i class="fab fa-facebook-f"></i></a>
+                                    {% endif %}
+                                    {% if social_media.twitter %}
+                                    <a href="{{ social_media.twitter }}" target="_blank" class="me-2"><i class="fab fa-twitter"></i></a>
+                                    {% endif %}
+                                    {% if social_media.linkedin %}
+                                    <a href="{{ social_media.linkedin }}" target="_blank" class="me-2"><i class="fab fa-linkedin"></i></a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-0">
+                            <div class="card-body text-center">
+                                <i class="fas fa-phone text-primary mb-3 phone-icon-large"></i>
+                                <h5>Get in Touch</h5>
+                                <p class="small text-muted">Speak directly with our solar experts</p>
+                                <a href="{% url 'core:contact' %}" class="btn btn-sm btn-outline-primary">Contact Us</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

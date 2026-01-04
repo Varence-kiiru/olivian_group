@@ -1,0 +1,214 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Supplier - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:supplier_list' %}">Suppliers</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:supplier_detail' object.pk %}">{{ object.name }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block page_name %}Delete Supplier{% endblock %}
+{% block page_title %}Delete Supplier{% endblock %}
+{% block page_subtitle %}Confirm supplier deletion{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-warning {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .supplier-info {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .warning-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+    
+    .cancel-btn {
+        min-width: 120px;
+    }
+    
+    .delete-btn {
+        min-width: 120px;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .delete-btn:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Warning Header -->
+        <div class="delete-warning">
+            <i class="fas fa-exclamation-triangle warning-icon"></i>
+            <h3>Warning: Delete Supplier</h3>
+            <p class="mb-0">This action cannot be undone. Please confirm that you want to delete this supplier.</p>
+        </div>
+
+        <!-- Supplier Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-building me-2"></i>Supplier Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="supplier-info">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Supplier Name</label>
+                                <div class="fw-bold">{{ object.name }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Contact Person</label>
+                                <div>{{ object.contact_person }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Email</label>
+                                <div>{{ object.email }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Phone</label>
+                                <div>{{ object.phone }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">City</label>
+                                <div>{{ object.city }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Status</label>
+                                <div>
+                                    <span class="badge {% if object.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if object.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                    {% if object.is_preferred %}
+                                    <span class="badge bg-warning ms-1">Preferred</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deletion Consequences -->
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>What happens when you delete this supplier?
+                    </h6>
+                    <ul class="mb-0">
+                        <li>The supplier record will be permanently removed</li>
+                        <li>All historical data will be lost</li>
+                        <li>Purchase orders associated with this supplier will remain but show as "Deleted Supplier"</li>
+                        <li>This action cannot be undone</li>
+                    </ul>
+                </div>
+
+                <!-- Check for Related Data -->
+                {% if object.purchase_orders.exists %}
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Cannot Delete Supplier
+                    </h6>
+                    <p class="mb-2">This supplier cannot be deleted because it has associated purchase orders:</p>
+                    <ul class="mb-2">
+                        <li><strong>{{ object.purchase_orders.count }}</strong> purchase order(s)</li>
+                        <li>Total value: <strong>{{ company.default_currency|default:"KES" }} {{ object.purchase_orders.aggregate.total|default:0|floatformat:2 }}</strong></li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Alternative:</strong> You can deactivate this supplier instead of deleting it. 
+                        This will preserve all historical data while preventing new transactions.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Confirmation Form -->
+                {% if not object.purchase_orders.exists %}
+                <form method="post" id="deleteForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                        <label class="form-check-label" for="confirmDelete">
+                            I understand that this action is permanent and cannot be undone
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'inventory:supplier_detail' object.pk %}" class="btn btn-secondary cancel-btn">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        
+                        <button type="submit" class="btn btn-danger delete-btn" id="deleteButton" disabled>
+                            <i class="fas fa-trash me-2"></i>Delete Supplier
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'inventory:supplier_detail' object.pk %}" class="btn btn-secondary cancel-btn">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </a>
+                    
+                    <a href="{% url 'inventory:supplier_update' object.pk %}" class="btn btn-warning">
+                        <i class="fas fa-toggle-off me-2"></i>Deactivate Instead
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    if (confirmCheckbox && deleteButton) {
+        confirmCheckbox.addEventListener('change', function() {
+            deleteButton.disabled = !this.checked;
+        });
+    }
+    
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            if (!confirm('Are you absolutely sure you want to delete this supplier? This action cannot be undone.')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+            deleteButton.disabled = true;
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,522 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ account.account_name }} - Financial Management{% endblock %}
+
+{% block page_title %}Bank Account Details{% endblock %}
+{% block page_subtitle %}{{ account.account_name }} - {{ account.bank.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:account_list' %}">Bank Accounts</a></li>
+<li class="breadcrumb-item active">{{ account.account_name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .account-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .balance-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--primary-color);
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .transaction-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .transaction-item:hover {
+        transform: translateX(5px);
+        box-shadow: var(--shadow);
+    }
+    
+    .transaction-item.deposit { border-left-color: #28a745; }
+    .transaction-item.withdrawal { border-left-color: #dc3545; }
+    .transaction-item.transfer { border-left-color: #17a2b8; }
+    .transaction-item.payment { border-left-color: #ffc107; }
+    
+    .status-badge {
+        padding: 0.3rem 0.7rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-reconciled { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-completed { background: #d1ecf1; color: #0c5460; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 1.5rem;
+    }
+    
+    .action-buttons .btn {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Account Header -->
+<div class="account-header">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-university fa-2x me-3"></i>
+                <div>
+                    <h2 class="mb-1">{{ account.account_name }}</h2>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3">{{ account.bank.name }}</span>
+                        <span class="badge bg-light text-dark me-2">{{ account.get_account_type_display }}</span>
+                        {% if account.is_default %}
+                        <span class="badge bg-warning">Default Account</span>
+                        {% endif %}
+                        {% if not account.is_active %}
+                        <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="small opacity-75">Account Number</div>
+                    <div class="h5 font-monospace">{{ account.account_number }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="small opacity-75">Currency</div>
+                    <div class="h5">{{ account.currency.name }} ({{ account.currency.code }})</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="balance-card">
+                <div class="text-center">
+                    <div class="small opacity-75 mb-2">Current Balance</div>
+                    <div class="h2 mb-2">{{ account.currency.symbol }}{{ account.current_balance|floatformat:2 }}</div>
+                    <div class="small">
+                        Available: {{ account.currency.symbol }}{{ account.available_balance|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons mb-4">
+    <a href="{% url 'financial:transaction_create' %}?account={{ account.pk }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>New Transaction
+    </a>
+    <a href="{% url 'financial:reconciliation_create' %}?account={{ account.pk }}" class="btn btn-success">
+        <i class="fas fa-balance-scale me-2"></i>Reconcile Account
+    </a>
+    <a href="{% url 'financial:account_update' account.pk %}" class="btn btn-outline-primary">
+        <i class="fas fa-edit me-2"></i>Edit Account
+    </a>
+    <button class="btn btn-outline-secondary" onclick="generateAccountStatement()">
+        <i class="fas fa-file-pdf me-2"></i>Generate Statement
+    </button>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="fas fa-download me-2"></i>Export
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportTransactions('csv')">Export as CSV</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportTransactions('excel')">Export as Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportTransactions('pdf')">Export as PDF</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Account Metrics -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-success">{{ account.currency.symbol }}{{ total_deposits|floatformat:2 }}</div>
+                    <div class="text-muted">Total Deposits</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-arrow-down fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-danger">{{ account.currency.symbol }}{{ total_withdrawals|floatformat:2 }}</div>
+                    <div class="text-muted">Total Withdrawals</div>
+                </div>
+                <div class="text-danger">
+                    <i class="fas fa-arrow-up fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-warning">{{ unreconciled_count }}</div>
+                    <div class="text-muted">Unreconciled</div>
+                </div>
+                <div class="text-warning">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-info">
+                        {% if account.last_reconciled_date %}
+                            {{ account.last_reconciled_date|timesince }} ago
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </div>
+                    <div class="text-muted">Last Reconciled</div>
+                </div>
+                <div class="text-info">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Balance History Chart -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Balance History (Last 12 Months)
+                </h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="period" id="period1m" value="1m">
+                    <label class="btn btn-outline-primary" for="period1m">1M</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period3m" value="3m">
+                    <label class="btn btn-outline-primary" for="period3m">3M</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period6m" value="6m">
+                    <label class="btn btn-outline-primary" for="period6m">6M</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period12m" value="12m" checked>
+                    <label class="btn btn-outline-primary" for="period12m">12M</label>
+                </div>
+            </div>
+            <canvas id="balanceChart" height="100"></canvas>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>Account Information
+            </h5>
+            
+            <table class="table table-sm">
+                <tr>
+                    <td class="text-muted">Bank Code:</td>
+                    <td>{{ account.bank.code }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Branch:</td>
+                    <td>{{ account.branch_name|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Branch Code:</td>
+                    <td>{{ account.branch_code|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Contact Person:</td>
+                    <td>{{ account.contact_person|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Contact Phone:</td>
+                    <td>{{ account.contact_phone|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Created:</td>
+                    <td>{{ account.created_at|date:"M d, Y" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Auto Reconciliation:</td>
+                    <td>
+                        {% if account.enable_auto_reconciliation %}
+                            <span class="badge bg-success">Enabled</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Disabled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-exchange-alt me-2"></i>Recent Transactions
+                </h5>
+                <a href="{% url 'financial:transaction_list' %}?account={{ account.pk }}" class="btn btn-outline-primary btn-sm">
+                    View All Transactions
+                </a>
+            </div>
+            
+            {% if recent_transactions %}
+                <div class="transaction-list">
+                    {% for transaction in recent_transactions %}
+                    <div class="transaction-item {{ transaction.transaction_type }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="fw-bold">{{ transaction.transaction_id }}</div>
+                                <div class="small text-muted">{{ transaction.transaction_date|date:"M d, Y" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="fw-medium">{{ transaction.description|truncatechars:40 }}</div>
+                                <div class="small text-muted">
+                                    {% if transaction.counterparty_name %}
+                                        {{ transaction.counterparty_name }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge bg-secondary">{{ transaction.get_transaction_type_display }}</span>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="fw-bold {% if transaction.transaction_type in 'deposit,receipt' %}text-success{% else %}text-danger{% endif %}">
+                                    {% if transaction.transaction_type in 'deposit,receipt' %}+{% else %}-{% endif %}{{ transaction.currency.symbol }}{{ transaction.amount|floatformat:2 }}
+                                </div>
+                            </div>
+                            <div class="col-md-1 text-end">
+                                {% if transaction.is_reconciled %}
+                                    <span class="status-badge status-reconciled">R</span>
+                                {% else %}
+                                    <span class="status-badge status-pending">P</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No transactions found</h6>
+                    <p class="text-muted">Start adding transactions to see them here</p>
+                    <a href="{% url 'financial:transaction_create' %}?account={{ account.pk }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add First Transaction
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-tasks me-2"></i>Recent Reconciliations
+            </h5>
+            
+            {% if recent_reconciliations %}
+                {% for reconciliation in recent_reconciliations %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
+                    <div>
+                        <div class="fw-bold">{{ reconciliation.reconciliation_id }}</div>
+                        <small class="text-muted">
+                            {{ reconciliation.period_start }} - {{ reconciliation.period_end }}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        {% if reconciliation.is_balanced %}
+                            <span class="status-badge status-reconciled">Balanced</span>
+                        {% else %}
+                            <span class="status-badge status-pending">Unbalanced</span>
+                        {% endif %}
+                        <div class="small text-muted">
+                            Variance: {{ account.currency.symbol }}{{ reconciliation.variance|floatformat:2 }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'financial:reconciliation_list' %}?account={{ account.pk }}" class="btn btn-outline-primary btn-sm w-100">
+                        View All Reconciliations
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-balance-scale fa-2x text-muted mb-2"></i>
+                    <div class="text-muted">No reconciliations yet</div>
+                    <a href="{% url 'financial:reconciliation_create' %}?account={{ account.pk }}" class="btn btn-outline-primary btn-sm mt-2">
+                        Create First Reconciliation
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize balance chart
+    loadBalanceChart('12m');
+    
+    // Period change handlers
+    document.querySelectorAll('input[name="period"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            loadBalanceChart(this.value);
+        });
+    });
+});
+
+function loadBalanceChart(period) {
+    fetch(`{% url 'financial:account_balance_history' account.pk %}?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('balanceChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.balanceChart) {
+                window.balanceChart.destroy();
+            }
+            
+            window.balanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.balance_history.map(item => item.date),
+                    datasets: [{
+                        label: 'Account Balance',
+                        data: data.balance_history.map(item => item.balance),
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color'),
+                        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '20',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '{{ account.currency.symbol }}' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            type: 'time',
+                            time: {
+                                parser: 'YYYY-MM-DD',
+                                displayFormats: {
+                                    day: 'MMM DD',
+                                    week: 'MMM DD',
+                                    month: 'MMM YYYY'
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    elements: {
+                        point: {
+                            radius: 4,
+                            hoverRadius: 6
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading balance chart:', error);
+        });
+}
+
+function generateAccountStatement() {
+    const startDate = prompt('Enter start date (YYYY-MM-DD):');
+    const endDate = prompt('Enter end date (YYYY-MM-DD):');
+    
+    if (startDate && endDate) {
+        window.open(`/financial/accounts/{{ account.pk }}/statement/?start=${startDate}&end=${endDate}`, '_blank');
+    }
+}
+
+function exportTransactions(format) {
+    const startDate = prompt('Enter start date (YYYY-MM-DD):');
+    const endDate = prompt('Enter end date (YYYY-MM-DD):');
+    
+    if (startDate && endDate) {
+        window.location.href = `/financial/accounts/{{ account.pk }}/export/?format=${format}&start=${startDate}&end=${endDate}`;
+    }
+}
+</script>
+{% endblock %}

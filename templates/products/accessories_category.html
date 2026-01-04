@@ -1,0 +1,171 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Solar Accessories & Components - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Ensure proper spacing from fixed header */
+.section:first-of-type {
+    padding-top: 140px !important;
+}
+
+@media (max-width: 768px) {
+    .section:first-of-type {
+        padding-top: 100px !important;
+    }
+    
+    .section {
+        padding-bottom: 2rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="section">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'products:list' %}">Products</a></li>
+                <li class="breadcrumb-item active">Accessories & Components</li>
+            </ol>
+        </nav>
+        
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">Solar Accessories & Components</h1>
+            <p class="lead text-muted">Complete your solar installation with our comprehensive range of high-quality accessories, cables, connectors, and monitoring equipment.</p>
+            {% if products.count %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>{{ products.count }}</strong> accessory products available across all categories
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Accessory Categories -->
+        {% if accessory_categories %}
+        <div class="row mb-5">
+            {% for item in accessory_categories %}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                {% if item.category.slug == 'cables' %}
+                                    <i class="fas fa-plug fa-3x text-primary"></i>
+                                {% elif item.category.slug == 'connectors' %}
+                                    <i class="fas fa-link fa-3x text-primary"></i>
+                                {% elif item.category.slug == 'charge-controllers' %}
+                                    <i class="fas fa-microchip fa-3x text-primary"></i>
+                                {% else %}
+                                    <i class="fas fa-tools fa-3x text-primary"></i>
+                                {% endif %}
+                            </div>
+                            <h5 class="card-title">{{ item.category.name }}</h5>
+                            <p class="card-text">{{ item.category.description|truncatewords:15|default:"Essential components for your solar system." }}</p>
+                            <p class="text-muted small">{{ item.products_count }} Product{{ item.products_count|pluralize }}</p>
+                            <a href="{% url 'products:category' item.category.slug %}" class="btn btn-outline-primary">View Products</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-2"></i>
+            <h5>Accessory Categories</h5>
+            <p>Individual accessory categories will be displayed here as products are added.</p>
+        </div>
+        {% endif %}
+        
+        <!-- All Accessory Products -->
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-4">All Accessory Products</h2>
+                <div class="row" id="products-grid">
+                    {% include 'website/partials/product_cards.html' %}
+                    {% if not products %}
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <h4>No Accessories Available</h4>
+                            <p class="text-muted">No accessory products are currently available.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add to cart function (same as main products page)
+function addToCart(productId) {
+    const button = event.target.closest('button');
+    const quantityInput = document.getElementById(`qty-${productId}`);
+    const quantity = parseInt(quantityInput.value) || 1;
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
+    button.disabled = true;
+    
+    fetch(`/shop/cart/add/${productId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            quantity: quantity
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success feedback
+            button.innerHTML = '<i class="fas fa-check me-1"></i>Added!';
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-success');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+                button.disabled = false;
+            }, 2000);
+            
+            if (window.showToast) {
+                window.showToast('Product added to cart successfully!', 'success');
+            }
+        } else {
+            button.innerHTML = originalText;
+            button.disabled = false;
+            if (window.showToast) {
+                window.showToast(data.message || 'Error adding product to cart', 'error');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = originalText;
+        button.disabled = false;
+        if (window.showToast) {
+            window.showToast('Error adding product to cart', 'error');
+        }
+    });
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1100 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ lead.title }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ lead.title }}{% endblock %}
+{% block page_subtitle %}Lead details and conversion tracking{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:lead_list' %}">Leads</a></li>
+<li class="breadcrumb-item active">{{ lead.title|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lead-header {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lead-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+
+    .status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        display: inline-block;
+    }
+
+    .priority-indicator {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .priority-low { background: #28a745; }
+    .priority-medium { background: #ffc107; }
+    .priority-high { background: #fd7e14; }
+    .priority-urgent { background: #dc3545; animation: pulse 2s infinite; }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .lead-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .lead-card h6 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .info-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        color: #6c757d;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        margin-left: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .conversion-card {
+        background: linear-gradient(135deg, #17a2b8, #20c997);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .conversion-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 2rem 0;
+        position: relative;
+    }
+    
+    .conversion-steps::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+    
+    .conversion-step {
+        background: white;
+        border: 3px solid #e9ecef;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        z-index: 2;
+        position: relative;
+    }
+    
+    .conversion-step.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .conversion-step.completed {
+        background: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    
+    .solar-specs {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    
+    .spec-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .spec-item:last-child {
+        border-bottom: none;
+    }
+    
+    .spec-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .spec-value {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+    }
+    
+    .action-btn {
+        flex: 1;
+        min-width: 200px;
+        padding: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        text-align: center;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    .contact-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .contact-avatar {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .progress-indicator {
+        background: #e9ecef;
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), #28a745);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .lead-score {
+        background: linear-gradient(135deg, #6f42c1, #e83e8c);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .score-number {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .score-label {
+        opacity: 0.8;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .quick-actions {
+        position: sticky;
+        top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Lead Header -->
+<div class="lead-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-3">
+                <span class="priority-indicator priority-{{ lead.priority }}"></span>
+                <h2 class="mb-0">{{ lead.title }}</h2>
+            </div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="status-badge">{{ lead.get_status_display }}</span>
+                <span class="opacity-75">Priority: {{ lead.get_priority_display }}</span>
+            </div>
+            <div class="opacity-75">
+                <i class="fas fa-user me-2"></i>{{ lead.contact.get_full_name }}
+                {% if lead.company %}
+                    <i class="fas fa-building ms-3 me-2"></i>{{ lead.company.name }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="d-flex flex-column align-items-end gap-2">
+                {% if lead.estimated_value %}
+                    <h3 class="mb-0">KES {{ lead.estimated_value|floatformat:0 }}</h3>
+                    <small class="opacity-75">Estimated Value</small>
+                {% endif %}
+                <small class="opacity-75">Created {{ lead.created_at|date:"M d, Y" }}</small>
+                {% if lead.assigned_to %}
+                    <small class="opacity-75">Assigned to {{ lead.assigned_to.get_full_name }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+<div class="messages mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Lead Progress -->
+        <div class="lead-card">
+            <h6><i class="fas fa-chart-line me-2"></i>Lead Progress</h6>
+            
+            <div class="conversion-steps">
+                <div class="conversion-step {% if lead.status == 'new' %}active{% elif lead.status in 'contacted,qualified,proposal,negotiation,won' %}completed{% endif %}">
+                    1
+                </div>
+                <div class="conversion-step {% if lead.status == 'contacted' %}active{% elif lead.status in 'qualified,proposal,negotiation,won' %}completed{% endif %}">
+                    2
+                </div>
+                <div class="conversion-step {% if lead.status == 'qualified' %}active{% elif lead.status in 'proposal,negotiation,won' %}completed{% endif %}">
+                    3
+                </div>
+                <div class="conversion-step {% if lead.status == 'proposal' %}active{% elif lead.status in 'negotiation,won' %}completed{% endif %}">
+                    4
+                </div>
+                <div class="conversion-step {% if lead.status == 'negotiation' %}active{% elif lead.status == 'won' %}completed{% endif %}">
+                    5
+                </div>
+                <div class="conversion-step {% if lead.status == 'won' %}completed{% endif %}">
+                    6
+                </div>
+            </div>
+            
+            <div class="row text-center">
+                <div class="col">New</div>
+                <div class="col">Contacted</div>
+                <div class="col">Qualified</div>
+                <div class="col">Proposal</div>
+                <div class="col">Negotiation</div>
+                <div class="col">Won</div>
+            </div>
+            
+            {% if lead.status in 'qualified,proposal' and not lead.opportunity %}
+            <div class="conversion-card mt-4">
+                <h5><i class="fas fa-rocket me-2"></i>Ready for Conversion</h5>
+                <p class="mb-3">This lead is qualified and ready to be converted to an opportunity.</p>
+                <form method="post" action="{% url 'crm:lead_convert' lead.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-light btn-lg">
+                        <i class="fas fa-exchange-alt me-2"></i>Convert to Opportunity
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Lead Information -->
+        <div class="lead-card">
+            <h6><i class="fas fa-info-circle me-2"></i>Lead Information</h6>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Contact</div>
+                        <p class="info-value">
+                            <a href="{% url 'crm:contact_detail' lead.contact.pk %}" class="text-decoration-none">
+                                {{ lead.contact.get_full_name }}
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                
+                {% if lead.company %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Company</div>
+                        <p class="info-value">
+                            <a href="{% url 'crm:company_detail' lead.company.pk %}" class="text-decoration-none">
+                                {{ lead.company.name }}
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if lead.source %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-filter"></i>  <!-- Changed from fa-source to fa-filter -->
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Source</div>
+                        <p class="info-value">
+                            <a href="{% url 'crm:lead_source_detail' lead.source.pk %}" class="text-decoration-none">
+                                {{ lead.source.name }}
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if lead.assigned_to %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Assigned To</div>
+                        <p class="info-value">{{ lead.assigned_to.get_full_name }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if lead.expected_close_date %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Expected Close</div>
+                        <p class="info-value">{{ lead.expected_close_date|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if lead.next_follow_up %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-clock {% if lead.is_overdue %}text-danger{% endif %}"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Next Follow-up</div>
+                        <p class="info-value {% if lead.is_overdue %}text-danger{% endif %}">
+                            {{ lead.next_follow_up|date:"M d, Y" }}
+                            {% if lead.is_overdue %}
+                                <span class="badge bg-danger ms-2">Overdue</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Solar System Specifications -->
+        {% if lead.system_type or lead.estimated_capacity or lead.monthly_electricity_bill %}
+        <div class="lead-card">
+            <h6><i class="fas fa-solar-panel me-2"></i>Solar System Requirements</h6>
+            
+            <div class="solar-specs">
+                {% if lead.system_type %}
+                <div class="spec-item">
+                    <span class="spec-label">System Type</span>
+                    <span class="spec-value">{{ lead.get_system_type_display }}</span>
+                </div>
+                {% endif %}
+                
+                {% if lead.estimated_capacity %}
+                <div class="spec-item">
+                    <span class="spec-label">Estimated Capacity</span>
+                    <span class="spec-value">{{ lead.estimated_capacity }} kW</span>
+                </div>
+                {% endif %}
+                
+                {% if lead.monthly_electricity_bill %}
+                <div class="spec-item">
+                    <span class="spec-label">Monthly Electricity Bill</span>
+                    <span class="spec-value">KES {{ lead.monthly_electricity_bill|floatformat:0 }}</span>
+                </div>
+                {% endif %}
+                
+                {% if lead.estimated_value %}
+                <div class="spec-item">
+                    <span class="spec-label">Estimated Project Value</span>
+                    <span class="spec-value text-success">KES {{ lead.estimated_value|floatformat:0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Description and Notes -->
+        {% if lead.description or lead.notes %}
+        <div class="lead-card">
+            <h6><i class="fas fa-file-alt me-2"></i>Description & Notes</h6>
+            
+            {% if lead.description %}
+            <div class="mb-3">
+                <strong>Description:</strong>
+                <p class="mt-2">{{ lead.description|linebreaks }}</p>
+            </div>
+            {% endif %}
+            
+            {% if lead.notes %}
+            <div class="bg-light p-3 rounded">
+                <strong>Internal Notes:</strong>
+                <p class="mt-2 mb-0">{{ lead.notes|linebreaks }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Activity Timeline -->
+        <div class="lead-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Activity Timeline</h6>
+                <a href="{% url 'crm:activity_create' %}?lead={{ lead.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Activity
+                </a>
+            </div>
+            
+            {% if activities %}
+            <div class="timeline">
+                {% for activity in activities %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-primary">{{ activity.get_activity_type_display }}</span>
+                            <strong class="ms-2">{{ activity.subject }}</strong>
+                        </div>
+                        <small class="text-muted">{{ activity.scheduled_datetime|date:"M d, Y H:i" }}</small>
+                    </div>
+                    
+                    {% if activity.description %}
+                    <p class="mb-2 text-muted">{{ activity.description }}</p>
+                    {% endif %}
+                    
+                    {% if activity.outcome %}
+                    <div class="bg-light p-2 rounded">
+                        <strong>Outcome:</strong> {{ activity.outcome }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ activity.assigned_to.get_full_name }}
+                            <span class="badge badge-{{ activity.status }} ms-2">{{ activity.get_status_display }}</span>
+                        </small>
+                        <a href="{% url 'crm:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No activities recorded</h6>
+                <p class="text-muted">Start tracking your interactions with this lead.</p>
+                <a href="{% url 'crm:activity_create' %}?lead={{ lead.pk }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add First Activity
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="quick-actions">
+            <!-- Lead Score -->
+            <div class="lead-score mb-4">
+                <div class="score-number">{{ lead_score|default:"75" }}</div>
+                <div class="score-label">Lead Score</div>
+                <div class="mt-2">
+                    <small>Based on activity, engagement, and profile data</small>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="lead-card">
+                <h6><i class="fas fa-address-card me-2"></i>Contact Details</h6>
+                
+                <div class="contact-card">
+                    <div class="d-flex align-items-center">
+                        <div class="contact-avatar">
+                            {{ lead.contact.first_name.0|upper }}{{ lead.contact.last_name.0|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>{{ lead.contact.get_full_name }}</strong>
+                            {% if lead.contact.position %}
+                                <div class="small text-muted">{{ lead.contact.position }}</div>
+                            {% endif %}
+                            <div class="small">
+                                <i class="fas fa-envelope me-1"></i>
+                                <a href="{% url 'crm:email_composer' %}?lead={{ lead.pk }}&contact={{ lead.contact.pk }}&email={{ lead.contact.email }}" class="text-decoration-none">{{ lead.contact.email }}</a>
+                            </div>
+                            {% if lead.contact.phone %}
+                            <div class="small">
+                                <i class="fas fa-phone me-1"></i>
+                                <a href="tel:{{ lead.contact.phone }}" class="text-decoration-none">{{ lead.contact.phone }}</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="lead-card">
+                <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crm:lead_update' lead.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Lead
+                    </a>
+                    
+                    <a href="{% url 'crm:activity_create' %}?lead={{ lead.pk }}" class="btn btn-success">
+                        <i class="fas fa-calendar-plus me-2"></i>Log Activity
+                    </a>
+                    
+                    {% if lead.status in 'qualified,proposal' and not lead.opportunity %}
+                    <form method="post" action="{% url 'crm:lead_convert' lead.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-exchange-alt me-2"></i>Convert to Opportunity
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'crm:email_composer' %}?lead={{ lead.pk }}&contact={{ lead.contact.pk }}&email={{ lead.contact.email }}" class="btn btn-outline-primary">
+                        <i class="fas fa-envelope me-2"></i>Send Email
+                    </a>
+                    
+                    {% if lead.contact.phone %}
+                    <a href="tel:{{ lead.contact.phone }}" class="btn btn-outline-success">
+                        <i class="fas fa-phone me-2"></i>Call
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-info" onclick="scheduleFollowUp()">
+                        <i class="fas fa-clock me-2"></i>Schedule Follow-up
+                    </button>
+                    
+                    <button class="btn btn-outline-danger" onclick="deleteLead()">
+                        <i class="fas fa-trash me-2"></i>Delete Lead
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Related Information -->
+            <div class="lead-card">
+                <h6><i class="fas fa-link me-2"></i>Related Information</h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crm:contact_detail' lead.contact.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user me-2"></i>View Contact Profile
+                    </a>
+                    
+                    {% if lead.company %}
+                    <a href="{% url 'crm:company_detail' lead.company.pk %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-building me-2"></i>View Company
+                    </a>
+                    {% endif %}
+                    
+                    {% if lead.opportunity %}
+                    <a href="{% url 'crm:opportunity_detail' lead.opportunity.pk %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-chart-line me-2"></i>View Opportunity
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'crm:activity_list' %}?lead={{ lead.pk }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-history me-2"></i>All Activities
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Lead Statistics -->
+            <div class="lead-card">
+                <h6><i class="fas fa-chart-bar me-2"></i>Lead Statistics</h6>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Days in Pipeline:</span>
+                        <strong>{{ lead.days_since_created }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Activities Logged:</span>
+                        <strong>{{ activities.count }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Last Contact:</span>
+                        <strong>
+                            {% if lead.last_contact_date %}
+                                {{ lead.last_contact_date|date:"M d" }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Conversion Probability:</span>
+                        <strong class="text-success">{{ conversion_probability|default:"25" }}%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function scheduleFollowUp() {
+    // Create a date input dialog
+    const dialog = document.createElement('div');
+    dialog.innerHTML = `
+        <div class="modal fade" id="followUpModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Schedule Follow-up</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Contact Info -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-user me-1"></i>Follow-up with</label>
+                            <div class="form-control-plaintext bg-light p-2 rounded">
+                                <strong>{{ lead.contact.get_full_name }}</strong>
+                                {% if lead.contact.email %}
+                                    <div class="small text-muted"><i class="fas fa-envelope me-1"></i>{{ lead.contact.email }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Follow-up Details -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="followUpDate" class="form-label">Follow-up Date *</label>
+                                    <input type="date" class="form-control" id="followUpDate"
+                                           min="${new Date().toISOString().split('T')[0]}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="followUpTime" class="form-label">Start Time</label>
+                                    <input type="time" class="form-control" id="followUpTime" value="09:00">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="followUpDuration" class="form-label">Duration (mins)</label>
+                                    <input type="number" class="form-control" id="followUpDuration" value="60" min="15" max="480">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Priority and Type -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="followUpPriority" class="form-label">Priority</label>
+                                    <select class="form-select" id="followUpPriority">
+                                        <option value="low">Low Priority</option>
+                                        <option value="medium" selected>Medium Priority</option>
+                                        <option value="high">High Priority</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="followUpType" class="form-label">Follow-up Type</label>
+                                    <select class="form-select" id="followUpType">
+                                        <option value="phone">Phone Call</option>
+                                        <option value="meeting">Meeting</option>
+                                        <option value="email">Email</option>
+                                        <option value="site_visit">Site Visit</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="mb-3">
+                            <label for="followUpLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="followUpLocation"
+                                   placeholder="Meeting location or call details">
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="followUpNotes" class="form-label">Follow-up Notes *</label>
+                            <textarea class="form-control" id="followUpNotes" rows="3"
+                                      placeholder="What needs to be discussed or accomplished?" required></textarea>
+                        </div>
+
+                        <!-- Expected Outcome -->
+                        <div class="mb-3">
+                            <label for="followUpOutcome" class="form-label">Expected Outcome</label>
+                            <textarea class="form-control" id="followUpOutcome" rows="2"
+                                      placeholder="What result do you want from this follow-up?"></textarea>
+                        </div>
+
+                        <!-- Reminder Settings -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="followUpReminder" checked>
+                                <label class="form-check-label" for="followUpReminder">
+                                    <i class="fas fa-bell me-1"></i>Set reminder 30 minutes before
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="submitFollowUp()">Schedule</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    const modal = new bootstrap.Modal(document.getElementById('followUpModal'));
+    modal.show();
+}
+
+function submitFollowUp() {
+    // Collect all form values
+    const date = document.getElementById('followUpDate').value;
+    const time = document.getElementById('followUpTime').value || '09:00';
+    const duration = document.getElementById('followUpDuration').value || '60';
+    const priority = document.getElementById('followUpPriority').value;
+    const followUpType = document.getElementById('followUpType').value;
+    const location = document.getElementById('followUpLocation').value;
+    const notes = document.getElementById('followUpNotes').value;
+    const outcome = document.getElementById('followUpOutcome').value;
+    const setReminder = document.getElementById('followUpReminder').checked;
+
+    if (!date) {
+        alert('Please select a follow-up date');
+        return;
+    }
+
+    if (!notes.trim()) {
+        alert('Please enter follow-up notes');
+        return;
+    }
+
+    // Create dynamic subject based on type
+    let subject, activityType;
+    switch(followUpType) {
+        case 'meeting':
+            subject = `Follow-up Meeting: ${notes.substring(0, 40)}${notes.length > 40 ? '...' : ''}`;
+            activityType = 'meeting';
+            break;
+        case 'site_visit':
+            subject = `Site Visit Follow-up: ${notes.substring(0, 35)}${notes.length > 35 ? '...' : ''}`;
+            activityType = 'site_visit';
+            break;
+        case 'email':
+            subject = `Follow-up Email: ${notes.substring(0, 40)}${notes.length > 40 ? '...' : ''}`;
+            activityType = 'email';
+            break;
+        case 'phone':
+        default:
+            subject = `Follow-up Call: ${notes.substring(0, 40)}${notes.length > 40 ? '...' : ''}`;
+            activityType = 'call';
+            break;
+    }
+
+    // Create comprehensive description with all relevant fields
+    const fullDescription = `Follow-up Activity - ${followUpType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+
+${notes}
+
+${outcome ? `Expected Outcome: ${outcome}` : ''}
+
+Scheduled for ${duration} minutes. Priority: ${priority.charAt(0).toUpperCase() + priority.slice(1)}`;
+
+    // Prepare form data with all Activity model fields
+    const formData = new URLSearchParams({
+        'subject': subject,
+        'activity_type': activityType,
+        'status': 'planned',
+        'priority': priority,
+        'lead': '{{ lead.pk }}',
+        'contact': '{{ lead.contact.pk }}',
+        'scheduled_datetime': `${date} ${time}:00`,
+        'duration_minutes': duration,
+        'location': location || '',
+        'description': fullDescription,
+        'outcome': outcome || '',
+        'assigned_to': '{{ lead.assigned_to.pk|default:request.user.pk }}',
+        'set_reminder': setReminder ? '1' : '0',
+        // Additional fields for better tracking
+        'preparation_notes': `Prepare for ${followUpType.replace('_', ' ')} with ${notes.length > 20 ? notes.substring(0, 20) + '...' : notes}`,
+        'action_items': outcome ? `Achieve: ${outcome}` : '',
+        'agenda': notes,
+        'required_resources': followUpType === 'meeting' ? 'Meeting room, presentation materials' : 'None specified',
+        'category': 'lead_follow_up'
+    });
+
+    fetch(`{% url 'crm:activity_create' %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Close modal and show success with detailed information
+            const modal = bootstrap.Modal.getInstance(document.getElementById('followUpModal'));
+            if (modal) {
+                modal.hide();
+            }
+
+            const formattedTime = new Date(`${date}T${time}`).toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+
+            alert(`✅ Follow-up ${followUpType.replace('_', ' ')} scheduled successfully!
+
+📅 Date & Time: ${formattedTime}
+⏱️ Duration: ${duration} minutes
+📍 Location: ${location || 'Not specified'}
+🔥 Priority: ${priority.charAt(0).toUpperCase() + priority.slice(1)}
+${outcome ? '🎯 Expected Outcome: ' + outcome : ''}
+${setReminder ? '📎 Reminder: Set for 30 minutes before' : ''}
+
+✅ Activity logged and added to timeline.`);
+            location.reload();
+        } else {
+            response.text().then(text => {
+                console.error('Server response:', text);
+                alert(`❌ Error scheduling follow-up ${followUpType.replace('_', ' ')}.
+
+Please check all details and try again. If the problem persists, contact support.`);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Network error:', error);
+        alert('❌ Network error. Please check your connection and try again.');
+    });
+}
+
+function deleteLead() {
+    if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+        fetch(`{% url 'crm:lead_delete' lead.pk %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '{% url "crm:lead_list" %}';
+            } else {
+                alert('Error deleting lead. Please try again.');
+            }
+        })
+        .catch(error => {
+            alert('Error deleting lead. Please try again.');
+        });
+    }
+}
+
+function refreshLeadData() {
+    fetch(`{% url 'crm:lead_detail' lead.pk %}?format=json`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update lead score
+        document.querySelector('.score-number').textContent = data.lead_score;
+        
+        // Update conversion probability
+        document.querySelector('.text-success').textContent = 
+            `${data.conversion_probability}%`;
+        
+        // Update activities count
+        document.querySelector('.activities-count').textContent = 
+            data.activities_count;
+            
+        console.log('Lead data refreshed');
+    })
+    .catch(error => console.error('Error refreshing lead data:', error));
+}
+
+// Auto-refresh every 5 minutes
+setInterval(refreshLeadData, 300000);
+</script>
+{% endblock %}

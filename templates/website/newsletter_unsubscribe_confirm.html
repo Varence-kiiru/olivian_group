@@ -1,0 +1,409 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Newsletter Unsubscribe - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_subscribe' %}">Newsletter</a></li>
+<li class="breadcrumb-item active">Unsubscribe</li>
+{% endblock %}
+
+{% block content %}
+<!-- Unsubscribe Confirmation Section -->
+<section class="section hero-unsubscribe-confirm">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="text-center mb-5">
+                    {% if unsubscribed %}
+                    <!-- Success State -->
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success success-icon-large"></i>
+                    </div>
+                    <h2 class="mb-3">Successfully Unsubscribed</h2>
+                    <p class="text-muted mb-4">
+                        You have been successfully removed from our newsletter mailing list.
+                        You will no longer receive promotional emails from {{ company.name|default:"Olivian Group" }}.
+                    </p>
+                    {% else %}
+                    <!-- Confirmation State -->
+                    <div class="mb-4">
+                        <i class="fas fa-envelope-open text-warning warning-icon-large"></i>
+                    </div>
+                    <h2 class="mb-3">Confirm Newsletter Unsubscribe</h2>
+                    <p class="text-muted mb-4">
+                        Are you sure you want to unsubscribe from our newsletter? 
+                        You'll miss out on:
+                    </p>
+                    
+                    <!-- Benefits List -->
+                    <div class="text-start mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-sun text-warning me-3"></i>
+                            <span>Latest solar technology updates and innovations</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-percent text-success me-3"></i>
+                            <span>Exclusive discounts and special offers</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-lightbulb text-primary me-3"></i>
+                            <span>Energy saving tips and solar insights</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-calendar text-info me-3"></i>
+                            <span>Information about solar events and workshops</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-leaf text-success me-3"></i>
+                            <span>Environmental impact stories and success cases</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if not unsubscribed %}
+                <!-- Unsubscribe Form -->
+                <div class="card">
+                    <div class="card-body">
+                        <form method="post" id="unsubscribe-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="token" value="{{ token }}">
+                            <input type="hidden" name="email" value="{{ email }}">
+                            
+                            <div class="mb-4">
+                                <h6>Email Address:</h6>
+                                <p class="text-muted">{{ email|default:"your-email@example.com" }}</p>
+                            </div>
+                            
+                            <!-- Feedback (Optional) -->
+                            <div class="mb-4">
+                                <label class="form-label">Why are you unsubscribing? (Optional)</label>
+                                <select class="form-select mb-3" name="reason">
+                                    <option value="">Select a reason</option>
+                                    <option value="too_frequent">Too many emails</option>
+                                    <option value="not_relevant">Content not relevant</option>
+                                    <option value="never_signed_up">I never signed up</option>
+                                    <option value="not_interested">No longer interested in solar</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                
+                                <textarea class="form-control" name="feedback" rows="3" 
+                                          placeholder="Additional feedback (optional)..."></textarea>
+                            </div>
+                            
+                            <!-- Alternatives -->
+                            <div class="mb-4">
+                                <h6>Or would you prefer to:</h6>
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="updateFrequency()">
+                                        <i class="fas fa-clock me-2"></i>Receive emails less frequently
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="updatePreferences()">
+                                        <i class="fas fa-cog me-2"></i>Update email preferences
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-unlink me-2"></i>Confirm Unsubscribe
+                                </button>
+                                <a href="{% url 'core:home' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Keep Subscription & Go Home
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Post-unsubscribe Actions -->
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="mb-3">What's Next?</h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'products:list' %}" class="btn btn-primary">
+                                <i class="fas fa-solar-panel me-2"></i>Browse Solar Products
+                            </a>
+                            <a href="{% url 'quotations:calculator' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-calculator me-2"></i>Calculate Solar Savings
+                            </a>
+                            <a href="{% url 'core:contact' %}" class="btn btn-outline-info">
+                                <i class="fas fa-phone me-2"></i>Contact Us
+                            </a>
+                            <a href="{% url 'core:home' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-home me-2"></i>Return to Homepage
+                            </a>
+                        </div>
+                        
+                        <!-- Resubscribe Option -->
+                        <div class="mt-4 pt-3 border-top">
+                            <p class="text-muted small mb-2">Changed your mind?</p>
+                            <button class="btn btn-sm btn-success" onclick="resubscribe()">
+                                <i class="fas fa-undo me-2"></i>Resubscribe to Newsletter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Still Connected Section -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h3 class="mb-4">Stay Connected With Us</h3>
+                <p class="text-muted mb-4">
+                    Even though you've unsubscribed from our newsletter, you can still stay connected 
+                    with us through other channels and get updates when you need them.
+                </p>
+                
+                <!-- Social Media Links -->
+                <div class="row justify-content-center">
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="#" class="text-decoration-none">
+                            <div class="p-3 bg-white rounded shadow-sm h-100">
+                                <i class="fab fa-facebook-f text-primary mb-2 social-icon-large"></i>
+                                <h6>Facebook</h6>
+                                <small class="text-muted">Daily updates & tips</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="#" class="text-decoration-none">
+                            <div class="p-3 bg-white rounded shadow-sm h-100">
+                                <i class="fab fa-twitter text-info mb-2 social-icon-large"></i>
+                                <h6>Twitter</h6>
+                                <small class="text-muted">Latest news & insights</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="#" class="text-decoration-none">
+                            <div class="p-3 bg-white rounded shadow-sm h-100">
+                                <i class="fab fa-linkedin-in text-primary mb-2 social-icon-large"></i>
+                                <h6>LinkedIn</h6>
+                                <small class="text-muted">Professional updates</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="#" class="text-decoration-none">
+                            <div class="p-3 bg-white rounded shadow-sm h-100">
+                                <i class="fab fa-youtube text-danger mb-2 social-icon-large"></i>
+                                <h6>YouTube</h6>
+                                <small class="text-muted">Video tutorials</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Update Frequency Modal -->
+<div class="modal fade" id="frequencyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Email Frequency</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>How often would you like to receive our newsletter?</p>
+                <form id="frequency-form">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="frequency" value="weekly" id="weekly">
+                            <label class="form-check-label" for="weekly">
+                                Weekly (Current)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="frequency" value="biweekly" id="biweekly">
+                            <label class="form-check-label" for="biweekly">
+                                Every 2 weeks
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="frequency" value="monthly" id="monthly">
+                            <label class="form-check-label" for="monthly">
+                                Monthly
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="frequency" value="quarterly" id="quarterly">
+                            <label class="form-check-label" for="quarterly">
+                                Quarterly (4 times per year)
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveFrequency()">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Preferences Modal -->
+<div class="modal fade" id="preferencesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Preferences</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Choose what types of emails you'd like to receive:</p>
+                <form id="preferences-form">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="newsletter" id="newsletter" checked>
+                        <label class="form-check-label" for="newsletter">
+                            Newsletter & Updates
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="promotions" id="promotions" checked>
+                        <label class="form-check-label" for="promotions">
+                            Special Offers & Promotions
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="product_updates" id="product_updates">
+                        <label class="form-check-label" for="product_updates">
+                            New Product Announcements
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="educational" id="educational">
+                        <label class="form-check-label" for="educational">
+                            Educational Content & Tips
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="events" id="events">
+                        <label class="form-check-label" for="events">
+                            Events & Workshops
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="savePreferences()">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateFrequency() {
+    $('#frequencyModal').modal('show');
+}
+
+function updatePreferences() {
+    $('#preferencesModal').modal('show');
+}
+
+function saveFrequency() {
+    const frequency = $('input[name="frequency"]:checked').val();
+    
+    if (!frequency) {
+        alert('Please select a frequency');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/newsletter/update-frequency/',
+        method: 'POST',
+        data: {
+            'email': '{{ email }}',
+            'frequency': frequency
+        },
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function() {
+            $('#frequencyModal').modal('hide');
+            alert('Email frequency updated successfully! You will now receive emails ' + frequency + '.');
+            window.location.href = '{% url "core:home" %}';
+        },
+        error: function(xhr) {
+            alert('Error updating frequency: ' + xhr.responseJSON.message);
+        }
+    });
+}
+
+function savePreferences() {
+    const preferences = [];
+    $('input[type="checkbox"]:checked').each(function() {
+        preferences.push($(this).val());
+    });
+    
+    if (preferences.length === 0) {
+        alert('Please select at least one email type');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/newsletter/update-preferences/',
+        method: 'POST',
+        data: {
+            'email': '{{ email }}',
+            'preferences': preferences
+        },
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function() {
+            $('#preferencesModal').modal('hide');
+            alert('Email preferences updated successfully!');
+            window.location.href = '{% url "core:home" %}';
+        },
+        error: function(xhr) {
+            alert('Error updating preferences: ' + xhr.responseJSON.message);
+        }
+    });
+}
+
+function resubscribe() {
+    if (confirm('Are you sure you want to resubscribe to our newsletter?')) {
+        $.ajax({
+            url: '/api/newsletter/resubscribe/',
+            method: 'POST',
+            data: {
+                'email': '{{ email }}'
+            },
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function() {
+                alert('Successfully resubscribed! Welcome back!');
+                window.location.href = '{% url "core:home" %}';
+            },
+            error: function(xhr) {
+                alert('Error resubscribing: ' + xhr.responseJSON.message);
+            }
+        });
+    }
+}
+
+// Form submission with loading state
+$('#unsubscribe-form').on('submit', function(e) {
+    const submitBtn = $(this).find('button[type="submit"]');
+    submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Processing...');
+    submitBtn.prop('disabled', true);
+});
+</script>
+{% endblock %}

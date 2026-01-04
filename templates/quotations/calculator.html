@@ -1,0 +1,3946 @@
+{% extends base_template|default:'website/base.html' %} 
+{% load static %} 
+
+{% block title %}{{ page_title|default:"Solar Calculator" }}{% endblock %} 
+
+{% if is_management_view %}
+  {% block page_title %}Solar System Calculator{% endblock %} 
+  {% block page_subtitle %}Get instant estimates for your solar energy system with professional accuracy{% endblock %} 
+  {% block breadcrumb %}
+  <li class="breadcrumb-item">
+    <a href="{% url 'accounts:dashboard' %}">Dashboard</a>
+  </li>
+  <li class="breadcrumb-item">
+    <a href="{% url 'quotations:list' %}">Quotations</a>
+  </li>
+  <li class="breadcrumb-item active">Calculator</li>
+  {% endblock %}
+{% endif %} 
+
+{% block extra_css %}
+<style>
+  /* Ensure content doesn't hide behind fixed navigation */
+  body {
+    padding-top: 70px;
+  }
+  
+  .calculator-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left: 5px solid var(--primary-color);
+  }
+
+  .calculator-step {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .calculator-step:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 1rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+  }
+
+  .info-box {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #17a2b8;
+  }
+
+  .result-card {
+    background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    border-left: 5px solid #28a745;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+  }
+
+  .result-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #28a745;
+    margin-bottom: 0.5rem;
+  }
+
+  .result-label {
+    font-size: 1.1rem;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .savings-breakdown {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .savings-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f3f4;
+  }
+
+  .savings-item:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #28a745;
+  }
+
+  .range-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .range-slider:hover {
+    opacity: 1;
+  }
+
+  .range-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+  }
+
+  .system-components {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .component-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .component-item:last-child {
+    border-bottom: none;
+  }
+
+  .component-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+  }
+
+  .recommendation-badge {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+  }
+
+  .cost-breakdown-items {
+    font-size: 0.9rem;
+  }
+
+  .cost-category {
+    margin-bottom: 1rem;
+  }
+
+  .cost-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f1f3f4;
+  }
+
+  .cost-item:last-child {
+    border-bottom: none;
+  }
+
+  .cost-item span:first-child {
+    flex: 1;
+    color: #495057;
+  }
+
+  .cost-item span:last-child {
+    font-weight: 600;
+    color: #28a745;
+  }
+
+  @media (max-width: 768px) {
+    .calculator-card {
+      padding: 1rem;
+    }
+    
+    .result-card {
+      padding: 1rem;
+    }
+    
+    .result-value {
+      font-size: 2rem;
+    }
+    
+    .calculator-step {
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+    }
+    
+    .step-title {
+      font-size: 1.1rem;
+    }
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, var(--primary-color), #20c997);
+    border-radius: 15px;
+    padding: 1.5rem;
+    color: white;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(56, 182, 255, 0.25);
+  }
+
+  .btn-action {
+    border-radius: 25px;
+    padding: 0.375rem 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+</style>
+{% endblock %} 
+
+{% block content %}
+
+{% if not is_management_view %}
+<!-- Customer Welcome Section -->
+<div class="container-fluid bg-primary text-white py-5 mb-4">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="display-5 fw-bold mb-3">Solar System Calculator</h1>
+        <p class="lead mb-0">Calculate optimal solar system size and generate quotations</p>
+        <p class="mb-2">Get instant estimates for your solar energy system with professional accuracy</p>
+        
+        <!-- Customer Action Buttons -->
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="button" class="btn btn-light btn-sm" onclick="downloadReport()">
+            <i class="fas fa-download me-1"></i>Download Report
+          </button>
+          <button type="button" class="btn btn-outline-light btn-sm" onclick="scheduleConsultation()">
+            <i class="fas fa-calendar-check me-1"></i>Schedule Consultation
+          </button>
+        </div>
+      </div>
+      <div class="col-md-4 text-center">
+        <i class="fas fa-solar-panel" style="font-size: 5rem; opacity: 0.8;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container">
+{% else %}
+<div class="container">
+{% endif %}
+
+<div class="row">
+  <!-- Calculator Form -->
+  <div class="col-lg-7">
+    <div class="calculator-card">
+      <form id="solarCalculator">
+        <!-- Step 1: Basic Information -->
+        <div class="calculator-step">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number">1</div>
+            <div class="step-title">Basic Information</div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="propertyType" class="form-label">Property Type</label>
+              <select
+                class="form-select"
+                id="propertyType"
+                onchange="calculateSystem()"
+              >
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="location" class="form-label">Location (County)</label>
+              <select
+                class="form-select"
+                id="location"
+                onchange="calculateSystem()"
+              >
+                <option value="nairobi">Nairobi</option>
+                <option value="mombasa">Mombasa</option>
+                <option value="kisumu">Kisumu</option>
+                <option value="nakuru">Nakuru</option>
+                <option value="eldoret">Eldoret</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="roofType" class="form-label">Installation Type</label>
+              <select
+                class="form-select"
+                id="roofType"
+                onchange="calculateSystem()"
+              >
+                <optgroup label="Roof Mounted">
+                  <option value="iron_sheets">Iron Sheets/Metal Roof</option>
+                  <option value="tiles">Tile Roof</option>
+                  <option value="concrete_roof">
+                    Concrete Roof (Ballasted)
+                  </option>
+                  <option value="asbestos">Asbestos Roof</option>
+                </optgroup>
+                <optgroup label="Ground Mounted">
+                  <option value="ground_standard">
+                    Ground Mount (Standard)
+                  </option>
+                  <option value="ground_premium">
+                    Ground Mount (Premium GI)
+                  </option>
+                  <option value="carport">Solar Carport</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="roofArea" class="form-label"
+                >Available Roof Area (m²)</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                id="roofArea"
+                value="100"
+                min="10"
+                max="1000"
+                onchange="calculateSystem()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Energy Consumption -->
+        <div class="calculator-step">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number">2</div>
+            <div class="step-title">Energy Consumption</div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="monthlyBill" class="form-label"
+                >Average Monthly Electricity Bill (KES)</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                id="monthlyBill"
+                value="5000"
+                min="500"
+                max="100000"
+                onchange="calculateFromBill()"
+              />
+              <div class="form-text">
+                Enter your average monthly electricity bill
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="monthlyConsumption" class="form-label"
+                >Monthly Consumption (kWh)</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                id="monthlyConsumption"
+                value="300"
+                min="50"
+                max="10000"
+                onchange="calculateFromConsumption()"
+              />
+              <div class="form-text">
+                Calculated from your bill or enter manually
+              </div>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h6><i class="fas fa-lightbulb me-2"></i>Energy Usage Pattern</h6>
+            <div class="row">
+              <div class="col-md-4">
+                <label for="dayUsage" class="form-label"
+                  >Daytime Usage (%)</label
+                >
+                <input
+                type="range"
+                class="range-slider"
+                id="dayUsage"
+                min="20"
+                max="80"
+                value="50"
+                onchange="adjustUsagePattern('dayUsage'); calculateSystem()"
+                />
+                <div class="text-center mt-1">
+                <span id="dayUsageValue">50%</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label for="eveningUsage" class="form-label"
+                  >Evening Usage (%)</label
+                >
+                <input
+                type="range"
+                class="range-slider"
+                id="eveningUsage"
+                min="15"
+                max="60"
+                value="40"
+                onchange="adjustUsagePattern('eveningUsage'); calculateSystem()"
+                />
+                <div class="text-center mt-1">
+                <span id="eveningUsageValue">40%</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label for="nightUsage" class="form-label"
+                  >Night Usage (%)</label
+                >
+                <input
+                type="range"
+                class="range-slider"
+                id="nightUsage"
+                min="5"
+                max="30"
+                value="10"
+                onchange="adjustUsagePattern('nightUsage'); calculateSystem()"
+                />
+                <div class="text-center mt-1">
+                <span id="nightUsageValue">10%</span>
+                </div>
+                </div>
+                </div>
+                  <!-- Usage Total Display -->
+                    <div class="alert alert-info mt-3">
+               <div class="d-flex justify-content-between align-items-center">
+                 <span><i class="fas fa-info-circle me-2"></i>Total Usage Distribution:</span>
+                 <strong><span id="usageTotal">100%</span></strong>
+               </div>
+               <small class="text-muted">Sliders automatically adjust to maintain 100% total</small>
+             </div>
+           </div>
+         </div>
+
+        <!-- Step 3: System Preferences -->
+        <div class="calculator-step">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number">3</div>
+            <div class="step-title">System Preferences</div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="systemType" class="form-label"
+                >Preferred System Type</label
+              >
+              <select
+                class="form-select"
+                id="systemType"
+                onchange="calculateSystem()"
+              >
+                <option value="grid_tied">Grid-Tied (Grid-Interactive)</option>
+                <option value="hybrid">Hybrid (Grid + Battery)</option>
+                <option value="off_grid">Off-Grid (Battery Only)</option>
+                <option value="backup">Backup Power System</option>
+              </select>
+              <div class="form-text" id="systemTypeDescription">
+                Grid-tied systems feed excess power back to the grid
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="budget" class="form-label">Budget Range (KES)</label>
+              <select
+                class="form-select"
+                id="budget"
+                onchange="calculateSystem()"
+              >
+                <option value="0-300000">Up to 300,000</option>
+                <option value="300000-600000">300,000 - 600,000</option>
+                <option value="600000-1000000">600,000 - 1,000,000</option>
+                <option value="1000000-2000000">1,000,000 - 2,000,000</option>
+                <option value="2000000+">Above 2,000,000</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="offsetPercentage" class="form-label"
+                >Desired Energy Offset (%)</label
+              >
+              <input
+                type="range"
+                class="range-slider"
+                id="offsetPercentage"
+                min="50"
+                max="120"
+                value="100"
+                onchange="updateOffsetDisplay(); calculateSystem()"
+              />
+              <div class="text-center mt-1">
+                <span id="offsetValue">100%</span> of your energy needs
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="form-check mt-4">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="futureExpansion"
+                  onchange="calculateSystem()"
+                />
+                <label class="form-check-label" for="futureExpansion">
+                  Plan for future expansion (adds 20% capacity)
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="electricVehicle"
+                  onchange="calculateSystem()"
+                />
+                <label class="form-check-label" for="electricVehicle">
+                  Planning to get electric vehicle
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Sidebar -->
+  <div class="col-lg-5">
+    <!-- Quick Results Summary -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="result-card text-center">
+          <div class="recommendation-badge mb-2">
+            <i class="fas fa-star me-1"></i>Recommended System
+          </div>
+          <div class="result-value" id="recommendedCapacity">5.0 kW</div>
+          <div class="result-label">Solar System Capacity</div>
+          
+          <div class="row mt-3">
+            <div class="col-6">
+              <div class="small text-muted">Total Investment</div>
+              <div class="h5 text-primary mb-0" id="totalSystemCost">KES 500,000</div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">Annual Savings</div>
+              <div class="h5 text-success mb-0" id="annualSavings">KES 50,400</div>
+            </div>
+          </div>
+          
+          <div class="row mt-2">
+            <div class="col-6">
+              <div class="small text-muted">Payback Period</div>
+              <div class="h6 mb-0" id="paybackPeriod">7.2 years</div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">25-Year Savings</div>
+              <div class="h6 mb-0 text-success" id="lifetimeSavings">KES 890,000</div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-top">
+            <button type="button" class="btn btn-primary btn-action me-2" onclick="generateQuotation()">
+              <i class="fas fa-file-invoice me-1"></i>Generate Quotation
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-action" onclick="shareResults()">
+              <i class="fas fa-share-alt me-1"></i>Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Breakdown -->
+    <div class="calculator-card mb-3">
+      <h6 class="mb-3">
+        <i class="fas fa-chart-line me-2 text-success"></i>Financial Breakdown
+      </h6>
+      <div class="savings-breakdown">
+        <div class="savings-item">
+          <span><i class="fas fa-bolt text-warning me-1"></i>Monthly Generation:</span>
+          <strong id="monthlyGeneration">600 kWh</strong>
+        </div>
+        <div class="savings-item">
+          <span><i class="fas fa-piggy-bank text-success me-1"></i>Monthly Savings:</span>
+          <strong id="monthlySavings">KES 4,200</strong>
+        </div>
+        <div class="savings-item">
+          <span><i class="fas fa-percentage text-info me-1"></i>ROI:</span>
+          <strong id="irrValue">12.5%</strong>
+        </div>
+        <div class="savings-item">
+          <span><i class="fas fa-calculator text-primary me-1"></i>NPV:</span>
+          <strong id="npvValue">KES 250,000</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Components -->
+    <div class="calculator-card mb-3">
+      <h6 class="mb-3">
+        <i class="fas fa-cogs me-2 text-primary"></i>System Components
+      </h6>
+      <div class="system-components">
+        <div class="component-item" id="panelComponent">
+          <div class="d-flex align-items-center">
+            <div class="component-icon">
+              <i class="fas fa-solar-panel"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold">Solar Panels</div>
+              <small class="text-muted" id="panelSpecs">24 x 550W Mono PERC</small>
+            </div>
+            <div class="text-end">
+              <small class="text-success fw-bold" id="panelCost">KES 180,000</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="component-item" id="inverterComponent">
+          <div class="d-flex align-items-center">
+            <div class="component-icon">
+              <i class="fas fa-microchip"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold">Inverter</div>
+              <small class="text-muted" id="inverterSpecs">5.0kW String Inverter</small>
+            </div>
+            <div class="text-end">
+              <small class="text-success fw-bold" id="inverterCost">KES 85,000</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-item" id="batteryComponent" style="display: none;">
+          <div class="d-flex align-items-center">
+            <div class="component-icon">
+              <i class="fas fa-battery-three-quarters"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold">Battery System</div>
+              <small class="text-muted" id="batterySpecs">10kWh Lithium-ion</small>
+            </div>
+            <div class="text-end">
+              <small class="text-success fw-bold" id="batteryCost">KES 150,000</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-item">
+          <div class="d-flex align-items-center">
+            <div class="component-icon">
+              <i class="fas fa-tools"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold">Installation & Components</div>
+              <small class="text-muted" id="mountingSpecs">Professional Installation</small>
+            </div>
+            <div class="text-end">
+              <small class="text-success fw-bold" id="installationCost">KES 85,000</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Analysis -->
+    <div class="calculator-card mb-3">
+      <h6 class="mb-3">
+        <i class="fas fa-chart-bar me-2 text-info"></i>Technical Analysis
+      </h6>
+      <div class="row">
+        <div class="col-6">
+          <div class="text-center p-2">
+            <div class="h6 mb-1 text-primary" id="performanceRatio">85.2%</div>
+            <small class="text-muted">Performance Ratio</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="text-center p-2">
+            <div class="h6 mb-1 text-warning" id="effectiveArea">85 m²</div>
+            <small class="text-muted">Effective Area</small>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-6">
+          <div class="text-center p-2">
+            <div class="h6 mb-1 text-success" id="selfConsumptionPotential">75%</div>
+            <small class="text-muted">Self-Consumption</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="text-center p-2">
+            <div class="h6 mb-1 text-info" id="lcoeValue">KES 8.50</div>
+            <small class="text-muted">Cost per kWh</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Environmental Impact -->
+    <div class="calculator-card mb-3">
+      <h6 class="mb-3">
+        <i class="fas fa-leaf me-2 text-success"></i>Environmental Impact
+      </h6>
+      <div class="row text-center">
+        <div class="col-6">
+          <div class="p-2">
+            <div class="h6 mb-1 text-success" id="co2Savings">3.2 tons</div>
+            <small class="text-muted">Annual CO₂ Reduction</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2">
+            <div class="h6 mb-1 text-success" id="treesEquivalent">144 trees</div>
+            <small class="text-muted">Trees Equivalent</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Professional Disclaimer -->
+    <div class="alert alert-warning">
+      <h6 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Professional Disclaimer
+      </h6>
+      <small>
+        This calculator provides preliminary estimates based on industry standards (IEC 61724, IEC 61215). 
+        Professional site assessment, shading analysis, and structural evaluation required for final system design.
+      </small>
+      <hr class="my-2" />
+      <small class="text-muted">
+        <strong>Note:</strong> All calculations include Kenya-specific meteorological data and current market pricing. 
+        Final quotations subject to site inspection and engineering approval.
+      </small>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %} {% block extra_js %}
+<script>
+  // Enhanced solar calculation parameters with realistic Kenya data (2024)
+  // Professional solar resource database with meteorological accuracy
+  const solarData = {
+    nairobi: {
+      solarHours: 5.2,
+      // Residential tariffs: 12.23 (0-30), 16.54 (31-100), 19.08 (>100) + surcharges ≈ 22-25
+      costPerKwh: { residential: 27.65, commercial: 20.8, industrial: 18.2 },
+      avgTemp: 19.5,
+      latitude: -1.286,
+      longitude: 36.817,
+      altitude: 1661,
+      seasonalVariation: 0.15,
+      dustingFactor: 0.03,
+      // Enhanced meteorological data for professional calculations
+      peakSunHours: {
+        jan: 5.8,
+        feb: 6.1,
+        mar: 5.9,
+        apr: 5.1,
+        may: 4.8,
+        jun: 4.3,
+        jul: 4.2,
+        aug: 4.9,
+        sep: 5.4,
+        oct: 5.8,
+        nov: 5.7,
+        dec: 5.6,
+      },
+      temperatureRange: { min: 11, max: 28, average: 19.5 },
+      humidity: 0.65, // Average relative humidity
+      windSpeed: 2.1, // m/s average
+      airPressure: 83.2, // kPa at 1661m altitude
+      uvIndex: 11, // High UV index
+      cloudCover: 0.42, // 42% average cloud cover
+      precipitationDays: 76, // Rainy days per year
+      // Professional grid data
+      gridStability: 0.94, // 94% grid availability
+      powerQuality: 0.92, // Voltage stability factor
+      utilityTariffEscalation: 0.085, // 8.5% annual increase
+    },
+    mombasa: {
+      solarHours: 5.8,
+      costPerKwh: { residential: 26.2, commercial: 22.1, industrial: 19.4 },
+      avgTemp: 26.3,
+      latitude: -4.043,
+      longitude: 39.669,
+      altitude: 16,
+      seasonalVariation: 0.12,
+      dustingFactor: 0.04,
+    },
+    kisumu: {
+      solarHours: 4.9,
+      costPerKwh: { residential: 23.8, commercial: 19.9, industrial: 17.5 },
+      avgTemp: 23.0,
+      latitude: -0.091,
+      longitude: 34.767,
+      altitude: 1131,
+      seasonalVariation: 0.18,
+      dustingFactor: 0.02,
+    },
+    nakuru: {
+      solarHours: 5.1,
+      costPerKwh: { residential: 24.1, commercial: 20.2, industrial: 17.8 },
+      avgTemp: 17.8,
+      latitude: -0.303,
+      longitude: 36.066,
+      altitude: 1870,
+      seasonalVariation: 0.16,
+      dustingFactor: 0.025,
+    },
+    eldoret: {
+      solarHours: 4.8,
+      costPerKwh: { residential: 23.5, commercial: 19.7, industrial: 17.3 },
+      avgTemp: 18.2,
+      latitude: 0.514,
+      longitude: 35.27,
+      altitude: 2085,
+      seasonalVariation: 0.2,
+      dustingFactor: 0.02,
+    },
+    other: {
+      solarHours: 5.0,
+      costPerKwh: { residential: 24.0, commercial: 20.0, industrial: 17.8 },
+      avgTemp: 21.0,
+      latitude: -1.0,
+      longitude: 37.0,
+      altitude: 1200,
+      seasonalVariation: 0.15,
+      dustingFactor: 0.03,
+    },
+  };
+
+  // Solar panel specifications (540W-595W range - JA Solar & Jinko)
+  const panelSpecs = {
+    standard: {
+      minWatt: 540,
+      maxWatt: 595,
+      efficiency: 21.2, // Average efficiency %
+      dimensions: { length: 2278, width: 1134, thickness: 30 }, // mm
+      weight: 27.5, // kg per panel
+      tempCoeff: -0.34, // %/°C (more accurate than -0.4)
+      manufacturer: "JA Solar / Jinko",
+      warranty: 30, // years product warranty
+    },
+    ja_solar: {
+      models: [
+        "JAM72S30-540/MR",
+        "JAM72S30-550/MR",
+        "JAM72S30-560/MR",
+        "JAM72S30-570/MR",
+      ],
+      weight: 27.3, // kg
+      dimensions: { length: 2278, width: 1134, thickness: 30 },
+      efficiency: 21.0,
+      tempCoeff: -0.34,
+    },
+    jinko: {
+      models: [
+        "JKM570N-72HL4-V",
+        "JKM580N-72HL4-V",
+        "JKM590N-72HL4-V",
+        "JKM595N-72HL4-V",
+      ],
+      weight: 28.1, // kg
+      dimensions: { length: 2278, width: 1134, thickness: 30 },
+      efficiency: 21.8,
+      tempCoeff: -0.29, // N-type cells have better temp coefficient
+    },
+  };
+
+  // Mounting system specifications by roof/ground type with enhanced aluminum rail systems
+  const mountingSystems = {
+    // Roof-mounted systems with aluminum rails and accessories
+    tiles: {
+      name: "Tile Roof Mount (Aluminum Rails)",
+      weightPerPanel: 8.5, // kg additional weight per panel
+      costPerPanel: 1200, // KES per panel mounting
+      laborHours: 0.75, // hours per panel
+      components: [
+        "Tile hooks",
+        "Aluminum rails",
+        "End clamps",
+        "Mid clamps",
+        "Grounding kit",
+        "Flashing",
+        "EPDM seal",
+      ],
+      materials: {
+        aluminumRails: "40x40mm aluminum extrusion per panel",
+        fasteners: "Stainless steel 316 tile hooks",
+        grounding: "Aluminum grounding lugs and bonding jumpers",
+        accessories: "End caps, splice kits, and weather sealing",
+      },
+      quantities: {
+        railsPerPanel: 2, // 2 x 1.5m aluminum rails per panel
+        tileHooksPerPanel: 4, // tile hooks per panel
+        endClampsFor6Panels: 4, // 4 end clamps total for 6 panels
+        midClampsFor6Panels: 10, // 10 mid clamps total for 6 panels
+        groundingLugsPerPanel: 2, // grounding lugs per panel
+        flashingPerPanel: 0.3, // square meters of flashing per panel
+        sealantPerPanel: 0.1, // kg of sealant per panel
+      },
+    },
+    iron_sheets: {
+      name: "Metal Roof Mount (Aluminum Rails)",
+      weightPerPanel: 6.2, // kg additional weight per panel
+      costPerPanel: 900, // KES per panel mounting
+      laborHours: 0.5, // hours per panel
+      components: [
+        "Metal clamps",
+        "Aluminum rails",
+        "Standing seam clamps",
+        "Grounding kit",
+        "Sealants",
+      ],
+      materials: {
+        aluminumRails: "40x40mm aluminum extrusion per panel",
+        fasteners: "Stainless steel standing seam clamps or penetrating screws",
+        grounding: "Aluminum grounding lugs and WEB washers",
+        accessories: "Butyl tape sealant, end caps, splice kits",
+      },
+      quantities: {
+        railsPerPanel: 1.5, // meters of aluminum rail per panel
+        metalClampsPerPanel: 6, // metal clamps per panel (more than tiles)
+        clampsPerPanel: 4, // end/mid clamps per panel
+        groundingLugsPerPanel: 2, // grounding lugs per panel
+        webWashersPerPanel: 6, // WEB washers per panel
+        sealantPerPanel: 0.15, // kg of butyl tape sealant per panel
+      },
+    },
+    concrete_roof: {
+      name: "Concrete Ballast Mount (Aluminum Rails)",
+      weightPerPanel: 35, // kg ballast weight per panel (no roof penetration)
+      costPerPanel: 1500, // KES per panel mounting
+      laborHours: 0.6, // hours per panel
+      components: [
+        "Ballast blocks",
+        "Aluminum rails",
+        "Ballast trays",
+        "Wind deflectors",
+        "Grounding kit",
+      ],
+      materials: {
+        aluminumRails: "40x40mm aluminum extrusion per panel",
+        ballast: "Concrete ballast blocks or gravel-filled trays",
+        grounding: "Aluminum grounding lugs and equipment grounding conductors",
+        accessories: "Wind deflectors, tilt legs, end caps",
+      },
+      quantities: {
+        railsPerPanel: 1.5, // meters of aluminum rail per panel
+        ballastBlocksPerPanel: 8, // concrete blocks per panel (35kg total)
+        ballastTraysPerPanel: 2, // ballast trays per panel
+        clampsPerPanel: 4, // clamps per panel
+        groundingLugsPerPanel: 2, // grounding lugs per panel
+        windDeflectorsPerPanel: 2, // wind deflectors per panel
+        tiltLegsPerPanel: 4, // tilt legs per panel
+      },
+    },
+    asbestos: {
+      name: "Asbestos Roof Mount (Specialized)",
+      weightPerPanel: 10.0, // kg additional weight per panel
+      costPerPanel: 1400, // KES per panel mounting (specialized equipment)
+      laborHours: 0.9, // hours per panel (safety protocols)
+      components: [
+        "Specialized clamps",
+        "Aluminum rails",
+        "Safety equipment",
+        "Grounding kit",
+        "Protective gear",
+      ],
+      materials: {
+        aluminumRails: "40x40mm aluminum extrusion per panel",
+        fasteners: "Non-penetrating clamps designed for asbestos",
+        grounding: "Isolated grounding system with aluminum components",
+        accessories:
+          "Safety protocols, protective equipment, specialized tools",
+      },
+      quantities: {
+        railsPerPanel: 1.5, // meters of aluminum rail per panel
+        specializedClampsPerPanel: 8, // non-penetrating clamps per panel
+        clampsPerPanel: 4, // rail clamps per panel
+        groundingLugsPerPanel: 2, // isolated grounding lugs per panel
+        safetyKitPerPanel: 0.1, // safety equipment allocation per panel
+        protectiveGearPerPanel: 0.1, // protective gear allocation per panel
+      },
+    },
+
+    // Ground-mounted systems with actual Kenya market pricing
+    ground_standard: {
+      name: "Ground Mount (Composite GI + Aluminum)",
+      weightPerPanel: 15, // kg foundation per panel
+      costPerPanel: 8500, // KES per panel (composite GI + aluminum structure)
+      laborHours: 1.8, // hours per panel (includes excavation, concrete work)
+      components: [
+        "Concrete slabs",
+        "Galvanized steel structure",
+        "Aluminum rails",
+        "Baseplates",
+        "Complete grounding system",
+      ],
+      materials: {
+        structure: "Hot-dip galvanized steel framework (1.5m-2.75m height)",
+        aluminumRails: "2 x 1.5m aluminum rails per panel",
+        foundation: "Concrete slabs at KES 5,000 each",
+        baseplates: "300x300mm x 6mm steel baseplates",
+        grounding: "Driven ground rods and aluminum grounding conductors",
+        accessories: "Fabricated and galvanized hardware, anchor bolts",
+      },
+      foundationDetails: {
+        concreteCubicMeters: 0.5, // per foundation stub
+        foundationCount: 6, // typical for 6-panel ground mount
+        steelKg: 45, // kg of galvanized steel per panel
+        hardwareItems:
+          "Anchor bolts, nuts, washers, grounding lugs, rail clamps",
+      },
+      quantities: {
+        railsPerPanel: 2, // 2 x 1.5m aluminum rails per panel
+        concreteSlabsPerPanel: 1, // 1 concrete slab per panel at KES 5,000 each
+        baseplatesPerPanel: 0.5, // baseplates shared across panels
+        clampsPerPanel: 6, // clamps needed for ground mount
+        groundingRodsPerSystem: 2, // ground rods per system
+        groundingLugsPerPanel: 2, // grounding lugs per panel
+        giStructureFabrication: 15, // kg fabrication per panel (estimated)
+      },
+    },
+    ground_premium: {
+      name: "Ground Mount (Premium GI Only)",
+      weightPerPanel: 18, // kg foundation per panel
+      costPerPanel: 10000, // KES per panel (premium GI only structure minimum)
+      laborHours: 2.2, // hours per panel (enhanced installation)
+      components: [
+        "Concrete slabs",
+        "Premium galvanized structure",
+        "Aluminum rails",
+        "Steel baseplates",
+        "Enhanced grounding",
+      ],
+      materials: {
+        structure: "Premium hot-dip galvanized steel framework (2.75m height)",
+        aluminumRails: "2 x 1.5m aluminum rails per panel",
+        foundation: "Concrete slabs at KES 5,000 each",
+        baseplates: "300x300mm x 6mm steel baseplates with premium finish",
+        grounding: "Enhanced grounding grid with copper-aluminum bonds",
+        accessories:
+          "Premium fabricated and galvanized hardware, heavy-duty clamps",
+      },
+      foundationDetails: {
+        concreteCubicMeters: 0.8, // per foundation stub
+        foundationCount: 8, // more foundations for premium system
+        steelKg: 65, // kg of premium galvanized steel per panel
+        hardwareItems:
+          "Premium anchor bolts, SS316 hardware, enhanced grounding",
+      },
+      quantities: {
+        railsPerPanel: 3.5, // meters of heavy-duty aluminum rail per panel
+        steelPostsPerPanel: 0.6, // more steel posts per panel
+        anchorBoltsPerPanel: 3, // premium anchor bolts per panel
+        clampsPerPanel: 8, // premium clamps per panel
+        groundingRodsPerSystem: 3, // enhanced grounding rods per system
+        concreteM3PerPanel: 0.12, // more concrete per panel (0.8m3/8panels)
+        rebarKgPerPanel: 5, // more rebar per panel
+        groundingLugsPerPanel: 3, // enhanced grounding per panel
+        washersAndNutsPerPanel: 12, // premium hardware per panel
+        trackerReadyComponents: 1, // tracker-ready components per panel
+      },
+    },
+    carport: {
+      name: "Solar Carport (Composite Structure)",
+      weightPerPanel: 45, // kg structure per panel
+      costPerPanel: 12500, // KES per panel (premium architectural structure)
+      laborHours: 3.0, // hours per panel (complex installation)
+      components: [
+        "Steel frame",
+        "Aluminum-steel composite",
+        "Premium rails",
+        "Architectural elements",
+        "Drainage system",
+      ],
+      materials: {
+        structure: "Composite steel frame with aluminum cladding (4m height)",
+        aluminumRails: "Architectural grade aluminum rail system (heavy-duty)",
+        foundation: "Deep concrete foundations with anchor bolts (1.2m depth)",
+        grounding: "Integrated grounding in structural elements",
+        accessories:
+          "Gutters, downspouts, lighting provisions, electrical conduits, vehicle clearance",
+      },
+      foundationDetails: {
+        concreteCubicMeters: 1.2, // per foundation pier
+        foundationCount: 12, // more foundations for carport structure
+        steelKg: 85, // kg of structural steel per panel
+        hardwareItems: "Architectural hardware, drainage, lighting conduits",
+      },
+    },
+  };
+
+  // Market-Available Inverter Specifications (July 2025 Kenya Market)
+  const availableInverters = {
+    offGrid: [
+      {
+        capacity: 1.0,
+        voltage: 12,
+        brand: "Must/Roomny",
+        price: 31500,
+        model: "1kW Pure Sine Wave",
+      },
+      {
+        capacity: 1.5,
+        voltage: 12,
+        brand: "Must/Roomny",
+        price: 36500,
+        model: "1.5kW Pure Sine Wave",
+      },
+      {
+        capacity: 2.0,
+        voltage: 24,
+        brand: "Must/Roomny",
+        price: 43000,
+        model: "2kW Pure Sine Wave",
+      },
+      {
+        capacity: 3.0,
+        voltage: 24,
+        brand: "Must PV-1800",
+        price: 57500,
+        model: "3kW Pure Sine Wave",
+      },
+      {
+        capacity: 4.0,
+        voltage: 24,
+        brand: "Must PV-1800",
+        price: 54000,
+        model: "4kW Pure Sine Wave",
+      },
+      {
+        capacity: 5.0,
+        voltage: 48,
+        brand: "Must PV-1800 VHM",
+        price: 90000,
+        model: "5kW Pure Sine Wave",
+      },
+    ],
+    hybrid: [
+      {
+        capacity: 1.5,
+        voltage: 12,
+        brand: "Generic TBB",
+        price: 58000,
+        model: "1.5kW Hybrid + 50A MPPT",
+        mppt: 50,
+      },
+      {
+        capacity: 1.7,
+        voltage: 24,
+        brand: "Generic TBB",
+        price: 65000,
+        model: "1.7kW Hybrid Dual-mode",
+        mppt: 60,
+      },
+      {
+        capacity: 3.0,
+        voltage: 24,
+        brand: "TBB/Felicity",
+        price: 75000,
+        model: "3kW Hybrid Entry",
+        mppt: 80,
+      },
+      {
+        capacity: 3.0,
+        voltage: 24,
+        brand: "TBB RiiO Sun II",
+        price: 72000,
+        model: "3kW Hybrid Entry",
+        mppt: 60,
+      },
+      {
+        capacity: 5.0,
+        voltage: 48,
+        brand: "Growatt SPF/Deye",
+        price: 114500,
+        model: "5kW Hybrid Stackable",
+        mppt: 100,
+      },
+      {
+        capacity: 6.0,
+        voltage: 48,
+        brand: "Deye SUN-6k",
+        price: 130000,
+        model: "6kW Hybrid Popular",
+        mppt: 120,
+      },
+      {
+        capacity: 8.0,
+        voltage: 96,
+        brand: "Huawei/Jinko",
+        price: 260000,
+        model: "8kW Industrial Hybrid",
+        mppt: 150,
+      },
+    ],
+    gridTied: [
+      {
+        capacity: 3.0,
+        voltage: 400,
+        brand: "Growatt/Huawei",
+        price: 100000,
+        model: "3kW Grid-Tie String",
+      },
+      {
+        capacity: 5.0,
+        voltage: 400,
+        brand: "Sungrow/GoodWe",
+        price: 190000,
+        model: "5kW Grid-Tie String",
+      },
+      {
+        capacity: 6.6,
+        voltage: 400,
+        brand: "Huawei Single-Phase",
+        price: 230000,
+        model: "6.6kW Grid-Tie",
+      },
+      {
+        capacity: 10.0,
+        voltage: 400,
+        brand: "Huawei/Deye",
+        price: 375000,
+        model: "10kW Three-Phase",
+      },
+      {
+        capacity: 15.0,
+        voltage: 400,
+        brand: "Fronius/GoodWe",
+        price: 520000,
+        model: "15kW Commercial",
+      },
+      {
+        capacity: 27.0,
+        voltage: 400,
+        brand: "Fronius Eco",
+        price: 850000,
+        model: "27kW Industrial",
+      },
+    ],
+  };
+
+  // Market-Available Battery Configurations (Kenya Market)
+  const availableBatteries = [
+    {
+      capacity: 2.56,
+      voltage: 12,
+      type: "LiFePO4",
+      brand: "Generic",
+      price: 45000,
+      cycles: 6000,
+      ah: 200,
+    },
+    {
+      capacity: 5.12,
+      voltage: 24,
+      type: "LiFePO4",
+      brand: "Pylontech/BYD",
+      price: 140000,
+      cycles: 6000,
+      ah: 200,
+    },
+    {
+      capacity: 7.68,
+      voltage: 48,
+      type: "LiFePO4",
+      brand: "Pylontech US3000C",
+      price: 180000,
+      cycles: 6000,
+      ah: 150,
+    },
+    {
+      capacity: 10.24,
+      voltage: 48,
+      type: "LiFePO4",
+      brand: "Pylontech US5000",
+      price: 240000,
+      cycles: 6000,
+      ah: 200,
+    },
+    {
+      capacity: 15.36,
+      voltage: 48,
+      type: "LiFePO4",
+      brand: "Pylontech Force L2",
+      price: 350000,
+      cycles: 6000,
+      ah: 300,
+    },
+    {
+      capacity: 20.48,
+      voltage: 48,
+      type: "LiFePO4",
+      brand: "BYD Battery-Box Pro",
+      price: 450000,
+      cycles: 6000,
+      ah: 400,
+    },
+    {
+      capacity: 25.6,
+      voltage: 48,
+      type: "LiFePO4",
+      brand: "Hubble AM-5",
+      price: 520000,
+      cycles: 6000,
+      ah: 500,
+    },
+  ];
+
+  // 2024 Kenya Solar Market Pricing (Based on industry research and market analysis)
+  // Enhanced with comprehensive component library and system matrix
+  const systemPricing = {
+    // Component Price Library - Based on actual Kenyan market data
+    components: {
+      // Solar Panels
+      panel550W: {
+        cost: 20000,
+        unit: "piece",
+        description: "550W mono/bifacial panel",
+        source: "water equation solar",
+      },
+      panel400W: {
+        cost: 16000,
+        unit: "piece",
+        description: "400W panel (if smaller panels needed)",
+      },
+      panel300W: {
+        cost: 12000,
+        unit: "piece",
+        description: "300W panel (budget option)",
+      },
+
+      // Inverters
+      inverter3kWGridTie: {
+        cost: 108500,
+        unit: "piece",
+        description: "3kW grid-tie inverter (Solis/Growatt)",
+        source: "Citymall Communication",
+      },
+      inverter5kWHybrid: {
+        cost: 95000,
+        unit: "piece",
+        description: "5kW hybrid inverter (Growatt/Deye)",
+        source: "Solar Shop Africa",
+      },
+      inverter5kWOffGrid: {
+        cost: 57500,
+        unit: "piece",
+        description: "5kW off-grid/UPS inverter (Must/Felicity)",
+        source: "Solar Shop Africa",
+      },
+
+      // Battery Storage
+      battery48V100Ah: {
+        cost: 140000,
+        unit: "piece",
+        description: "48V 100Ah LiFePO₄ battery (5.12kWh)",
+        source: "SOLAR MAN POWER SOLUTIONS LTD",
+      },
+
+      // Electrical Components
+      combinerBox12Way: {
+        cost: 4900,
+        unit: "piece",
+        description: "12-way PV combiner box (IP-65)",
+        source: "solarstore.co.ke",
+      },
+      dcMCB32A: {
+        cost: 4000,
+        unit: "piece",
+        description: "DC MCB 32A / 550V (2-pole)",
+        source: "solarstore.co.ke",
+      },
+      dcIsolator40A: {
+        cost: 9500,
+        unit: "piece",
+        description: "DC isolator 40A / 1000V",
+        source: "kenya-solar-shop.co.ke",
+      },
+      mc4ConnectorPair: {
+        cost: 890,
+        unit: "pair",
+        description: "MC4 connector pair",
+        source: "Jumia Kenya",
+      },
+
+      // Cables & Wiring
+      pvCable6mm: {
+        cost: 17000,
+        unit: "100m roll",
+        description: "6mm² PV cable (100m roll)",
+        source: "Happy Solar Systems",
+      },
+      acCable6mm: {
+        cost: 150,
+        unit: "meter",
+        description: "6mm² AC cable (per m)",
+        source: "Jiji Kenya",
+      },
+
+      // Protection & Safety
+      acBreakerRCD: {
+        cost: 1600,
+        unit: "set",
+        description: "AC breaker + RCD set",
+        source: "Jumia Kenya",
+      },
+      dcSPD1000V: {
+        cost: 7000,
+        unit: "piece",
+        description: "DC SPD 1000V",
+        source: "Jumia Kenya",
+      },
+      acSPD230V: {
+        cost: 5000,
+        unit: "piece",
+        description: "AC SPD 230V",
+        source: "Jumia Kenya",
+      },
+
+      // Installation Materials
+      earthingKit: {
+        cost: 3500,
+        unit: "set",
+        description: "Earthing / grounding kit",
+        source: "Bestcare Facilities Management Services",
+      },
+      conduitsFittings: {
+        cost: 100,
+        unit: "meter",
+        description: "Conduits & fittings",
+        source: "Bestcare Facilities Management Services",
+      },
+    },
+
+    // Mounting & Structural Rates (per kW for 3.4kW array)
+    mounting: {
+      ironSheetRoof: {
+        cost: 15000,
+        description: "Al rails + GI L-feet",
+        source: "Bestcare Facilities Management Services",
+      },
+      tileRoof: {
+        cost: 20000,
+        description: "Tile hooks + Al rails",
+        source: "Bestcare Facilities Management Services",
+      },
+      concreteRoof: {
+        cost: 25000,
+        description: "Ballasted racks, no roof penetrations",
+        source: "Bestcare Facilities Management Services",
+      },
+      asbestosRoof: {
+        cost: 22000,
+        description: "Non-penetrating clamp rails",
+        source: "Bestcare Facilities Management Services",
+      },
+      groundMountStd: {
+        cost: 30000,
+        description: "GI frame + Al rails",
+        source: "Bestcare Facilities Management Services",
+      },
+      groundMountPremium: {
+        cost: 40000,
+        description: "Fully-fabricated GI structure",
+        source: "Bestcare Facilities Management Services",
+      },
+      solarCarport: {
+        cost: 65000,
+        description: "Fabricated GI car-port",
+        source: "Bestcare Facilities Management Services",
+      },
+    },
+
+    // Complete System Cost Matrix (3.4kW baseline, ex-VAT)
+    systemMatrix: {
+      gridTied: {
+        ironSheetRoof: {
+          residential: 339340,
+          commercial: 322373,
+          industrial: 373274,
+        },
+        tileRoof: {
+          residential: 356340,
+          commercial: 338523,
+          industrial: 391974,
+        },
+        concreteRoof: {
+          residential: 373340,
+          commercial: 354673,
+          industrial: 410674,
+        },
+        asbestosRoof: {
+          residential: 363140,
+          commercial: 344983,
+          industrial: 399454,
+        },
+        groundMountStd: {
+          residential: 390340,
+          commercial: 370823,
+          industrial: 429374,
+        },
+        groundMountPremium: {
+          residential: 424340,
+          commercial: 403123,
+          industrial: 466774,
+        },
+        solarCarport: {
+          residential: 509340,
+          commercial: 483873,
+          industrial: 560274,
+        },
+      },
+      hybrid: {
+        ironSheetRoof: {
+          residential: 885840,
+          commercial: 841548,
+          industrial: 974424,
+        },
+        tileRoof: {
+          residential: 902840,
+          commercial: 857698,
+          industrial: 991124,
+        },
+        concreteRoof: {
+          residential: 919840,
+          commercial: 873848,
+          industrial: 1007824,
+        },
+        asbestosRoof: {
+          residential: 909640,
+          commercial: 864158,
+          industrial: 1000604,
+        },
+        groundMountStd: {
+          residential: 936840,
+          commercial: 890998,
+          industrial: 1030524,
+        },
+        groundMountPremium: {
+          residential: 970840,
+          commercial: 922298,
+          industrial: 1067924,
+        },
+        solarCarport: {
+          residential: 1055840,
+          commercial: 1003048,
+          industrial: 1161424,
+        },
+      },
+      offGrid: {
+        ironSheetRoof: {
+          residential: 838340,
+          commercial: 796423,
+          industrial: 922174,
+        },
+        tileRoof: {
+          residential: 855340,
+          commercial: 812573,
+          industrial: 939874,
+        },
+        concreteRoof: {
+          residential: 872340,
+          commercial: 828723,
+          industrial: 957574,
+        },
+        asbestosRoof: {
+          residential: 862140,
+          commercial: 818033,
+          industrial: 948354,
+        },
+        groundMountStd: {
+          residential: 889340,
+          commercial: 844873,
+          industrial: 978274,
+        },
+        groundMountPremium: {
+          residential: 923340,
+          commercial: 877173,
+          industrial: 1015674,
+        },
+        solarCarport: {
+          residential: 1008340,
+          commercial: 957923,
+          industrial: 1109174,
+        },
+      },
+      backupOnly: {
+        noMount: {
+          residential: 351600,
+          commercial: 334020,
+          industrial: 386760,
+        },
+      },
+    },
+
+    // Solar panel costs - Current Kenya market rates (2024)
+    panelCostPerWatt: 22, // KES per watt (Current market rate for quality panels)
+    panelCostPerWattBudget: 20, // KES per watt (Budget options)
+    panelCostPerWattPremium: 25, // KES per watt (Premium brands)
+
+    // Inverter costs - scaled from 5kW MPPT at KES 55,000-137,000 range
+    inverterCostPer5kW: 96000, // KES per 5kW (average of 55k-137k range)
+    inverterCostPer5kWBudget: 55000, // KES per 5kW (budget MPPT)
+    inverterCostPer5kWPremium: 137000, // KES per 5kW (premium MPPT)
+    microInverterCost: 8500, // KES per micro-inverter unit
+
+    // Battery storage - scaled from 5.12kWh at KES 111,000-240,000 range
+    batteryCostPer5_12kWh: 175500, // KES per 5.12kWh (average of 111k-240k range)
+    batteryCostPer5_12kWhBudget: 111000, // KES per 5.12kWh (budget lithium)
+    batteryCostPer5_12kWhPremium: 240000, // KES per 5.12kWh (premium lithium)
+
+    // Labor and installation - skilled solar technicians
+    installationCostPerKw: 15000, // KES per kW (certified installation teams)
+    laborRatePerHour: 1200, // KES per hour (skilled solar technician)
+    laborRatePerDay: 2000, // KES per day per technician (8-hour workday)
+    laborMaterialPercentageCap: 0.1, // 10% of material costs maximum
+
+    // System warranties and lifespans
+    warrantyYears: 25, // Panel performance warranty (industry standard)
+    productWarrantyYears: 12, // Panel product warranty
+    inverterLifeYears: 10, // String inverter expected life
+    batteryLifeYears: 15, // LiFePO4 cycle life (6000+ cycles)
+
+    // Essential electrical components - accurate Kenya market rates (Ex-VAT)
+    stringCombinerBoxEmpty: 3700, // KES per combiner box (average of 2,500-4,900 for 4-12 way)
+    stringCombinerBoxAssembled: 14000, // KES per fully assembled combiner box
+    dcDisconnect: 9500, // KES per DC isolator/disconnect switch
+    acDisconnect: 3500, // KES per AC disconnect switch (keep existing)
+    // KPLC meter removed - only KPLC installs their meters
+    groundingKit: 3500, // KES per system (estimate 2,000-5,000 range average)
+    surgeProtector: 24500, // KES per SPD (average of 19,000-30,000 range)
+
+    // MPPT Charge Controllers (for battery systems)
+    mpptController: 18000, // KES per 60A MPPT controller
+    mpptControllerLarge: 25000, // KES per 100A MPPT controller
+
+    // Circuit breakers and protection - updated market rates
+    dcBreaker32A: 2200, // KES per DC breaker (32A, 2-pole, average 2,000-2,400)
+    acBreakerMCB: 825, // KES per AC MCB (average 250-1,400 range)
+    rcd: 3500, // KES per RCD (residual current device)
+
+    // Cabling and accessories - updated Kenya market rates
+    dcCabling: 120, // KES per meter (DC solar cable 4mm²)
+    acCabling: 150, // KES per meter (AC cable 6mm² - OPTIONAL for most clients)
+    solarDcCableKit: 7000, // KES per solar DC cable kit
+    mc4ConnectorsSuntree: 360, // KES per pair (Suntree brand)
+    mc4ConnectorsGeneric: 890, // KES per pair (generic)
+    mc4ConnectorsPair: 625, // KES per pair (average of 360-890)
+    cableChannels: 200, // KES per meter (average 100-300 range)
+    conduit: 200, // KES per meter (average 100-300 range)
+
+    // Individual mounting system material costs (actual Kenya market rates)
+    aluminumRail1_5m: 1200, // KES per 1.5m aluminum rail (each panel needs 2 rails)
+    tileHook: 180, // KES per stainless steel tile hook
+    metalClamp: 120, // KES per metal roof clamp
+    endClamp: 250, // KES per end clamp (market rate)
+    midClamp: 250, // KES per mid clamp (market rate)
+    ballastBlock: 450, // KES per concrete ballast block (4-5kg)
+    ballastTray: 800, // KES per ballast tray
+    windDeflector: 350, // KES per wind deflector
+    tiltLeg: 180, // KES per tilt leg
+    groundingLug: 120, // KES per aluminum grounding lug
+    webWasher: 45, // KES per WEB washer
+    flashing: 650, // KES per square meter of flashing
+    sealant: 1200, // KES per kg of sealant/butyl tape
+
+    // GI Structure costs (per panel basis)
+    giStructurePremium: 10000, // KES per panel (GI only structure minimum)
+    giStructureComposite: 8500, // KES per panel (GI + aluminum composite)
+
+    // Steel fabrication materials
+    mildSteelPlate: 240, // KES per kg (235-245 range average)
+    coldRolledTube: 280, // KES per kg (275-285 range average)
+    angleLines: 1000, // KES per piece (small angle lines 2"x2")
+    concreteSlab: 5000, // KES per concrete slab
+
+    // Steel structure specifications and fabrication
+    baseplate300x300x6mm: 1800, // KES per baseplate (300x300mm, 6mm thick)
+    fabricationCost: 150, // KES per kg fabrication cost
+    galvanizingCost: 80, // KES per kg galvanizing cost
+
+    // Battery system components
+    batteryInverter: 35000, // KES per 5kW hybrid inverter
+    bms: 12000, // KES per battery management system
+    batteryMonitoring: 8000, // KES per battery monitoring display
+
+    // Professional services - now included in labor costs
+    // systemDesign, electricalPermit, structuralAssessment, commissioningCost, epcManagement
+    // All combined into labor and installation costs
+
+    // Import duties and taxes (factored into component costs)
+    importDuty: 0.25, // 25% import duty on solar equipment
+    vat: 0.16, // 16% VAT on all goods and services
+
+    // Financing and overhead costs
+    dealerMargin: 0.2, // 20% dealer margin
+    // warrantyReserve removed - clients might not pay
+    contingency: 0.05, // 5% project contingency
+
+    // AC wiring option for clients who need it
+    acWiringOptional: true, // Most clients already have premises wired
+  };
+
+  // Advanced financial modeling parameters
+  const financialParameters = {
+    // Interest rates and financing
+    bankLoanRate: 0.145, // 14.5% typical Kenya bank rate
+    saccoBorrowingRate: 0.12, // 12% SACCO borrowing rate
+    microfinanceRate: 0.18, // 18% microfinance rate
+    leasingRate: 0.16, // 16% equipment leasing rate
+
+    // Tax incentives and rebates
+    investmentDeduction: 0.4, // 40% investment deduction
+    vatExemption: true, // VAT exemption on solar equipment
+    importDutyExemption: true, // Import duty exemption
+    corporateTaxRate: 0.3, // 30% corporate tax
+
+    // Insurance and maintenance
+    systemInsuranceRate: 0.003, // 0.3% of system value annually
+    maintenanceRate: 0.015, // 1.5% of system value annually
+    performanceGuarantee: 0.9, // 90% performance guarantee
+
+    // Economic factors
+    inflationRate: 0.065, // 6.5% Kenya inflation
+    discountRate: 0.1, // 10% discount rate for NPV
+    currencyAppreciationUSD: 0.03, // 3% annual KES appreciation vs USD
+
+    // Carbon credit potential
+    carbonCreditPrice: 1500, // KES per ton CO2 equivalent
+    carbonCreditEligibility: 0.7, // 70% of emissions qualify
+  };
+
+  // Professional system loss factors (IEC 61724 standard)
+  const systemLosses = {
+    soiling: 0.02, // 2% dust/dirt losses
+    shading: 0.03, // 3% partial shading (conservative)
+    mismatch: 0.02, // 2% module mismatch
+    ohmic: 0.02, // 2% wiring losses
+    inverter: 0.04, // 4% inverter efficiency loss
+    transformer: 0.01, // 1% transformer losses (if applicable)
+    availability: 0.003, // 0.3% system downtime
+    aging: 0.005, // 0.5% annual degradation (first year)
+  };
+
+  // Load profile patterns (based on Kenya residential usage studies)
+  const loadProfiles = {
+    residential: {
+      night: 0.6, // 22:00 - 06:00 (60% of average)
+      morning: 1.2, // 06:00 - 10:00 (120% of average)
+      day: 0.8, // 10:00 - 16:00 (80% of average)
+      evening: 1.4, // 16:00 - 22:00 (140% of average)
+    },
+    commercial: {
+      night: 0.3, // 22:00 - 06:00 (30% of average)
+      morning: 1.1, // 06:00 - 10:00 (110% of average)
+      day: 1.3, // 10:00 - 16:00 (130% of average)
+      evening: 0.9, // 16:00 - 22:00 (90% of average)
+    },
+    industrial: {
+      night: 0.8, // 22:00 - 06:00 (80% of average - continuous operations)
+      morning: 1.1, // 06:00 - 10:00 (110% of average)
+      day: 1.2, // 10:00 - 16:00 (120% of average)
+      evening: 1.0, // 16:00 - 22:00 (100% of average)
+    },
+  };
+
+  // Adjust usage pattern to maintain 100% total
+  function adjustUsagePattern(changedSlider) {
+    const dayUsage = parseInt(document.getElementById("dayUsage").value);
+    const eveningUsage = parseInt(document.getElementById("eveningUsage").value);
+    const nightUsage = parseInt(document.getElementById("nightUsage").value);
+    
+    let newDay = dayUsage;
+    let newEvening = eveningUsage;
+    let newNight = nightUsage;
+    
+    // Calculate the adjustment needed
+    const total = newDay + newEvening + newNight;
+    const excess = total - 100;
+    
+    if (excess !== 0) {
+      // Distribute the excess proportionally among the other two sliders
+      if (changedSlider === 'dayUsage') {
+        // Adjust evening and night proportionally
+        const otherTotal = newEvening + newNight;
+        if (otherTotal > 0) {
+          const adjustment = Math.max(1, 100 - newDay);
+          const eveningRatio = newEvening / otherTotal;
+          const nightRatio = newNight / otherTotal;
+          
+          newEvening = Math.round(adjustment * eveningRatio);
+          newNight = Math.round(adjustment * nightRatio);
+          
+          // Ensure we hit exactly 100%
+          const newTotal = newDay + newEvening + newNight;
+          if (newTotal !== 100) {
+            const diff = 100 - newTotal;
+            newEvening += diff;
+          }
+        }
+      } else if (changedSlider === 'eveningUsage') {
+        // Adjust day and night proportionally
+        const otherTotal = newDay + newNight;
+        if (otherTotal > 0) {
+          const adjustment = Math.max(1, 100 - newEvening);
+          const dayRatio = newDay / otherTotal;
+          const nightRatio = newNight / otherTotal;
+          
+          newDay = Math.round(adjustment * dayRatio);
+          newNight = Math.round(adjustment * nightRatio);
+          
+          // Ensure we hit exactly 100%
+          const newTotal = newDay + newEvening + newNight;
+          if (newTotal !== 100) {
+            const diff = 100 - newTotal;
+            newDay += diff;
+          }
+        }
+      } else if (changedSlider === 'nightUsage') {
+        // Adjust day and evening proportionally
+        const otherTotal = newDay + newEvening;
+        if (otherTotal > 0) {
+          const adjustment = Math.max(1, 100 - newNight);
+          const dayRatio = newDay / otherTotal;
+          const eveningRatio = newEvening / otherTotal;
+          
+          newDay = Math.round(adjustment * dayRatio);
+          newEvening = Math.round(adjustment * eveningRatio);
+          
+          // Ensure we hit exactly 100%
+          const newTotal = newDay + newEvening + newNight;
+          if (newTotal !== 100) {
+            const diff = 100 - newTotal;
+            newDay += diff;
+          }
+        }
+      }
+      
+      // Apply bounds and update sliders
+      newDay = Math.max(20, Math.min(80, newDay));
+      newEvening = Math.max(15, Math.min(60, newEvening));
+      newNight = Math.max(5, Math.min(30, newNight));
+      
+      // Update slider values if they changed
+      if (changedSlider !== 'dayUsage') {
+        document.getElementById("dayUsage").value = newDay;
+      }
+      if (changedSlider !== 'eveningUsage') {
+        document.getElementById("eveningUsage").value = newEvening;
+      }
+      if (changedSlider !== 'nightUsage') {
+        document.getElementById("nightUsage").value = newNight;
+      }
+    }
+    
+    // Update display values
+    document.getElementById("dayUsageValue").textContent = newDay + "%";
+    document.getElementById("eveningUsageValue").textContent = newEvening + "%";
+    document.getElementById("nightUsageValue").textContent = newNight + "%";
+    
+    // Update total display
+    const finalTotal = newDay + newEvening + newNight;
+    document.getElementById("usageTotal").textContent = finalTotal + "%";
+  }
+  
+  // Legacy function for backwards compatibility
+  function updateUsageDisplay() {
+    document.getElementById("dayUsageValue").textContent =
+      document.getElementById("dayUsage").value + "%";
+    document.getElementById("eveningUsageValue").textContent =
+      document.getElementById("eveningUsage").value + "%";
+    document.getElementById("nightUsageValue").textContent =
+      document.getElementById("nightUsage").value + "%";
+  }
+
+  // Update offset display
+  function updateOffsetDisplay() {
+    document.getElementById("offsetValue").textContent =
+      document.getElementById("offsetPercentage").value + "%";
+  }
+
+  // Calculate from monthly bill
+  function calculateFromBill() {
+    const monthlyBill =
+      parseFloat(document.getElementById("monthlyBill").value) || 0;
+    const location = document.getElementById("location").value;
+    const propertyType = document.getElementById("propertyType").value;
+    const costPerKwh =
+      solarData[location].costPerKwh[propertyType] ||
+      solarData[location].costPerKwh.residential;
+
+    const estimatedConsumption = monthlyBill / costPerKwh;
+    document.getElementById("monthlyConsumption").value =
+      Math.round(estimatedConsumption);
+
+    calculateSystem();
+  }
+
+  // Calculate from consumption
+  function calculateFromConsumption() {
+    const monthlyConsumption =
+      parseFloat(document.getElementById("monthlyConsumption").value) || 0;
+    const location = document.getElementById("location").value;
+    const propertyType = document.getElementById("propertyType").value;
+    const costPerKwh =
+      solarData[location].costPerKwh[propertyType] ||
+      solarData[location].costPerKwh.residential;
+
+    const estimatedBill = monthlyConsumption * costPerKwh;
+    document.getElementById("monthlyBill").value = Math.round(estimatedBill);
+
+    calculateSystem();
+  }
+
+  // Professional financial analysis functions
+  function calculateNPV(cashFlows, discountRate) {
+    return cashFlows.reduce((npv, cashFlow, year) => {
+      return npv + cashFlow / Math.pow(1 + discountRate, year);
+    }, 0);
+  }
+
+  function calculateIRR(cashFlows, initialGuess = 0.1) {
+    const maxIterations = 100;
+    const tolerance = 0.000001;
+    let rate = initialGuess;
+
+    for (let i = 0; i < maxIterations; i++) {
+      const npv = calculateNPV(cashFlows, rate);
+      const npvDerivative = cashFlows.reduce((sum, cashFlow, year) => {
+        return sum - (year * cashFlow) / Math.pow(1 + rate, year + 1);
+      }, 0);
+
+      const newRate = rate - npv / npvDerivative;
+      if (Math.abs(newRate - rate) < tolerance) return newRate;
+      rate = newRate;
+    }
+    return rate;
+  }
+
+  function calculateLCOE(
+    systemCost,
+    annualGeneration,
+    lifetime,
+    discountRate,
+    annualOMCost
+  ) {
+    const presentValueGeneration = Array.from(
+      { length: lifetime },
+      (_, year) => {
+        const degradedGeneration = annualGeneration * Math.pow(0.995, year); // 0.5% annual degradation
+        return degradedGeneration / Math.pow(1 + discountRate, year + 1);
+      }
+    ).reduce((sum, pv) => sum + pv, 0);
+
+    const presentValueCosts =
+      systemCost +
+      Array.from({ length: lifetime }, (_, year) => {
+        return annualOMCost / Math.pow(1 + discountRate, year + 1);
+      }).reduce((sum, pv) => sum + pv, 0);
+
+    return presentValueCosts / presentValueGeneration;
+  }
+
+  function performShadeAnalysis(roofArea, panelArea, latitude) {
+    // Simplified shade analysis based on latitude and panel spacing
+    const optimalTilt = Math.abs(latitude);
+    const rowSpacing =
+      panelArea * Math.sin((optimalTilt * Math.PI) / 180) * 2.5; // 2.5x panel height spacing
+    const effectiveArea = roofArea * 0.85; // 85% usable area accounting for obstructions
+    const shadeLossFactor = Math.max(
+      0.02,
+      Math.min(0.15, (roofArea - effectiveArea) / roofArea)
+    );
+
+    return {
+      effectiveArea: effectiveArea,
+      shadeLoss: shadeLossFactor,
+      optimalTilt: optimalTilt,
+      recommendedSpacing: rowSpacing,
+    };
+  }
+
+  // Smart inverter selection based on market availability
+  function selectOptimalInverter(systemType, requiredCapacity, peakLoad) {
+    const inverterCategory =
+      systemType === "grid_tied"
+        ? "gridTied"
+        : systemType === "hybrid"
+        ? "hybrid"
+        : "offGrid";
+
+    const availableOptions = availableInverters[inverterCategory];
+
+    // For grid-tied: size for DC capacity (90-110% of panel capacity)
+    // For hybrid: size for peak AC load + battery charging (120-150% of peak load)
+    // For off-grid: size for peak load with safety margin (150-200% of peak load)
+
+    let sizingFactor;
+    if (systemType === "grid_tied") {
+      sizingFactor = requiredCapacity; // Direct sizing for grid-tie
+    } else if (systemType === "hybrid") {
+      sizingFactor = Math.max(requiredCapacity * 0.9, peakLoad * 1.3); // Peak load + charging margin
+    } else if (systemType === "off_grid") {
+      sizingFactor = peakLoad * 1.6; // Higher safety margin for off-grid
+    } else {
+      // backup
+      sizingFactor = peakLoad * 1.4; // Backup sizing
+    }
+
+    // Find the smallest inverter that meets or exceeds requirements
+    const suitableInverters = availableOptions.filter(
+      (inv) => inv.capacity >= sizingFactor
+    );
+
+    if (suitableInverters.length === 0) {
+      // If no single inverter is large enough, recommend the largest available
+      return availableOptions[availableOptions.length - 1];
+    }
+
+    // Return the most cost-effective option (smallest suitable)
+    return suitableInverters[0];
+  }
+
+  // Smart battery selection based on market availability
+  function selectOptimalBattery(
+    requiredCapacityKWh,
+    systemVoltage,
+    autonomyHours
+  ) {
+    // Filter batteries compatible with system voltage
+    const compatibleBatteries = availableBatteries.filter((battery) => {
+      // Allow voltage flexibility for system design
+      return (
+        battery.voltage <= systemVoltage &&
+        battery.capacity <= requiredCapacityKWh * 1.5
+      );
+    });
+
+    if (compatibleBatteries.length === 0) {
+      return availableBatteries[1]; // Default to 5.12kWh option
+    }
+
+    // Find battery that meets capacity requirement with minimum oversizing
+    const suitableBatteries = compatibleBatteries.filter(
+      (battery) => battery.capacity >= requiredCapacityKWh * 0.8 // Allow 80% DOD
+    );
+
+    if (suitableBatteries.length === 0) {
+      // If none meet requirement, get closest larger option
+      return compatibleBatteries.reduce((prev, curr) =>
+        Math.abs(curr.capacity - requiredCapacityKWh) <
+        Math.abs(prev.capacity - requiredCapacityKWh)
+          ? curr
+          : prev
+      );
+    }
+
+    // Return most cost-effective suitable option
+    return suitableBatteries.reduce((prev, curr) =>
+      curr.price / curr.capacity < prev.price / prev.capacity ? curr : prev
+    );
+  }
+
+  // Enhanced load analysis based on usage patterns
+  function analyzeLoadProfile(
+    monthlyConsumption,
+    dayUsage,
+    eveningUsage,
+    nightUsage
+  ) {
+    const totalPercentage = dayUsage + eveningUsage + nightUsage;
+
+    // Normalize percentages if they don't add up to 100%
+    const normalizedDay = (dayUsage / totalPercentage) * 100;
+    const normalizedEvening = (eveningUsage / totalPercentage) * 100;
+    const normalizedNight = (nightUsage / totalPercentage) * 100;
+
+    const dailyConsumption = monthlyConsumption / 30;
+
+    // Calculate consumption by time period
+    const dayConsumption = dailyConsumption * (normalizedDay / 100);
+    const eveningConsumption = dailyConsumption * (normalizedEvening / 100);
+    const nightConsumption = dailyConsumption * (normalizedNight / 100);
+
+    // Estimate peak loads (assuming power factor and diversity)
+    const dayPeak = (dayConsumption / 8) * 1.5; // 8 hours, 1.5 diversity factor
+    const eveningPeak = (eveningConsumption / 6) * 2.0; // 6 hours, higher diversity
+    const nightPeak = (nightConsumption / 10) * 1.2; // 10 hours, lower diversity
+
+    const overallPeakLoad = Math.max(dayPeak, eveningPeak, nightPeak);
+
+    // Calculate self-consumption potential
+    const solarHours = 8; // Effective solar hours
+    const solarOverlapHours = 6; // Hours when solar and consumption overlap
+    const selfConsumptionPotential =
+      (dayConsumption * 0.8 + eveningConsumption * 0.3) / dailyConsumption;
+
+    return {
+      dailyConsumption,
+      dayConsumption,
+      eveningConsumption,
+      nightConsumption,
+      peakLoad: overallPeakLoad,
+      dayPeak,
+      eveningPeak,
+      nightPeak,
+      selfConsumptionPotential,
+      criticalLoad: Math.max(eveningPeak, nightPeak), // For battery sizing
+      autonomyRequirement: nightConsumption + eveningConsumption * 0.5, // Critical backup needs
+    };
+  }
+
+  // Enhanced calculation function with professional engineering standards
+  function calculateSystem() {
+    const monthlyConsumption =
+      parseFloat(document.getElementById("monthlyConsumption").value) || 0;
+    const offsetPercentage =
+      parseFloat(document.getElementById("offsetPercentage").value) || 100;
+    const location = document.getElementById("location").value;
+    const systemType = document.getElementById("systemType").value;
+    const propertyType = document.getElementById("propertyType").value;
+    const futureExpansion = document.getElementById("futureExpansion").checked;
+    const electricVehicle = document.getElementById("electricVehicle").checked;
+    const roofArea =
+      parseFloat(document.getElementById("roofArea").value) || 100;
+
+    // Get usage pattern inputs
+    const dayUsage =
+      parseFloat(document.getElementById("dayUsage").value) || 60;
+    const eveningUsage =
+      parseFloat(document.getElementById("eveningUsage").value) || 30;
+    const nightUsage =
+      parseFloat(document.getElementById("nightUsage").value) || 10;
+
+    const locationData = solarData[location];
+
+    // Step 1: Enhanced Load Analysis with Real Usage Patterns
+    const loadAnalysis = analyzeLoadProfile(
+      monthlyConsumption,
+      dayUsage,
+      eveningUsage,
+      nightUsage
+    );
+
+    // Apply offset percentage to the analysis
+    const targetConsumption = (monthlyConsumption * offsetPercentage) / 100;
+    const scalingFactor = targetConsumption / monthlyConsumption;
+
+    const scaledLoadAnalysis = {
+      ...loadAnalysis,
+      dailyConsumption: loadAnalysis.dailyConsumption * scalingFactor,
+      dayConsumption: loadAnalysis.dayConsumption * scalingFactor,
+      eveningConsumption: loadAnalysis.eveningConsumption * scalingFactor,
+      nightConsumption: loadAnalysis.nightConsumption * scalingFactor,
+      peakLoad: loadAnalysis.peakLoad * scalingFactor,
+      criticalLoad: loadAnalysis.criticalLoad * scalingFactor,
+      autonomyRequirement: loadAnalysis.autonomyRequirement * scalingFactor,
+    };
+
+    // Adjust for future needs with more precise factors
+    let adjustedConsumption = scaledLoadAnalysis.dailyConsumption;
+    let adjustedPeakLoad = scaledLoadAnalysis.peakLoad;
+
+    if (futureExpansion) {
+      adjustedConsumption *= 1.25; // 25% for expansion
+      adjustedPeakLoad *= 1.2; // 20% peak load increase
+    }
+    if (electricVehicle) {
+      adjustedConsumption += 12; // 12 kWh/day for EV (Kenya average)
+      adjustedPeakLoad += 7; // 7kW EV charging load
+    }
+
+    // Step 2: Temperature Derating (IEC 61215 standard)
+    const tempCoefficient = -0.004; // %/°C for crystalline silicon
+    const cellTempRise = 30; // NOCT approximation (°C above ambient)
+    const avgCellTemp = locationData.avgTemp + cellTempRise;
+    const tempDerating = 1 + tempCoefficient * (avgCellTemp - 25);
+
+    // Step 3: Calculate Total System Losses
+    const locationSystemLosses = {
+      ...systemLosses,
+      soiling: locationData.dustingFactor, // Location-specific soiling
+    };
+
+    const totalSystemLosses = Object.values(locationSystemLosses).reduce(
+      (sum, loss) => sum + loss,
+      0
+    );
+    const systemEfficiency = (1 - totalSystemLosses) * tempDerating;
+
+    // Step 4: Enhanced Solar Resource Calculation
+    const baseSolarHours = locationData.solarHours;
+
+    // Adjust for seasonal variation (worst-case month sizing)
+    const adjustedSolarHours =
+      baseSolarHours * (1 - locationData.seasonalVariation);
+
+    // Altitude boost factor (thinner atmosphere = higher irradiance)
+    const altitudeBoost = 1 + (locationData.altitude / 1000) * 0.001; // 0.1% per 100m
+    const finalSolarHours = adjustedSolarHours * altitudeBoost;
+
+    // Professional shade analysis
+    const panelArea = 2.278 * 1.134; // m² per panel
+    const shadeAnalysis = performShadeAnalysis(
+      roofArea,
+      panelArea,
+      locationData.latitude
+    );
+
+    // Apply shade losses to system efficiency
+    const shadeAdjustedEfficiency =
+      systemEfficiency * (1 - shadeAnalysis.shadeLoss);
+
+    // Step 5: Enhanced System Capacity Calculation with Professional Standards
+    const requiredCapacity =
+      adjustedConsumption / (finalSolarHours * shadeAdjustedEfficiency);
+
+    // Check roof area constraint with improved space factor
+    const spacePerKw = propertyType === "industrial" ? 5 : 6; // m² per kW
+    const maxCapacityByRoof = roofArea / spacePerKw;
+
+    const finalCapacity = Math.min(requiredCapacity, maxCapacityByRoof);
+
+    // Round to standard system sizes
+    const standardSizes = [
+      1, 1.5, 2, 3, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50,
+    ];
+    const recommendedCapacity =
+      standardSizes.find((size) => size >= finalCapacity) ||
+      Math.ceil(finalCapacity);
+
+    // Professional inverter selection based on market availability
+    const selectedInverter = selectOptimalInverter(
+      systemType,
+      recommendedCapacity,
+      adjustedPeakLoad
+    );
+    const finalInverterCapacity = selectedInverter.capacity;
+
+    // Step 6: Enhanced Energy Generation Calculation
+    const monthlyGeneration =
+      recommendedCapacity * finalSolarHours * 30 * systemEfficiency;
+
+    // Account for inverter clipping in high irradiance periods
+    const clippingFactor = Math.min(
+      1,
+      finalInverterCapacity / recommendedCapacity
+    );
+    const adjustedGeneration = monthlyGeneration * clippingFactor;
+
+    // Step 7: Financial Analysis with realistic Kenya tariffs
+    const costPerKwh =
+      locationData.costPerKwh[propertyType] ||
+      locationData.costPerKwh.residential;
+
+    // Calculate self-consumption vs grid export using actual load analysis
+    const selfConsumptionRatio = scaledLoadAnalysis.selfConsumptionPotential;
+    const feedInTariff = propertyType === "industrial" ? costPerKwh * 0.4 : 0; // Only industrial gets feed-in
+
+    const monthlySavings =
+      adjustedGeneration * selfConsumptionRatio * costPerKwh +
+      adjustedGeneration * (1 - selfConsumptionRatio) * feedInTariff;
+
+    const annualSavings = monthlySavings * 12;
+
+    // Step 8: Enhanced System Costing with realistic components
+    const roofType = document.getElementById("roofType").value;
+    const mountingSystem = mountingSystems[roofType] || mountingSystems.tiles;
+
+    // Calculate number of panels needed (540W-595W range)
+    const panelWattage = 570; // Average wattage in range
+    const panelCount = Math.ceil((recommendedCapacity * 1000) / panelWattage);
+    const actualSystemCapacity = (panelCount * panelWattage) / 1000; // Actual kW based on panel count
+
+    // Professional panel costs with quality tiers
+    const panelCost =
+      panelCount * panelWattage * systemPricing.panelCostPerWatt;
+    const panelWeight = panelCount * panelSpecs.standard.weight; // Total panel weight
+
+    // Calculate realistic mounting costs based on actual material quantities
+    const mountingCost = calculateMountingSystemCost(
+      mountingSystem,
+      panelCount
+    );
+    const mountingWeight = panelCount * mountingSystem.weightPerPanel;
+    const totalSystemWeight = panelWeight + mountingWeight;
+
+    // Professional inverter costs (market-based pricing)
+    const inverterCost = selectedInverter.price;
+
+    // Enhanced battery sizing with market-available options
+    let batteryCost = 0;
+    let batteryCapacity = 0;
+    let selectedBattery = null;
+
+    if (
+      systemType === "hybrid" ||
+      systemType === "off_grid" ||
+      systemType === "backup"
+    ) {
+      // Calculate required battery capacity based on actual load analysis
+      const autonomyHours =
+        systemType === "off_grid" ? 24 : systemType === "backup" ? 8 : 12; // hours of backup
+
+      // For backup systems, size for critical loads only
+      const criticalLoadForBattery =
+        systemType === "backup"
+          ? scaledLoadAnalysis.criticalLoad
+          : scaledLoadAnalysis.autonomyRequirement;
+
+      const requiredBatteryCapacity =
+        (criticalLoadForBattery * autonomyHours) / 0.8; // 80% DOD limit
+
+      // Select optimal battery from market options
+      selectedBattery = selectOptimalBattery(
+        requiredBatteryCapacity,
+        selectedInverter.voltage,
+        autonomyHours
+      );
+      batteryCapacity = selectedBattery.capacity;
+      batteryCost = selectedBattery.price;
+
+      // For backup-only systems, reduce solar array size significantly
+      if (systemType === "backup") {
+        // Backup systems need minimal solar - just enough to maintain batteries
+        recommendedCapacity = Math.min(
+          recommendedCapacity,
+          batteryCapacity * 0.3
+        );
+      }
+    }
+
+    // Essential electrical components with accurate Kenya market rates
+    const combinerBoxCost =
+      Math.ceil(panelCount / 12) * systemPricing.stringCombinerBoxAssembled; // 1 per 12 panels
+    const disconnectCosts =
+      systemPricing.dcDisconnect + systemPricing.acDisconnect;
+    // No KPLC meter cost - only KPLC installs meters
+    const groundingCost = systemPricing.groundingKit; // Per system, not per panel
+    const surgeProtectionCost = systemPricing.surgeProtector; // DC surge protection
+
+    // Circuit breakers and protection (essential components)
+    const dcBreakerCount = Math.ceil(panelCount / 6); // 1 DC breaker per string (6 panels)
+    const dcBreakerCost = dcBreakerCount * systemPricing.dcBreaker32A;
+    const acBreakerCost = systemPricing.acBreakerMCB; // 1 AC breaker
+    const rcdCost = systemPricing.rcd; // Residual current device
+
+    // MPPT Controllers (for battery systems)
+    let mpptCost = 0;
+    if (systemType === "hybrid" || systemType === "off_grid") {
+      const mpptCount = Math.ceil(actualSystemCapacity / 5); // 1 MPPT per 5kW
+      mpptCost =
+        mpptCount *
+        (actualSystemCapacity > 5
+          ? systemPricing.mpptControllerLarge
+          : systemPricing.mpptController);
+    }
+
+    // MC4 connectors and DC cable kit (essential for panel connections)
+    const mc4ConnectorCost = panelCount * 2 * systemPricing.mc4ConnectorsPair; // 2 pairs per panel
+    const dcCableKitCost = systemPricing.solarDcCableKit; // Solar DC cable kit per system
+
+    // Professional cabling and conduit costs (realistic estimates)
+    const dcCablingLength = actualSystemCapacity * 15; // 15m DC per kW
+    const acCablingLength = actualSystemCapacity * 25; // 25m AC per kW
+    const conduitLength = (dcCablingLength + acCablingLength) * 0.8; // 80% in conduit
+
+    const dcCablingCost = dcCablingLength * systemPricing.dcCabling;
+    // AC wiring optional for most clients (premises already wired)
+    const acCablingCost = systemPricing.acWiringOptional
+      ? 0
+      : acCablingLength * systemPricing.acCabling;
+    const conduitCost = conduitLength * systemPricing.conduit;
+    const cableChannelCost =
+      dcCablingLength * 0.8 * systemPricing.cableChannels; // 80% DC cabling in channels
+
+    // Professional services now included in labor costs (simplified)
+    // Calculate labor cost: 10% of materials OR KES 2000/day per technician, whichever higher
+
+    // Ensure all costs are properly calculated (no undefined/NaN values)
+    const safePanelCost = panelCost || 0;
+    const safeMountingCost = mountingCost || 0;
+    const safeInverterCost = inverterCost || 0;
+    const safeBatteryCost = batteryCost || 0;
+    const safeCombinerBoxCost = combinerBoxCost || 0;
+    const safeDisconnectCosts = disconnectCosts || 0;
+    const safeGroundingCost = groundingCost || 0;
+    const safeSurgeProtectionCost = surgeProtectionCost || 0;
+    const safeDcBreakerCost = dcBreakerCost || 0;
+    const safeAcBreakerCost = acBreakerCost || 0;
+    const safeRcdCost = rcdCost || 0;
+    const safeMpptCost = mpptCost || 0;
+    const safeMc4ConnectorCost = mc4ConnectorCost || 0;
+    const safeDcCableKitCost = dcCableKitCost || 0;
+    const safeDcCablingCost = dcCablingCost || 0;
+    const safeAcCablingCost = acCablingCost || 0;
+    const safeConduitCost = conduitCost || 0;
+    const safeCableChannelCost = cableChannelCost || 0;
+
+    const materialsCost =
+      safePanelCost +
+      safeMountingCost +
+      safeInverterCost +
+      safeBatteryCost +
+      safeCombinerBoxCost +
+      safeDisconnectCosts +
+      safeGroundingCost +
+      safeSurgeProtectionCost +
+      safeDcBreakerCost +
+      safeAcBreakerCost +
+      safeRcdCost +
+      safeMpptCost +
+      safeMc4ConnectorCost +
+      safeDcCableKitCost +
+      safeDcCablingCost +
+      safeAcCablingCost +
+      safeConduitCost +
+      safeCableChannelCost;
+
+    // Calculate labor based on 10% of materials OR KES 2000/day per technician
+    const materialBasedLabor = materialsCost * 0.1; // 10% of materials
+
+    const totalLaborHours = panelCount * mountingSystem.laborHours;
+    const totalLaborDays = Math.max(1, Math.ceil(totalLaborHours / 8)); // Minimum 1 day
+    const numberOfTechnicians = Math.max(1, Math.ceil(panelCount / 10)); // 1 technician per 10 panels minimum
+    const dailyBasedLabor = numberOfTechnicians * totalLaborDays * 2000; // KES 2000 per day per technician
+
+    // Use whichever is higher
+    const laborCost = Math.max(materialBasedLabor, dailyBasedLabor);
+
+    // Calculate comprehensive equipment costs
+    const equipmentCost =
+      panelCost +
+      mountingCost +
+      inverterCost +
+      batteryCost +
+      combinerBoxCost +
+      disconnectCosts +
+      groundingCost +
+      surgeProtectionCost +
+      dcBreakerCost +
+      acBreakerCost +
+      rcdCost +
+      mpptCost +
+      mc4ConnectorCost +
+      dcCableKitCost;
+
+    const installationCost =
+      dcCablingCost +
+      acCablingCost +
+      conduitCost +
+      cableChannelCost +
+      laborCost;
+
+    // Professional services now included in labor costs
+    const subtotalCost = equipmentCost + installationCost;
+
+    // Apply professional margins and contingencies (warranty reserve removed)
+    const contingencyCost = subtotalCost * systemPricing.contingency;
+
+    const totalSystemCost = subtotalCost + contingencyCost;
+
+    // Professional Financial Analysis with Advanced Metrics
+    const projectLifetime = 25; // years
+    const annualDegradation = 0.005; // 0.5% per year
+    const electricityEscalation = locationData.utilityTariffEscalation || 0.085; // 8.5% annual increase
+
+    // Calculate annual O&M costs
+    const annualInsurance =
+      totalSystemCost * financialParameters.systemInsuranceRate;
+    const annualMaintenance =
+      totalSystemCost * financialParameters.maintenanceRate;
+    const annualOMCosts = annualInsurance + annualMaintenance;
+
+    // Enhanced payback calculation with escalating electricity rates
+    const paybackPeriod = calculatePaybackWithEscalation(
+      totalSystemCost,
+      annualSavings,
+      electricityEscalation
+    );
+
+    // 25-year lifetime analysis with degradation
+    const lifetimeSavings = calculateLifetimeSavings(
+      annualSavings,
+      totalSystemCost,
+      projectLifetime,
+      electricityEscalation,
+      annualDegradation
+    );
+
+    // Professional financial metrics
+    const annualGeneration = adjustedGeneration * 12;
+    const lcoe = calculateLCOE(
+      totalSystemCost,
+      annualGeneration,
+      projectLifetime,
+      financialParameters.discountRate,
+      annualOMCosts
+    );
+
+    // Generate cash flows for NPV and IRR calculations
+    const cashFlows = [-totalSystemCost]; // Initial investment
+    for (let year = 1; year <= projectLifetime; year++) {
+      const degradedGeneration =
+        annualGeneration * Math.pow(1 - annualDegradation, year - 1);
+      const escalatedSavings =
+        annualSavings * Math.pow(1 + electricityEscalation, year - 1);
+      const yearlyOMCosts =
+        annualOMCosts *
+        Math.pow(1 + financialParameters.inflationRate, year - 1);
+      const netCashFlow = escalatedSavings - yearlyOMCosts;
+      cashFlows.push(netCashFlow);
+    }
+
+    const npv = calculateNPV(cashFlows, financialParameters.discountRate);
+    const irr = calculateIRR(cashFlows);
+
+    // Carbon credit potential
+    const annualCO2Reduction = (annualGeneration * 0.5) / 1000; // tons CO2 per year
+    const carbonCredits =
+      annualCO2Reduction *
+      financialParameters.carbonCreditPrice *
+      financialParameters.carbonCreditEligibility;
+
+    // Performance ratio calculation (IEC 61724)
+    const performanceRatio =
+      (shadeAdjustedEfficiency / panelSpecs.standard.efficiency) * 100;
+
+    // Update displays with comprehensive professional analysis
+    updateResults({
+      capacity: actualSystemCapacity,
+      recommendedCapacity: recommendedCapacity,
+      inverterCapacity: finalInverterCapacity,
+      panelCount: panelCount,
+      panelWattage: panelWattage,
+      monthlyGeneration: adjustedGeneration,
+      annualGeneration: annualGeneration,
+      monthlySavings: monthlySavings,
+      annualSavings: annualSavings,
+      paybackPeriod: paybackPeriod,
+      lifetimeSavings: lifetimeSavings,
+      panelCost: panelCost,
+      mountingCost: mountingCost,
+      inverterCost: inverterCost,
+      batteryCost: batteryCost,
+      batteryCapacity: batteryCapacity,
+      totalSystemCost: totalSystemCost,
+      systemType: systemType,
+      systemEfficiency: systemEfficiency,
+      shadeAdjustedEfficiency: shadeAdjustedEfficiency,
+      tempDerating: tempDerating,
+      selfConsumptionRatio: selfConsumptionRatio,
+      panelWeight: panelWeight,
+      totalSystemWeight: totalSystemWeight,
+      mountingSystem: mountingSystem,
+      // Market-selected components
+      selectedInverter: selectedInverter,
+      selectedBattery: selectedBattery,
+      // Load analysis results
+      loadAnalysis: scaledLoadAnalysis,
+      peakLoad: adjustedPeakLoad,
+      // Advanced financial metrics
+      npv: npv,
+      irr: irr,
+      lcoe: lcoe,
+      annualOMCosts: annualOMCosts,
+      carbonCredits: carbonCredits,
+      performanceRatio: performanceRatio,
+      // Shade analysis results
+      shadeAnalysis: shadeAnalysis,
+      // Environmental impact
+      annualCO2Reduction: annualCO2Reduction,
+      // Professional parameters
+      electricityEscalation: electricityEscalation,
+      projectLifetime: projectLifetime,
+      costBreakdown: {
+        equipment: equipmentCost,
+        installation: installationCost,
+        contingency: contingencyCost,
+        // Detailed breakdown
+        panels: panelCost,
+        mounting: mountingCost,
+        inverter: inverterCost,
+        battery: batteryCost,
+        electrical:
+          combinerBoxCost +
+          disconnectCosts +
+          groundingCost +
+          surgeProtectionCost +
+          dcBreakerCost +
+          acBreakerCost +
+          rcdCost +
+          mpptCost,
+        cabling:
+          dcCablingCost +
+          acCablingCost +
+          conduitCost +
+          cableChannelCost +
+          mc4ConnectorCost +
+          dcCableKitCost,
+        labor: laborCost,
+        // Individual component costs for detailed breakdown
+        combinerBox: combinerBoxCost,
+        dcDisconnect: systemPricing.dcDisconnect,
+        acDisconnect: systemPricing.acDisconnect,
+        grounding: groundingCost,
+        surgeProtection: surgeProtectionCost,
+        dcBreakers: dcBreakerCost,
+        acBreaker: acBreakerCost,
+        rcd: rcdCost,
+        mppt: mpptCost,
+        mc4Connectors: mc4ConnectorCost,
+        dcCableKit: dcCableKitCost,
+        dcCabling: dcCablingCost,
+        acCabling: acCablingCost,
+        conduits: conduitCost,
+        cableChannels: cableChannelCost,
+      },
+    });
+  }
+
+  // Calculate realistic mounting system costs based on material quantities
+  function calculateMountingSystemCost(mountingSystem, panelCount) {
+    if (!mountingSystem.quantities) {
+      // Fallback to old method if no quantities defined
+      return panelCount * mountingSystem.costPerPanel;
+    }
+
+    let totalCost = 0;
+    const quantities = mountingSystem.quantities;
+
+    // Calculate costs based on actual material quantities
+    Object.entries(quantities).forEach(([component, qtyPerPanel]) => {
+      const totalQty = component.includes("PerSystem")
+        ? qtyPerPanel
+        : qtyPerPanel * panelCount;
+
+      switch (component) {
+        case "railsPerPanel":
+          totalCost += totalQty * systemPricing.aluminumRail1_5m; // 2 x 1.5m rails per panel
+          break;
+        case "tileHooksPerPanel":
+          totalCost += totalQty * systemPricing.tileHook;
+          break;
+        case "endClampsFor6Panels":
+          totalCost += qtyPerPanel * systemPricing.endClamp; // Fixed quantity for 6 panels
+          break;
+        case "midClampsFor6Panels":
+          totalCost += qtyPerPanel * systemPricing.midClamp; // Fixed quantity for 6 panels
+          break;
+        case "clampsPerPanel":
+          totalCost += totalQty * systemPricing.endClamp; // Average of end/mid clamp cost
+          break;
+        case "metalClampsPerPanel":
+          totalCost += totalQty * systemPricing.metalClamp;
+          break;
+        case "ballastBlocksPerPanel":
+          totalCost += totalQty * systemPricing.ballastBlock;
+          break;
+        case "ballastTraysPerPanel":
+          totalCost += totalQty * systemPricing.ballastTray;
+          break;
+        case "windDeflectorsPerPanel":
+          totalCost += totalQty * systemPricing.windDeflector;
+          break;
+        case "tiltLegsPerPanel":
+          totalCost += totalQty * systemPricing.tiltLeg;
+          break;
+        case "groundingLugsPerPanel":
+          totalCost += totalQty * systemPricing.groundingLug;
+          break;
+        case "webWashersPerPanel":
+          totalCost += totalQty * systemPricing.webWasher;
+          break;
+        case "flashingPerPanel":
+          totalCost += totalQty * systemPricing.flashing;
+          break;
+        case "sealantPerPanel":
+          totalCost += totalQty * systemPricing.sealant;
+          break;
+        case "steelPostsPerPanel":
+          totalCost += totalQty * systemPricing.steelPost;
+          break;
+        case "anchorBoltsPerPanel":
+          totalCost += totalQty * systemPricing.anchorBolt;
+          break;
+        case "concreteSlabsPerPanel":
+          totalCost += totalQty * systemPricing.concreteSlab; // KES 5,000 per slab
+          break;
+        case "concreteM3PerPanel":
+          totalCost += totalQty * systemPricing.concrete;
+          break;
+        case "rebarKgPerPanel":
+          totalCost += totalQty * systemPricing.rebar;
+          break;
+        case "baseplatesPerPanel":
+          totalCost += totalQty * systemPricing.baseplate300x300x6mm;
+          break;
+        case "giStructureFabrication":
+          totalCost += totalQty * systemPricing.fabricationCost;
+          break;
+        case "groundingRodsPerSystem":
+          totalCost += totalQty * 2500; // KES per grounding rod
+          break;
+        case "washersAndNutsPerPanel":
+          totalCost += totalQty * 25; // KES per washer/nut set
+          break;
+        case "specializedClampsPerPanel":
+          totalCost += totalQty * 250; // KES per specialized clamp
+          break;
+        case "safetyKitPerPanel":
+          totalCost += totalQty * 15000; // KES per safety kit allocation
+          break;
+        case "protectiveGearPerPanel":
+          totalCost += totalQty * 8000; // KES per protective gear allocation
+          break;
+        case "trackerReadyComponents":
+          totalCost += totalQty * 1500; // KES per tracker-ready component
+          break;
+      }
+    });
+
+    return totalCost;
+  }
+
+  // Helper function to calculate self-consumption ratio
+  function calculateSelfConsumption(
+    monthlyGeneration,
+    monthlyConsumption,
+    loadProfile
+  ) {
+    // Simplified self-consumption calculation based on load profile
+    // Day-time generation vs day-time consumption
+    const dayGeneration = monthlyGeneration * 0.8; // 80% generated during day
+    const dayConsumption =
+      (monthlyConsumption * (loadProfile.morning + loadProfile.day)) / 4;
+
+    return Math.min(1, dayConsumption / dayGeneration);
+  }
+
+  // Helper function for payback calculation with escalating rates
+  function calculatePaybackWithEscalation(
+    systemCost,
+    initialAnnualSavings,
+    escalationRate
+  ) {
+    let cumulativeSavings = 0;
+    let year = 0;
+
+    while (cumulativeSavings < systemCost && year < 30) {
+      year++;
+      const yearSavings =
+        initialAnnualSavings * Math.pow(1 + escalationRate, year - 1);
+      cumulativeSavings += yearSavings;
+    }
+
+    return year;
+  }
+
+  // Helper function for lifetime savings calculation
+  function calculateLifetimeSavings(
+    initialAnnualSavings,
+    systemCost,
+    years,
+    escalationRate,
+    degradationRate
+  ) {
+    let totalSavings = 0;
+
+    for (let year = 1; year <= years; year++) {
+      const escalatedSavings =
+        initialAnnualSavings * Math.pow(1 + escalationRate, year - 1);
+      const degradedSavings =
+        escalatedSavings * Math.pow(1 - degradationRate, year - 1);
+      totalSavings += degradedSavings;
+    }
+
+    return totalSavings - systemCost;
+  }
+
+  // Update result displays
+  function updateResults(results) {
+    document.getElementById("recommendedCapacity").textContent =
+      results.capacity.toFixed(1) + " kW";
+    document.getElementById("monthlyGeneration").textContent =
+      Math.round(results.monthlyGeneration) + " kWh";
+    document.getElementById("monthlySavings").textContent =
+      "KES " + Math.round(results.monthlySavings).toLocaleString();
+    document.getElementById("annualSavings").textContent =
+      "KES " + Math.round(results.annualSavings).toLocaleString();
+    document.getElementById("paybackPeriod").textContent =
+      results.paybackPeriod.toFixed(1) + " years";
+    document.getElementById("lifetimeSavings").textContent =
+      "KES " + Math.round(results.lifetimeSavings).toLocaleString();
+
+    // Update performance details
+    if (document.getElementById("systemEfficiency")) {
+      document.getElementById("systemEfficiency").textContent =
+        (results.systemEfficiency * 100).toFixed(1) + "%";
+    }
+    if (document.getElementById("tempDerating")) {
+      document.getElementById("tempDerating").textContent =
+        (results.tempDerating * 100).toFixed(1) + "%";
+    }
+    if (document.getElementById("selfConsumption")) {
+      document.getElementById("selfConsumption").textContent =
+        (results.selfConsumptionRatio * 100).toFixed(0) + "%";
+    }
+
+    // Update component costs with realistic specifications
+    document.getElementById(
+      "panelSpecs"
+    ).textContent = `${results.panelCount} x ${results.panelWattage}W ${panelSpecs.standard.manufacturer}`;
+    document.getElementById("panelCost").textContent =
+      "KES " + Math.round(results.panelCost).toLocaleString();
+
+    // Display market-selected inverter information
+    if (results.selectedInverter) {
+      document.getElementById(
+        "inverterSpecs"
+      ).textContent = `${results.selectedInverter.brand} ${results.selectedInverter.model}`;
+    } else {
+      document.getElementById(
+        "inverterSpecs"
+      ).textContent = `${results.inverterCapacity.toFixed(
+        1
+      )}kW String Inverter`;
+    }
+    document.getElementById("inverterCost").textContent =
+      "KES " + Math.round(results.inverterCost).toLocaleString();
+
+    const batteryComponent = document.getElementById("batteryComponent");
+    if (
+      results.systemType === "hybrid" ||
+      results.systemType === "off_grid" ||
+      results.systemType === "backup"
+    ) {
+      batteryComponent.style.display = "block";
+
+      // Display market-selected battery information
+      if (results.selectedBattery) {
+        document.getElementById(
+          "batterySpecs"
+        ).textContent = `${results.selectedBattery.brand} ${results.selectedBattery.capacity}kWh ${results.selectedBattery.type}`;
+      } else {
+        document.getElementById(
+          "batterySpecs"
+        ).textContent = `${results.batteryCapacity}kWh Lithium-ion`;
+      }
+
+      document.getElementById("batteryCost").textContent =
+        "KES " + Math.round(results.batteryCost).toLocaleString();
+    } else {
+      batteryComponent.style.display = "none";
+    }
+
+    // Enhanced mounting system cost display with detailed specifications
+    if (document.getElementById("mountingCost")) {
+      document.getElementById("mountingCost").textContent =
+        "KES " + Math.round(results.mountingCost).toLocaleString();
+      document.getElementById("mountingSpecs").textContent =
+        results.mountingSystem.name;
+
+      // Enhanced mounting system details with professional specifications
+      if (document.getElementById("mountingDetails")) {
+        let detailsHtml = '<div class="mt-2"><small class="text-muted">';
+
+        // Add only relevant components for the selected installation type
+        detailsHtml += "<strong>Included Components:</strong><br>";
+        results.mountingSystem.components.forEach((component) => {
+          detailsHtml += `• ${component}<br>`;
+        });
+
+        // Add specific materials specification for the installation type
+        if (results.mountingSystem.materials) {
+          detailsHtml +=
+            "<br><strong>Professional Materials Specification:</strong><br>";
+          Object.entries(results.mountingSystem.materials).forEach(
+            ([key, value]) => {
+              const formattedKey = key
+                .replace(/([A-Z])/g, " $1")
+                .replace(/^./, (str) => str.toUpperCase());
+              detailsHtml += `• <strong>${formattedKey}:</strong> ${value}<br>`;
+            }
+          );
+        }
+
+        // Add detailed quantities for the specific installation type
+        if (results.mountingSystem.quantities) {
+          detailsHtml +=
+            "<br><strong>Component Quantities (Total System):</strong><br>";
+          Object.entries(results.mountingSystem.quantities).forEach(
+            ([key, value]) => {
+              const formattedKey = key
+                .replace(/([A-Z])/g, " $1")
+                .replace(/^./, (str) => str.toUpperCase());
+              const totalQuantity = key.includes("PerSystem")
+                ? value
+                : value * results.panelCount;
+              detailsHtml += `• ${formattedKey}: ${totalQuantity}<br>`;
+            }
+          );
+        }
+
+        // Add installation-specific notes
+        const roofType = document.getElementById("roofType").value;
+        if (roofType.includes("ground")) {
+          detailsHtml +=
+            "<br><strong>Ground Mount Specifications:</strong><br>";
+          detailsHtml += "• Foundation depth: 1.2m minimum<br>";
+          detailsHtml += "• Soil bearing capacity assessment required<br>";
+          detailsHtml += "• Wind load rating: 150 km/h<br>";
+          detailsHtml += "• Tilt angle: 15° optimal for Kenya<br>";
+          if (results.mountingSystem.foundationDetails) {
+            const foundations = results.mountingSystem.foundationDetails;
+            detailsHtml += `• Total concrete required: ${(
+              foundations.concreteCubicMeters * foundations.foundationCount
+            ).toFixed(1)}m³<br>`;
+            detailsHtml += `• Total steel structure: ${(
+              foundations.steelKg * results.panelCount
+            ).toFixed(0)}kg<br>`;
+          }
+        } else {
+          detailsHtml += "<br><strong>Roof Mount Specifications:</strong><br>";
+          detailsHtml += "• Structural load analysis included<br>";
+          detailsHtml += "• Weather-sealed mounting points<br>";
+          detailsHtml += "• 25-year mounting system warranty<br>";
+          if (roofType === "concrete_roof") {
+            detailsHtml += "• No roof penetration required<br>";
+            detailsHtml += `• Total ballast weight: ${(
+              35 * results.panelCount
+            ).toFixed(0)}kg<br>`;
+          } else if (roofType === "asbestos") {
+            detailsHtml += "• Non-penetrating mounting system<br>";
+            detailsHtml += "• Safety protocols included<br>";
+          }
+        }
+
+        detailsHtml += "</small></div>";
+        document.getElementById("mountingDetails").innerHTML = detailsHtml;
+      }
+    }
+
+    document.getElementById("installationCost").textContent =
+      "KES " + Math.round(results.costBreakdown.labor || 0).toLocaleString();
+    document.getElementById("totalSystemCost").textContent =
+      "KES " + Math.round(results.totalSystemCost).toLocaleString();
+
+    // Professional Financial Metrics
+    if (document.getElementById("npvValue")) {
+      document.getElementById("npvValue").textContent =
+        "KES " + Math.round(results.npv || 0).toLocaleString();
+    }
+    if (document.getElementById("irrValue")) {
+      document.getElementById("irrValue").textContent =
+        ((results.irr || 0) * 100).toFixed(1) + "%";
+    }
+    if (document.getElementById("lcoeValue")) {
+      document.getElementById("lcoeValue").textContent =
+        "KES " + (results.lcoe || 0).toFixed(2) + "/kWh";
+    }
+    if (document.getElementById("performanceRatio")) {
+      document.getElementById("performanceRatio").textContent =
+        (results.performanceRatio || 0).toFixed(1) + "%";
+    }
+    if (document.getElementById("omCosts")) {
+      document.getElementById("omCosts").textContent =
+        "KES " + Math.round(results.annualOMCosts || 0).toLocaleString();
+    }
+
+    // Load Analysis Results
+    if (document.getElementById("peakLoadDemand")) {
+      document.getElementById("peakLoadDemand").textContent =
+        (results.peakLoad || 0).toFixed(1) + " kW";
+    }
+    if (document.getElementById("dailyPattern")) {
+      const dayUsage =
+        parseFloat(document.getElementById("dayUsage").value) || 60;
+      const eveningUsage =
+        parseFloat(document.getElementById("eveningUsage").value) || 30;
+      const nightUsage =
+        parseFloat(document.getElementById("nightUsage").value) || 10;
+      document.getElementById(
+        "dailyPattern"
+      ).textContent = `Day: ${dayUsage}%, Evening: ${eveningUsage}%, Night: ${nightUsage}%`;
+    }
+    if (document.getElementById("selfConsumptionPotential")) {
+      document.getElementById("selfConsumptionPotential").textContent =
+        (results.selfConsumptionRatio * 100).toFixed(0) + "%";
+    }
+    if (document.getElementById("criticalLoad") && results.loadAnalysis) {
+      document.getElementById("criticalLoad").textContent =
+        results.loadAnalysis.criticalLoad.toFixed(1) + " kW";
+    }
+
+    // Shade Analysis Results
+    if (document.getElementById("effectiveArea") && results.shadeAnalysis) {
+      document.getElementById("effectiveArea").textContent =
+        results.shadeAnalysis.effectiveArea.toFixed(0) + " m²";
+    }
+    if (document.getElementById("shadeLoss") && results.shadeAnalysis) {
+      document.getElementById("shadeLoss").textContent =
+        (results.shadeAnalysis.shadeLoss * 100).toFixed(1) + "%";
+    }
+    if (document.getElementById("optimalTilt") && results.shadeAnalysis) {
+      document.getElementById("optimalTilt").textContent =
+        results.shadeAnalysis.optimalTilt.toFixed(1) + "°";
+    }
+    if (document.getElementById("adjustedEfficiency")) {
+      document.getElementById("adjustedEfficiency").textContent =
+        (
+          (results.shadeAdjustedEfficiency || results.systemEfficiency) * 100
+        ).toFixed(1) + "%";
+    }
+
+    // Enhanced Environmental impact
+    const co2Savings = (results.annualCO2Reduction || 0).toFixed(1);
+    const treesEquivalent = Math.round(co2Savings * 45); // 1 tree = ~22kg CO2/year
+    const lifetimeCO2 = (co2Savings * results.projectLifetime).toFixed(1);
+
+    document.getElementById("co2Savings").textContent = co2Savings + " tons";
+    document.getElementById("treesEquivalent").textContent =
+      treesEquivalent + " trees";
+
+    if (document.getElementById("lifetimeCO2")) {
+      document.getElementById("lifetimeCO2").textContent =
+        lifetimeCO2 + " tons";
+    }
+    if (document.getElementById("carbonCredits")) {
+      document.getElementById("carbonCredits").textContent =
+        "KES " + Math.round(results.carbonCredits || 0).toLocaleString();
+    }
+
+    // Update detailed cost breakdown
+    updateDetailedCostBreakdown(results);
+  }
+
+  // Update detailed cost breakdown display
+  function updateDetailedCostBreakdown(results) {
+    const breakdownContainer = document.getElementById("detailedCostBreakdown");
+    if (!breakdownContainer) return;
+
+    let breakdownHtml = '<div class="cost-breakdown-items">';
+
+    // Equipment costs
+    breakdownHtml +=
+      '<div class="cost-category"><h6 class="text-primary mb-2">Equipment Costs</h6>';
+    breakdownHtml += `<div class="cost-item"><span>Solar Panels (${
+      results.panelCount
+    } x ${results.panelWattage}W)</span><span>KES ${Math.round(
+      results.costBreakdown.panels
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Mounting System (detailed below)</span><span>KES ${Math.round(
+      results.costBreakdown.mounting
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Inverter (${results.inverterCapacity.toFixed(
+      1
+    )}kW)</span><span>KES ${Math.round(
+      results.costBreakdown.inverter
+    ).toLocaleString()}</span></div>`;
+    if (results.costBreakdown.battery > 0) {
+      breakdownHtml += `<div class="cost-item"><span>Battery System (${
+        results.batteryCapacity
+      }kWh)</span><span>KES ${Math.round(
+        results.costBreakdown.battery
+      ).toLocaleString()}</span></div>`;
+    }
+    breakdownHtml += "</div>";
+
+    // Electrical components
+    breakdownHtml +=
+      '<div class="cost-category mt-3"><h6 class="text-warning mb-2">Electrical Components</h6>';
+    if (results.costBreakdown.combinerBox > 0) {
+      breakdownHtml += `<div class="cost-item"><span>DC Combiner Box</span><span>KES ${Math.round(
+        results.costBreakdown.combinerBox
+      ).toLocaleString()}</span></div>`;
+    }
+    breakdownHtml += `<div class="cost-item"><span>DC Disconnect Switch</span><span>KES ${Math.round(
+      results.costBreakdown.dcDisconnect
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>AC Disconnect Switch</span><span>KES ${Math.round(
+      results.costBreakdown.acDisconnect
+    ).toLocaleString()}</span></div>`;
+    // KPLC meter removed - only KPLC installs meters
+    breakdownHtml += `<div class="cost-item"><span>DC Circuit Breakers</span><span>KES ${Math.round(
+      results.costBreakdown.dcBreakers
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>AC Circuit Breaker</span><span>KES ${Math.round(
+      results.costBreakdown.acBreaker
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>RCD (Safety Device)</span><span>KES ${Math.round(
+      results.costBreakdown.rcd
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Surge Protection</span><span>KES ${Math.round(
+      results.costBreakdown.surgeProtection
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Grounding Kit</span><span>KES ${Math.round(
+      results.costBreakdown.grounding
+    ).toLocaleString()}</span></div>`;
+    if (results.costBreakdown.mppt > 0) {
+      breakdownHtml += `<div class="cost-item"><span>MPPT Charge Controllers</span><span>KES ${Math.round(
+        results.costBreakdown.mppt
+      ).toLocaleString()}</span></div>`;
+    }
+    breakdownHtml += "</div>";
+
+    // Cabling and connections
+    breakdownHtml +=
+      '<div class="cost-category mt-3"><h6 class="text-success mb-2">Cabling & Connections</h6>';
+    breakdownHtml += `<div class="cost-item"><span>MC4 Connectors</span><span>KES ${Math.round(
+      results.costBreakdown.mc4Connectors
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Solar DC Cable Kit</span><span>KES ${Math.round(
+      results.costBreakdown.dcCableKit
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>DC Cabling</span><span>KES ${Math.round(
+      results.costBreakdown.dcCabling
+    ).toLocaleString()}</span></div>`;
+    if (results.costBreakdown.acCabling > 0) {
+      breakdownHtml += `<div class="cost-item"><span>AC Cabling (Optional)</span><span>KES ${Math.round(
+        results.costBreakdown.acCabling
+      ).toLocaleString()}</span></div>`;
+    }
+    breakdownHtml += `<div class="cost-item"><span>Conduits & Fittings</span><span>KES ${Math.round(
+      results.costBreakdown.conduits
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Cable Channels</span><span>KES ${Math.round(
+      results.costBreakdown.cableChannels
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += "</div>";
+
+    // Labor and services
+    breakdownHtml +=
+      '<div class="cost-category mt-3"><h6 class="text-info mb-2">Installation & Services</h6>';
+    breakdownHtml += `<div class="cost-item"><span>Labor & Installation (includes professional services)</span><span>KES ${Math.round(
+      results.costBreakdown.labor
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += `<div class="cost-item"><span>Project Contingency (5%)</span><span>KES ${Math.round(
+      results.costBreakdown.contingency
+    ).toLocaleString()}</span></div>`;
+    breakdownHtml += "</div>";
+
+    breakdownHtml += "</div>";
+
+    // Professional Specifications and Compliance
+    breakdownHtml +=
+      '<div class="cost-category mt-3"><h6 class="text-dark mb-2">Professional Specifications & Compliance</h6>';
+    breakdownHtml += '<div class="small text-muted">';
+    breakdownHtml +=
+      "<strong>Standards Compliance:</strong> IEC 61215, IEC 61730, IEC 61724<br>";
+    breakdownHtml +=
+      "<strong>Installation Standards:</strong> Kenya Bureau of Standards (KEBS), NEMA Guidelines<br>";
+    breakdownHtml +=
+      "<strong>Electrical Code:</strong> Kenya Electrical Code (KEC), IEEE Standards<br>";
+    breakdownHtml +=
+      "<strong>Performance Guarantee:</strong> 90% of predicted performance (Year 1)<br>";
+    breakdownHtml +=
+      "<strong>Panel Warranty:</strong> 25 years performance, 12 years product<br>";
+    breakdownHtml +=
+      "<strong>Inverter Warranty:</strong> 10 years standard, extendable to 20 years<br>";
+    breakdownHtml +=
+      "<strong>Installation Warranty:</strong> 5 years workmanship guarantee<br>";
+    breakdownHtml +=
+      "<strong>System Monitoring:</strong> Real-time performance tracking included<br>";
+    breakdownHtml +=
+      "<strong>Maintenance Plan:</strong> Annual inspection and cleaning recommended<br>";
+    breakdownHtml +=
+      "<strong>Insurance:</strong> System insurance recommended (0.3% annually)<br>";
+    breakdownHtml += "</div></div>";
+
+    breakdownContainer.innerHTML = breakdownHtml;
+  }
+
+  // System type description updates
+  document.getElementById("systemType").addEventListener("change", function () {
+    const descriptions = {
+      grid_tied:
+        "Grid-tied systems feed excess power back to the grid - no battery storage",
+      hybrid:
+        "Hybrid systems include battery backup for power outages - full solar array + batteries",
+      off_grid:
+        "Off-grid systems operate independently without grid connection - large battery bank required",
+      backup:
+        "Backup power systems with minimal solar - batteries charged from grid, small solar for maintenance",
+    };
+
+    document.getElementById("systemTypeDescription").textContent =
+      descriptions[this.value];
+    calculateSystem();
+  });
+
+  // Display component pricing information
+  function displayComponentPricing() {
+    const componentLibrary = systemPricing.components;
+    let componentHtml = '<div class="component-library-info mt-3">';
+    componentHtml +=
+      '<h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Component Price Reference</h6>';
+
+    // Group components by category
+    const categories = {
+      "Solar Panels": ["panel550W", "panel400W", "panel300W"],
+      Inverters: [
+        "inverter3kWGridTie",
+        "inverter5kWHybrid",
+        "inverter5kWOffGrid",
+      ],
+      "Energy Storage": ["battery48V100Ah"],
+      "Electrical Protection": [
+        "combinerBox12Way",
+        "dcMCB32A",
+        "dcIsolator40A",
+        "acBreakerRCD",
+        "dcSPD1000V",
+        "acSPD230V",
+      ],
+      "Cables & Connections": ["mc4ConnectorPair", "pvCable6mm", "acCable6mm"],
+      Installation: ["earthingKit", "conduitsFittings"],
+    };
+
+    Object.entries(categories).forEach(([category, components]) => {
+      componentHtml += `<div class="mb-3"><h6 class="text-muted small">${category}</h6>`;
+      components.forEach((componentKey) => {
+        const component = componentLibrary[componentKey];
+        if (component) {
+          componentHtml += `<div class="d-flex justify-content-between small mb-1">`;
+          componentHtml += `<span>${component.description}</span>`;
+          componentHtml += `<span class="text-primary">KES ${component.cost.toLocaleString()}/${
+            component.unit
+          }</span>`;
+          componentHtml += `</div>`;
+          if (component.source) {
+            componentHtml += `<div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.5rem;">Source: ${component.source}</div>`;
+          }
+        }
+      });
+      componentHtml += "</div>";
+    });
+
+    componentHtml += "</div>";
+
+    // Add to detailed breakdown section
+    const breakdownContainer = document.getElementById("detailedCostBreakdown");
+    if (breakdownContainer) {
+      breakdownContainer.innerHTML += componentHtml;
+    }
+  }
+
+  // Generate quotation
+  function generateQuotation() {
+    // Prepare calculator data
+    const calculatorData = {
+      // Basic system info
+      capacity: parseFloat(
+        document.getElementById("recommendedCapacity").textContent.replace(/[^\d.]/g, '')
+      ),
+      systemType: document.getElementById("systemType").value,
+      monthlyConsumption: parseFloat(document.getElementById("monthlyConsumption").value) || 0,
+      location: document.getElementById("location").value,
+      roofType: document.getElementById("roofType").value,
+      propertyType: document.getElementById("propertyType").value,
+      monthlyBill: parseFloat(document.getElementById("monthlyBill").value) || 0,
+      roofArea: parseFloat(document.getElementById("roofArea").value) || 0,
+      offsetPercentage: parseFloat(document.getElementById("offsetPercentage").value) || 100,
+      budget: document.getElementById("budget").value,
+      
+      // Financial calculations
+      totalSystemCost: parseFloat(
+        document.getElementById("totalSystemCost").textContent.replace(/[^\d.]/g, '')
+      ),
+      monthlyGeneration: parseFloat(
+        document.getElementById("monthlyGeneration").textContent.replace(/[^\d.]/g, '')
+      ) || 0,
+      monthlySavings: parseFloat(
+        document.getElementById("monthlySavings").textContent.replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      annualSavings: parseFloat(
+        document.getElementById("annualSavings").textContent.replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      paybackPeriod: parseFloat(
+        document.getElementById("paybackPeriod").textContent.replace(/[^\d.]/g, '')
+      ) || 0,
+      lifetimeSavings: parseFloat(
+        document.getElementById("lifetimeSavings").textContent.replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      
+      // Performance metrics
+      systemEfficiency: parseFloat(
+        (document.getElementById("systemEfficiency")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 85.2,
+      selfConsumption: parseFloat(
+        (document.getElementById("selfConsumption")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 53,
+      performanceRatio: parseFloat(
+        (document.getElementById("performanceRatio")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 85.2,
+      
+      // Component costs
+      panelCost: parseFloat(
+        (document.getElementById("panelCost")?.textContent || '0').replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      inverterCost: parseFloat(
+        (document.getElementById("inverterCost")?.textContent || '0').replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      batteryCost: parseFloat(
+        (document.getElementById("batteryCost")?.textContent || '0').replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      installationCost: parseFloat(
+        (document.getElementById("installationCost")?.textContent || '0').replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      
+      // Environmental impact
+      co2Savings: parseFloat(
+        (document.getElementById("co2Savings")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 0,
+      
+      // Advanced metrics (if available)
+      npvValue: parseFloat(
+        (document.getElementById("npvValue")?.textContent || '0').replace(/[^\d.,]/g, '').replace(/,/g, '')
+      ) || 0,
+      irrValue: parseFloat(
+        (document.getElementById("irrValue")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 0,
+      lcoeValue: parseFloat(
+        (document.getElementById("lcoeValue")?.textContent || '0').replace(/[^\d.]/g, '')
+      ) || 0
+    };
+
+    // Store data for modal
+    window.currentCalculatorData = calculatorData;
+    
+    // Populate the modal summary
+    document.getElementById("quotationSummary").innerHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <strong>System Specifications:</strong><br>
+          • Capacity: ${calculatorData.capacity} kW<br>
+          • Type: ${document.getElementById("systemType").selectedOptions[0].text}<br>
+          • Monthly Generation: ${calculatorData.monthlyGeneration} kWh<br>
+          • Property: ${document.getElementById("propertyType").selectedOptions[0].text}<br>
+          • Location: ${document.getElementById("location").selectedOptions[0].text}<br>
+        </div>
+        <div class="col-md-6">
+          <strong>Financial Summary:</strong><br>
+          • Total Cost: KES ${calculatorData.totalSystemCost.toLocaleString()}<br>
+          • Monthly Savings: KES ${calculatorData.monthlySavings.toLocaleString()}<br>
+          • Annual Savings: KES ${calculatorData.annualSavings.toLocaleString()}<br>
+          • Payback Period: ${calculatorData.paybackPeriod} years<br>
+          • Offset Target: ${calculatorData.offsetPercentage}%<br>
+        </div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-6">
+          <strong>Performance Metrics:</strong><br>
+          • System Efficiency: ${calculatorData.systemEfficiency}%<br>
+          • Self-Consumption: ${calculatorData.selfConsumption}%<br>
+          • Performance Ratio: ${calculatorData.performanceRatio}%<br>
+        </div>
+        <div class="col-md-6">
+          <strong>Environmental Impact:</strong><br>
+          • CO₂ Reduction: ${calculatorData.co2Savings} tons/year<br>
+          • Roof Area: ${calculatorData.roofArea} m²<br>
+          • Monthly Consumption: ${calculatorData.monthlyConsumption} kWh<br>
+        </div>
+      </div>
+    `;
+
+    // Show modal
+    new bootstrap.Modal(document.getElementById("quotationModal")).show();
+  }
+
+  // Other action functions
+  function scheduleConsultation() {
+    // Show consultation modal
+    new bootstrap.Modal(document.getElementById("consultationModal")).show();
+  }
+
+  function downloadReport() {
+    // Generate and download detailed PDF report
+    const calculatorData = {
+      capacity: parseFloat(
+        document.getElementById("recommendedCapacity").textContent.replace(/[^\d.]/g, '') || 0
+      ),
+      systemType: document.getElementById("systemType").value,
+      monthlyConsumption: document.getElementById("monthlyConsumption").value,
+      location: document.getElementById("location").value,
+      roofType: document.getElementById("roofType").value,
+      propertyType: document.getElementById("propertyType").value,
+      totalSystemCost: parseFloat(
+        document.getElementById("totalSystemCost").textContent.replace(/[^\d.]/g, '') || 0
+      ),
+      monthlyBill: document.getElementById("monthlyBill").value,
+      roofArea: document.getElementById("roofArea").value,
+      offsetPercentage: document.getElementById("offsetPercentage").value,
+      budget: document.getElementById("budget").value,
+      annualSavings: document.getElementById("annualSavings")?.textContent || 'N/A',
+      paybackPeriod: document.getElementById("paybackPeriod")?.textContent || 'N/A',
+      co2Savings: document.getElementById("co2Savings")?.textContent || 'N/A',
+    };
+
+    // Create a temporary link to download the report
+    const reportContent = generateReportContent(calculatorData);
+    const blob = new Blob([reportContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `solar_calculator_report_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function generateReportContent(data) {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Solar Calculator Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { background: #38b6ff; color: white; padding: 20px; text-align: center; }
+            .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+            .highlight { background: #f8f9fa; padding: 15px; border-left: 4px solid #38b6ff; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Solar System Calculator Report</h1>
+            <p>Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="section">
+            <h2>System Specifications</h2>
+            <table>
+                <tr><th>Property Type</th><td>${data.propertyType}</td></tr>
+                <tr><th>Location</th><td>${data.location}</td></tr>
+                <tr><th>Installation Type</th><td>${data.roofType}</td></tr>
+                <tr><th>Available Roof Area</th><td>${data.roofArea} m²</td></tr>
+                <tr><th>System Type</th><td>${data.systemType}</td></tr>
+                <tr><th>Recommended Capacity</th><td>${data.capacity} kW</td></tr>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>Energy Consumption</h2>
+            <table>
+                <tr><th>Monthly Bill</th><td>KES ${data.monthlyBill}</td></tr>
+                <tr><th>Monthly Consumption</th><td>${data.monthlyConsumption} kWh</td></tr>
+                <tr><th>Energy Offset Target</th><td>${data.offsetPercentage}%</td></tr>
+            </table>
+        </div>
+        
+        <div class="highlight">
+            <h2>Financial Summary</h2>
+            <table>
+                <tr><th>Total System Cost</th><td>KES ${data.totalSystemCost.toLocaleString()}</td></tr>
+                <tr><th>Annual Savings</th><td>${data.annualSavings}</td></tr>
+                <tr><th>Payback Period</th><td>${data.paybackPeriod}</td></tr>
+                <tr><th>Budget Range</th><td>${data.budget}</td></tr>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>Environmental Impact</h2>
+            <table>
+                <tr><th>Annual CO₂ Reduction</th><td>${data.co2Savings}</td></tr>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>Important Notes</h2>
+            <ul>
+                <li>This report is based on preliminary calculations using industry standards</li>
+                <li>Final system design requires professional site assessment</li>
+                <li>All prices are estimates and may vary based on actual requirements</li>
+                <li>Professional consultation recommended for accurate quotations</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa;">
+            <h3>Contact Information</h3>
+            <p>The Olivian Group Limited<br>
+            Phone: +254-719-728-666<br>
+            Email: info@olivian.co.ke<br>
+            Website: https://olivian.co.ke</p>
+        </div>
+    </body>
+    </html>
+    `;
+  }
+
+  function shareResults() {
+    if (navigator.share) {
+      navigator.share({
+        title: "Solar System Calculator Results",
+        text: `Recommended system: ${
+          document.getElementById("recommendedCapacity").textContent
+        }`,
+        url: window.location.href,
+      });
+    } else {
+      alert("Share feature would be implemented here");
+    }
+  }
+
+  // Initialize calculator
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize usage pattern to ensure 100% total
+    adjustUsagePattern('dayUsage');
+    updateOffsetDisplay();
+    calculateSystem();
+    displayComponentPricing();
+  });
+
+  // Handle quotation generation form submission
+  function submitQuotationForm(event) {
+    // Prevent any default form submission
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    const form = document.getElementById('quotationForm');
+    const formData = new FormData(form);
+    
+    // Validate required fields
+    const customerName = formData.get('customer_name');
+    const customerEmail = formData.get('customer_email');
+    
+    if (!customerName || !customerEmail) {
+      document.getElementById('quotationResult').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> Please fill in all required fields (Name and Email).
+        </div>
+      `;
+      return false;
+    }
+
+    const customerData = {
+      name: customerName,
+      email: customerEmail,
+      phone: formData.get('customer_phone') || ''
+    };
+
+    // Make sure we have calculator data
+    if (!window.currentCalculatorData) {
+      document.getElementById('quotationResult').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> Calculator data is missing. Please recalculate the system first.
+        </div>
+      `;
+      return false;
+    }
+
+    const data = {
+      calculatorData: window.currentCalculatorData,
+      customerData: customerData
+    };
+
+    // Show loading
+    const submitBtn = document.getElementById('submitQuotationBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    submitBtn.disabled = true;
+
+    // Clear previous results
+    document.getElementById('quotationResult').innerHTML = '';
+
+    fetch('{% url "quotations:generate_quotation" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        const emailStatus = result.email_sent ? 
+          '<i class="fas fa-envelope-circle-check text-success"></i> Email sent successfully!' : 
+          '<i class="fas fa-envelope-open-text text-warning"></i> Quotation generated (email failed)';
+          
+        document.getElementById('quotationResult').innerHTML = `
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> ${result.message}
+            <br><strong>Quotation Number:</strong> ${result.quotation_number}
+            <br><small class="d-flex align-items-center mt-2">${emailStatus}</small>
+            ${result.email_error ? `<br><small class="text-danger">Error: ${result.email_error}</small>` : ''}
+          </div>
+        `;
+        form.reset();
+        
+        // Close modal after longer delay to allow reading
+        setTimeout(() => {
+          bootstrap.Modal.getInstance(document.getElementById('quotationModal')).hide();
+        }, 5000);
+      } else {
+        document.getElementById('quotationResult').innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> ${result.message}
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('quotationResult').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> Error: Failed to generate quotation. Please try again.
+        </div>
+      `;
+    })
+    .finally(() => {
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    });
+    
+    return false; // Prevent any form submission
+  }
+
+  // Helper function to get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Handle consultation scheduling form submission
+  function submitConsultationForm() {
+    const form = document.getElementById('consultationForm');
+    const formData = new FormData(form);
+    
+    const customerData = {
+      name: formData.get('customer_name'),
+      email: formData.get('customer_email'),
+      phone: formData.get('customer_phone')
+    };
+
+    const consultationData = {
+      preferredDate: formData.get('preferred_date'),
+      preferredTime: formData.get('preferred_time'),
+      consultationType: formData.get('consultation_type')
+    };
+
+    const data = {
+      customerData: customerData,
+      consultationData: consultationData
+    };
+
+    // Show loading
+    const submitBtn = document.getElementById('submitConsultationBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    submitBtn.disabled = true;
+
+    fetch('{% url "quotations:schedule_consultation" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        document.getElementById('consultationResult').innerHTML = `
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> ${result.message}
+          </div>
+        `;
+        form.reset();
+      } else {
+        document.getElementById('consultationResult').innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> ${result.message}
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      document.getElementById('consultationResult').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> Error: ${error.message}
+        </div>
+      `;
+    })
+    .finally(() => {
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    });
+  }
+</script>
+
+<!-- Quotation Modal -->
+<div class="modal fade" id="quotationModal" tabindex="-1" aria-labelledby="quotationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: var(--primary-color); color: white;">
+        <h5 class="modal-title" id="quotationModalLabel">
+          <i class="fas fa-file-invoice-dollar me-2"></i>Generate Professional Quotation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="quotationResult"></div>
+        
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="alert alert-info">
+              <h6><i class="fas fa-info-circle me-2"></i>System Summary</h6>
+              <div id="quotationSummary"></div>
+            </div>
+          </div>
+        </div>
+
+        <form id="quotationForm" onsubmit="return submitQuotationForm(event);">
+          <h6 class="mb-3">Customer Information</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="customer_name" class="form-label">Full Name *</label>
+              <input type="text" class="form-control" name="customer_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="customer_email" class="form-label">Email Address *</label>
+              <input type="email" class="form-control" name="customer_email" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="customer_phone" class="form-label">Phone Number</label>
+              <input type="tel" class="form-control" name="customer_phone" placeholder="+254...">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="submitQuotationBtn" onclick="submitQuotationForm()">
+          <i class="fas fa-paper-plane me-2"></i>Generate & Send Quotation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Consultation Modal -->
+<div class="modal fade" id="consultationModal" tabindex="-1" aria-labelledby="consultationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: var(--primary-color); color: white;">
+        <h5 class="modal-title" id="consultationModalLabel">
+          <i class="fas fa-calendar-check me-2"></i>Schedule Free Consultation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="consultationResult"></div>
+        
+        <div class="alert alert-success mb-4">
+          <h6><i class="fas fa-gift me-2"></i>Complimentary Services Include:</h6>
+          <ul class="mb-0">
+            <li>Professional site assessment</li>
+            <li>Energy consumption analysis</li>
+            <li>Custom system design & quotation</li>
+            <li>Financing options discussion</li>
+          </ul>
+        </div>
+
+        <form id="consultationForm">
+          <h6 class="mb-3">Contact Information</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="customer_name" class="form-label">Full Name *</label>
+              <input type="text" class="form-control" name="customer_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="customer_email" class="form-label">Email Address *</label>
+              <input type="email" class="form-control" name="customer_email" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="customer_phone" class="form-label">Phone Number</label>
+              <input type="tel" class="form-control" name="customer_phone" placeholder="+254...">
+            </div>
+          </div>
+
+          <h6 class="mb-3 mt-4">Consultation Preferences</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="preferred_date" class="form-label">Preferred Date *</label>
+              <input type="date" class="form-control" name="preferred_date" required 
+                     min="{% now 'Y-m-d' %}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="preferred_time" class="form-label">Preferred Time *</label>
+              <select class="form-select" name="preferred_time" required>
+                <option value="">Select time...</option>
+                <option value="morning">Morning (8:00 AM - 12:00 PM)</option>
+                <option value="afternoon">Afternoon (12:00 PM - 5:00 PM)</option>
+                <option value="evening">Evening (5:00 PM - 7:00 PM)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="consultation_type" class="form-label">Consultation Type</label>
+              <select class="form-select" name="consultation_type">
+                <option value="site_visit">Site Visit (Recommended)</option>
+                <option value="virtual">Virtual Consultation</option>
+                <option value="phone">Phone Consultation</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="submitConsultationBtn" onclick="submitConsultationForm()">
+          <i class="fas fa-calendar-plus me-2"></i>Schedule Consultation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not is_management_view %}
+</div> <!-- Close customer container -->
+{% endif %}
+
+<script>
+// Auto-populate customer information if logged in
+{% if customer_info and not is_management_view %}
+document.addEventListener('DOMContentLoaded', function() {
+  const customerInfo = {
+    name: "{{ customer_info.name|escapejs }}",
+    email: "{{ customer_info.email|escapejs }}",
+    phone: "{{ customer_info.phone|escapejs }}"
+  };
+
+  // Auto-populate quotation modal when it opens
+  const quotationModal = document.getElementById('quotationModal');
+  if (quotationModal) {
+    quotationModal.addEventListener('show.bs.modal', function() {
+      // Populate quotation form fields
+      const nameField = document.querySelector('#quotationForm input[name="customer_name"]');
+      const emailField = document.querySelector('#quotationForm input[name="customer_email"]');
+      const phoneField = document.querySelector('#quotationForm input[name="customer_phone"]');
+      
+      if (nameField && customerInfo.name) nameField.value = customerInfo.name;
+      if (emailField && customerInfo.email) emailField.value = customerInfo.email;
+      if (phoneField && customerInfo.phone) phoneField.value = customerInfo.phone;
+    });
+  }
+
+  // Auto-populate consultation modal when it opens
+  const consultationModal = document.getElementById('consultationModal');
+  if (consultationModal) {
+    consultationModal.addEventListener('show.bs.modal', function() {
+      // Populate consultation form fields
+      const nameField = document.querySelector('#consultationForm input[name="customer_name"]');
+      const emailField = document.querySelector('#consultationForm input[name="customer_email"]');
+      const phoneField = document.querySelector('#consultationForm input[name="customer_phone"]');
+      
+      if (nameField && customerInfo.name) nameField.value = customerInfo.name;
+      if (emailField && customerInfo.email) emailField.value = customerInfo.email;
+      if (phoneField && customerInfo.phone) phoneField.value = customerInfo.phone;
+    });
+  }
+});
+{% endif %}
+</script>
+
+{% endblock %}

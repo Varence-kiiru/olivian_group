@@ -1,0 +1,321 @@
+{% extends "website/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {{ company.name }}{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.preferences-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.cookie-category-card {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cookie-category-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.category-header {
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.category-info h5 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.category-info p {
+    margin-bottom: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.cookie-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 30px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-color, #38b6ff);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(30px);
+}
+
+input:disabled + .toggle-slider {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.essential-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.save-preferences-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.save-preferences-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(56, 182, 255, 0.3);
+}
+
+.category-details {
+    padding: 1.5rem;
+    display: none;
+}
+
+.category-details.show {
+    display: block;
+    border-top: 1px solid #e9ecef;
+    background: #fefefe;
+}
+
+.expand-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="preferences-container">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-cog text-primary me-3"></i>Cookie Preferences
+            </h1>
+            <p class="lead text-muted">Manage your cookie consent preferences</p>
+        </div>
+
+        <!-- Info Alert -->
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>About Cookie Preferences:</strong> 
+            You can choose which categories of cookies you want to allow. Essential cookies cannot be disabled as they are necessary for the website to function properly.
+        </div>
+
+        <!-- Cookie Categories -->
+        <div id="cookie-categories-list">
+            {% for category in categories %}
+            <div class="cookie-category-card">
+                <div class="category-header">
+                    <div class="category-info">
+                        <h5>{{ category.display_name }}</h5>
+                        <p>{{ category.description }}</p>
+                    </div>
+                    <div class="cookie-toggle">
+                        {% if category.is_essential %}
+                        <span class="essential-badge">Always Active</span>
+                        {% else %}
+                        <label class="toggle-switch">
+                            <input type="checkbox" 
+                                   data-category="{{ category.name }}"
+                                   {% if current_consent %}
+                                       {% if category.name == 'analytics' and current_consent.analytics_consent == 'granted' %}checked{% endif %}
+                                       {% if category.name == 'marketing' and current_consent.marketing_consent == 'granted' %}checked{% endif %}
+                                       {% if category.name == 'preferences' and current_consent.preferences_consent == 'granted' %}checked{% endif %}
+                                       {% if category.name == 'social' and current_consent.social_consent == 'granted' %}checked{% endif %}
+                                   {% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        {% endif %}
+                        
+                        {% if category.cookies.all %}
+                        <button class="expand-btn" onclick="toggleCategoryDetails('{{ category.name }}')">
+                            View Details
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if category.cookies.all %}
+                <div id="details-{{ category.name }}" class="category-details">
+                    <h6>Cookies in this category:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Purpose</th>
+                                    <th>Duration</th>
+                                    <th>Provider</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cookie in category.cookies.all %}
+                                {% if cookie.is_active %}
+                                <tr>
+                                    <td><code>{{ cookie.name }}</code></td>
+                                    <td>{{ cookie.purpose }}</td>
+                                    <td>{{ cookie.duration }}</td>
+                                    <td>{{ cookie.provider|default:"First Party" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No cookie categories are currently configured.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Save Button -->
+        <div class="text-center mt-4">
+            <button onclick="savePreferences()" class="btn save-preferences-btn">
+                <i class="fas fa-save me-2"></i>Save My Preferences
+            </button>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="mt-5 pt-4 border-top">
+            <h4>Need Help?</h4>
+            <p>Learn more about cookies and privacy in our <a href="{% url 'core:cookie_policy' %}">Cookie Policy</a> and <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCategoryDetails(categoryName) {
+    const details = document.getElementById('details-' + categoryName);
+    const isVisible = details.classList.contains('show');
+    
+    // Hide all other details
+    document.querySelectorAll('.category-details').forEach(detail => {
+        detail.classList.remove('show');
+    });
+    
+    // Toggle current details
+    if (!isVisible) {
+        details.classList.add('show');
+    }
+}
+
+function savePreferences() {
+    const preferences = {
+        essential: 'granted', // Always granted
+        analytics: 'denied',
+        marketing: 'denied', 
+        preferences: 'denied',
+        social: 'denied'
+    };
+    
+    // Get checkbox states
+    document.querySelectorAll('input[type="checkbox"][data-category]').forEach(checkbox => {
+        const category = checkbox.getAttribute('data-category');
+        preferences[category] = checkbox.checked ? 'granted' : 'denied';
+    });
+    
+    // Use the global cookie manager if available
+    if (typeof window.cookieManager !== 'undefined') {
+        window.cookieManager.consentData = preferences;
+        window.cookieManager.saveConsentSettings().then(() => {
+            alert('Cookie preferences saved successfully!');
+            window.location.href = '/';
+        });
+    } else {
+        // Fallback: make direct API call
+        fetch('/api/cookie-consent/update/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(preferences)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Cookie preferences saved successfully!');
+                window.location.href = '/';
+            } else {
+                alert('Error saving preferences: ' + data.message);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

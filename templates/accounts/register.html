@@ -1,0 +1,291 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Register - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top: 120px;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3>Create Account</h3>
+                        <p class="text-muted">Join {{ company.name|default:"Olivian Group" }} for exclusive access to solar solutions</p>
+                    </div>
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ form.non_field_errors }}
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.first_name.errors }}
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name *</label>
+                                    {{ form.first_name }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.last_name.errors }}
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name *</label>
+                                    {{ form.last_name }}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.email.errors }}
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address *</label>
+                                {{ form.email }}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.phone.errors }}
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.username.errors }}
+                                <label for="{{ form.username.id_for_label }}" class="form-label">Username *</label>
+                                {{ form.username }}
+                                <small class="text-muted">This will be used to log in to your account</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.password.errors }}
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">Password *</label>
+                                    {{ form.password }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.password2.errors }}
+                                    <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password *</label>
+                                    {{ form.password2 }}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.customer_type.errors }}
+                                <label for="{{ form.customer_type.id_for_label }}" class="form-label">Account Type *</label>
+                                {{ form.customer_type }}
+                            </div>
+
+                            <div id="business-fields" style="display: none;">
+                                <div class="mb-3">
+                                    {{ form.company_name.errors }}
+                                    <label for="{{ form.company_name.id_for_label }}" class="form-label">Company Name</label>
+                                    {{ form.company_name }}
+                                </div>
+                            </div>
+                            
+                            <!-- Partner specific fields -->
+                            <div id="partner-fields" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="id_business_license" class="form-label">Business License Number</label>
+                                    <input type="text" class="form-control" name="business_license" id="id_business_license">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_service_areas" class="form-label">Service Areas</label>
+                                    <input type="text" class="form-control" name="service_areas" id="id_service_areas" 
+                                           placeholder="Counties you serve">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" name="agree_terms" id="agree_terms" required>
+                                <label class="form-check-label" for="agree_terms">
+                                    I agree to the <a href="{% url 'core:terms_of_service' %}" target="_blank">Terms of Service</a> and 
+                                    <a href="{% url 'core:privacy_policy' %}" target="_blank">Privacy Policy</a> *
+                                </label>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" name="newsletter" id="newsletter" checked>
+                                <label class="form-check-label" for="newsletter">
+                                    Subscribe to our newsletter for solar tips and updates
+                                </label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-user-plus me-2"></i>Create Account
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <p class="mb-0">Already have an account? 
+                                <a href="{% url 'accounts:login' %}" class="text-decoration-none">Sign In</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Benefits -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Benefits of Creating an Account</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Track your orders and quotations
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Faster checkout process
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Access to exclusive offers
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Project management tools
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Priority customer support
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Solar system monitoring
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide fields based on account type
+    const customerTypeSelect = document.getElementById('id_customer_type');
+    const businessFields = document.getElementById('business-fields');
+    const partnerFields = document.getElementById('partner-fields');
+
+    if (customerTypeSelect) {
+        customerTypeSelect.addEventListener('change', function() {
+            // Hide all fields first
+            if (businessFields) businessFields.style.display = 'none';
+            if (partnerFields) partnerFields.style.display = 'none';
+            
+            // Show relevant fields
+            if (this.value === 'business') {
+                if (businessFields) businessFields.style.display = 'block';
+            } else if (this.value === 'partner') {
+                if (partnerFields) partnerFields.style.display = 'block';
+            }
+        });
+    }
+
+    // Password strength validation
+    const passwordInput = document.getElementById('id_password');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const strength = calculatePasswordStrength(password);
+            
+            // Remove existing strength indicator
+            const existing = this.parentNode.querySelector('.password-strength');
+            if (existing) existing.remove();
+            
+            if (password.length > 0) {
+                const strengthDiv = document.createElement('div');
+                strengthDiv.className = 'password-strength mt-1';
+                
+                let strengthText = '';
+                let strengthClass = '';
+                
+                if (strength < 30) {
+                    strengthText = 'Weak';
+                    strengthClass = 'text-danger';
+                } else if (strength < 60) {
+                    strengthText = 'Medium';
+                    strengthClass = 'text-warning';
+                } else {
+                    strengthText = 'Strong';
+                    strengthClass = 'text-success';
+                }
+                
+                strengthDiv.innerHTML = `
+                    <small class="${strengthClass}">Password strength: ${strengthText}</small>
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar ${strengthClass.replace('text', 'bg')}" 
+                             style="width: ${strength}%"></div>
+                    </div>
+                `;
+                
+                this.parentNode.appendChild(strengthDiv);
+            }
+        });
+    }
+
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const password1 = document.getElementById('id_password').value;
+            const password2 = document.getElementById('id_password2').value;
+            const agreeTerms = document.getElementById('agree_terms');
+            
+            if (password1 !== password2) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            if (password1.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long!');
+                return;
+            }
+            
+            if (agreeTerms && !agreeTerms.checked) {
+                e.preventDefault();
+                alert('You must agree to the Terms of Service and Privacy Policy!');
+                return;
+            }
+        });
+    }
+});
+
+function calculatePasswordStrength(password) {
+    let strength = 0;
+    
+    if (password.length >= 8) strength += 25;
+    if (/[a-z]/.test(password)) strength += 25;
+    if (/[A-Z]/.test(password)) strength += 25;
+    if (/[0-9]/.test(password)) strength += 25;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+    
+    return Math.min(strength, 100);
+}
+</script>
+{% endblock %}

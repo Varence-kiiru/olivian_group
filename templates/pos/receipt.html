@@ -1,0 +1,278 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Receipt - Sale #{{ sale.sale_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+        background: white;
+        border: 1px solid #ddd;
+    }
+    
+    .receipt-header {
+        text-align: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .company-name {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .company-details {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+    
+    .receipt-info {
+        margin-bottom: 15px;
+        font-size: 12px;
+    }
+    
+    .receipt-info div {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+    }
+    
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        font-size: 11px;
+    }
+    
+    .items-table th,
+    .items-table td {
+        text-align: left;
+        padding: 3px 0;
+        border-bottom: 1px dotted #999;
+    }
+    
+    .items-table th {
+        font-weight: bold;
+    }
+    
+    .qty-price {
+        text-align: right;
+    }
+    
+    .totals {
+        border-top: 2px solid #000;
+        padding-top: 10px;
+        font-size: 12px;
+    }
+    
+    .totals div {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+    }
+    
+    .grand-total {
+        font-weight: bold;
+        font-size: 14px;
+        border-top: 1px solid #000;
+        padding-top: 5px;
+        margin-top: 5px;
+    }
+    
+    .payment-info {
+        margin-top: 15px;
+        border-top: 1px dotted #999;
+        padding-top: 10px;
+        font-size: 11px;
+    }
+    
+    .receipt-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 10px;
+        border-top: 1px dotted #999;
+        padding-top: 10px;
+    }
+    
+    .print-btn {
+        text-align: center;
+        margin: 20px 0;
+    }
+    
+    @media print {
+        .print-btn, .btn, nav, .sidebar {
+            display: none !important;
+        }
+        
+        .receipt-container {
+            max-width: none;
+            margin: 0;
+            border: none;
+            box-shadow: none;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Receipt - Sale #{{ sale.sale_number }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="print-btn">
+                        <button type="button" class="btn btn-primary" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print Receipt
+                        </button>
+                        <a href="{% url 'pos:sale_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Sales
+                        </a>
+                    </div>
+                    
+                    <div class="receipt-container">
+                        <!-- Receipt Header -->
+                        <div class="receipt-header">
+                            <div class="company-name">
+                                {% if company_settings %}
+                                    {{ company_settings.company_name }}
+                                {% else %}
+                                    THE OLIVIAN GROUP LIMITED
+                                {% endif %}
+                            </div>
+                            <div class="company-details">
+                                {% if company_settings %}
+                                    {{ company_settings.company_address }}<br>
+                                    Phone: {{ company_settings.company_phone }}<br>
+                                    Email: {{ company_settings.company_email }}
+                                {% else %}
+                                    Kahawa Sukari Road, Nairobi, Kenya<br>
+                                    Phone: +254-719-728-666<br>
+                                    Email: info@olivian.co.ke
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Receipt Info -->
+                        <div class="receipt-info">
+                            <div>
+                                <span>Receipt No:</span>
+                                <span>{{ sale.receipt_number }}</span>
+                            </div>
+                            <div>
+                                <span>Sale No:</span>
+                                <span>{{ sale.sale_number }}</span>
+                            </div>
+                            <div>
+                                <span>Date:</span>
+                                <span>{{ sale.created_at|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div>
+                                <span>Cashier:</span>
+                                <span>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</span>
+                            </div>
+                            {% if sale.customer %}
+                            <div>
+                                <span>Customer:</span>
+                                <span>{{ sale.customer.name }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Items -->
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="qty-price">Qty</th>
+                                    <th class="qty-price">Price</th>
+                                    <th class="qty-price">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in sale_items %}
+                                <tr>
+                                    <td>{{ item.product_name }}</td>
+                                    <td class="qty-price">{{ item.quantity }}</td>
+                                    <td class="qty-price">{{ item.unit_price|floatformat:2 }}</td>
+                                    <td class="qty-price">{{ item.line_total|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        <!-- Totals -->
+                        <div class="totals">
+                            <div>
+                                <span>Subtotal:</span>
+                                <span>KES {{ sale.subtotal|floatformat:2 }}</span>
+                            </div>
+                            <div>
+                                <span>Tax (16%):</span>
+                                <span>KES {{ sale.tax_amount|floatformat:2 }}</span>
+                            </div>
+                            {% if sale.discount_amount > 0 %}
+                            <div>
+                                <span>Discount:</span>
+                                <span>KES {{ sale.discount_amount|floatformat:2 }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="grand-total">
+                                <span>TOTAL:</span>
+                                <span>KES {{ sale.grand_total|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Info -->
+                        <div class="payment-info">
+                            <div style="font-weight: bold; margin-bottom: 5px;">PAYMENT DETAILS:</div>
+                            {% for payment in payments %}
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>{{ payment.get_payment_type_display }}:</span>
+                                <span>KES {{ payment.amount|floatformat:2 }}</span>
+                            </div>
+                            {% if payment.mpesa_receipt_number %}
+                            <div style="font-size: 10px;">
+                                M-Pesa Receipt: {{ payment.mpesa_receipt_number }}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if sale.change_amount > 0 %}
+                            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-weight: bold;">
+                                <span>CHANGE:</span>
+                                <span>KES {{ sale.change_amount|floatformat:2 }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="receipt-footer">
+                            <div>THANK YOU FOR YOUR BUSINESS!</div>
+                            <div style="margin-top: 5px;">
+                                Goods sold are not returnable unless defective.
+                            </div>
+                            <div style="margin-top: 10px;">
+                                For support: info@olivian.co.ke
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

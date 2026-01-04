@@ -1,0 +1,206 @@
+{% comment %}
+Universal Customer Modal Component
+This component can be included in any template that needs customer creation functionality.
+It creates customers in the quotations.Customer model which is shared across all apps.
+
+Usage:
+1. Include this template: {% include "components/customer_modal.html" %}
+2. Add the CSS: {% include "components/customer_modal_css.html" %}
+3. Add the JavaScript: {% include "components/customer_modal_js.html" %}
+4. Call openCustomerModal() to show the modal
+5. Listen for the 'customerCreated' event to handle the response
+
+Custom options:
+- Set window.customerModalConfig.targetSelectId to specify which select dropdown to update
+- Set window.customerModalConfig.includeBusinessFields to show/hide business-specific fields
+- Set window.customerModalConfig.onCustomerCreated to add custom callback
+{% endcomment %}
+
+<!-- Universal Customer Modal -->
+<div class="modal fade" id="universalCustomerModal" tabindex="-1" role="dialog" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Add New Customer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="universal-customer-form" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <h6 class="text-muted border-bottom pb-2">
+                                <i class="fas fa-info-circle me-1"></i>Basic Information
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="first_name" required>
+                            <div class="invalid-feedback">First name is required.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="last_name" required>
+                            <div class="invalid-feedback">Last name is required.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" name="email" required>
+                            <div class="invalid-feedback">Valid email is required.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" name="phone" required>
+                            <div class="invalid-feedback">Phone number is required.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Business Information -->
+                    <div id="business-info-section">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted border-bottom pb-2">
+                                    <i class="fas fa-building me-1"></i>Business Information
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Company Name</label>
+                                <input type="text" class="form-control" name="company">
+                                <small class="form-text text-muted">Leave empty for individual customers</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Business Type</label>
+                                <select class="form-select" name="business_type">
+                                    <option value="individual">Individual</option>
+                                    <option value="business">Business</option>
+                                    <option value="government">Government</option>
+                                    <option value="ngo">NGO</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tax Number</label>
+                            <input type="text" class="form-control" name="tax_number">
+                            <small class="form-text text-muted">VAT/PIN number for business customers</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Location Information -->
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted border-bottom pb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i>Location Information
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <textarea class="form-control" name="address" rows="2" placeholder="Street address, building, apartment"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" name="city" placeholder="e.g., Nairobi">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" name="country" value="Kenya">
+                        </div>
+                    </div>
+                    
+                    <!-- Solar System Information (Optional) -->
+                    <div id="solar-info-section" style="display: none;">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted border-bottom pb-2">
+                                    <i class="fas fa-solar-panel me-1"></i>Solar System Information (Optional)
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Monthly Consumption (kWh)</label>
+                                <input type="number" class="form-control" name="monthly_consumption" step="0.01" min="0" placeholder="500">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Average Monthly Bill (KES)</label>
+                                <input type="number" class="form-control" name="average_monthly_bill" step="0.01" min="0" placeholder="5000">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Property Type</label>
+                                <select class="form-select" name="property_type">
+                                    <option value="residential">Residential</option>
+                                    <option value="commercial">Commercial</option>
+                                    <option value="industrial">Industrial</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Roof Area (m²)</label>
+                                <input type="number" class="form-control" name="roof_area" step="0.01" min="0" placeholder="100">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Roof Type</label>
+                            <select class="form-select" name="roof_type">
+                                <option value="iron_sheets">Iron Sheets</option>
+                                <option value="tiles">Tiles</option>
+                                <option value="concrete">Concrete</option>
+                                <option value="asbestos">Asbestos</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Options -->
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="show-solar-fields">
+                                <label class="form-check-label" for="show-solar-fields">
+                                    Include solar system information
+                                </label>
+                                <small class="form-text text-muted d-block">Check this if customer is interested in solar solutions</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="save-customer-btn" onclick="saveUniversalCustomer()">
+                    <i class="fas fa-save me-1"></i>Add Customer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="customer-modal-loading" class="customer-modal-loading" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2">Creating customer...</div>
+</div>

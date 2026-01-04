@@ -1,0 +1,1061 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Request a Solar Quotation - Olivian Group{% endblock %}
+
+{% block extra_css %}
+<style>
+    .request-form {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+
+    .form-header h1 {
+        color: var(--primary-color, #38b6ff);
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-header p {
+        color: #666;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        border-left: 4px solid var(--primary-color, #38b6ff);
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .form-section h3 {
+        color: var(--primary-color, #38b6ff);
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+    }
+
+    .form-row {
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color, #38b6ff);
+        box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.1);
+    }
+
+    .form-text {
+        color: #666;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .urgency-options {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .urgency-option {
+        flex: 1;
+        min-width: 150px;
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        position: relative;
+    }
+
+    .urgency-option:hover {
+        border-color: var(--primary-color, #38b6ff);
+    }
+
+    .urgency-option.selected {
+        border-color: var(--primary-color, #38b6ff);
+        background: rgba(56, 182, 255, 0.1);
+    }
+
+    .urgency-option input {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .urgency-label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .urgency-desc {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary-color, #38b6ff), #0066cc);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s ease;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .pre-filled-notice {
+        background: linear-gradient(135deg, #e8f5e8, #d4edda);
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .pre-filled-notice .alert-icon {
+        color: #28a745;
+        margin-right: 0.5rem;
+    }
+
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #f5c6cb;
+    }
+
+    @media (max-width: 768px) {
+        .urgency-options {
+            flex-direction: column;
+        }
+
+        .urgency-option {
+            width: 100%;
+        }
+    }
+
+    /* Guided Requirements Styles */
+    .guided-requirements {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1.5rem;
+        background: #f9f9f9;
+    }
+
+    .requirement-header {
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 0;
+        transition: all 0.3s ease;
+    }
+
+    .requirement-header:hover {
+        background: rgba(56, 182, 255, 0.05);
+        border-color: var(--primary-color, #38b6ff);
+    }
+
+    .requirement-content {
+        padding: 1.5rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-top: 0.5rem;
+    }
+
+    /* Appliance Calculator Styles */
+    .appliance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .appliance-category {
+        margin-bottom: 1rem;
+    }
+
+    .appliance-category h6 {
+        color: var(--primary-color, #38b6ff);
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .appliance-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        margin-bottom: 0.25rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .appliance-item:hover {
+        background: rgba(56, 182, 255, 0.1);
+    }
+
+    .appliance-item input {
+        margin-right: 0.75rem;
+        transform: scale(1.2);
+    }
+
+    .appliance-item span {
+        font-size: 0.9rem;
+        flex-grow: 1;
+    }
+
+    .result-box {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+    .result-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .result-item .label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .result-item .value {
+        font-weight: bold;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .result-item .value.text-success {
+        color: #28a745 !important;
+    }
+
+    /* Schedule and Options Styles */
+    .schedule-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .schedule-option {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .schedule-option input {
+        margin-right: 0.5rem;
+    }
+
+    /* Radio and Checkbox Options */
+    .radio-options, .concerns-options, .constraint-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .radio-options label, .concerns-options label, .constraint-options label {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .radio-options label:hover, .concerns-options label:hover, .constraint-options label:hover {
+        border-color: var(--primary-color, #38b6ff);
+        background: rgba(56, 182, 255, 0.05);
+    }
+
+    .radio-options label input, .concerns-options label input, .constraint-options label input {
+        margin-right: 0.75rem;
+        transform: scale(1.2);
+    }
+
+    /* Calculator Results Animation */
+    .calculator-results {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="request-form">
+        <div class="form-header">
+            <h1><i class="fas fa-solar-panel text-warning me-3"></i>Request a Solar Quotation</h1>
+            <p>Tell us about your solar energy needs, and we'll provide you with a detailed, customized quotation within 3-5 business days.</p>
+        </div>
+
+        {% if is_logged_in_customer %}
+        <div class="pre-filled-notice">
+            <i class="fas fa-info-circle alert-icon"></i>
+            <strong>Welcome back!</strong> Some information has been pre-filled from your account.
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error-message">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            There was an error submitting your request. Please check the form and try again.
+        </div>
+        {% endif %}
+
+        <form method="post" id="quotationRequestForm">
+            {% csrf_token %}
+
+            <!-- Customer Information -->
+            <div class="form-section">
+                <h3><i class="fas fa-user me-2"></i>Customer Information</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="customer_name">Full Name *</label>
+                            <input type="text" class="form-control" name="customer_name" id="customer_name"
+                                   value="{% if initial_data.customer_name %}{{ initial_data.customer_name }}{% endif %}"
+                                   required maxlength="200">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" class="form-control" name="email" id="email"
+                                   value="{% if initial_data.email %}{{ initial_data.email }}{% endif %}"
+                                   required maxlength="254">
+                            <div class="form-text">We'll send your quotation to this email</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" class="form-control" name="phone" id="phone"
+                                   value="{% if initial_data.phone %}{{ initial_data.phone }}{% endif %}"
+                                   required maxlength="20">
+                            <div class="form-text">For quotation follow-up calls</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="company_name">Company Name (Optional)</label>
+                            <input type="text" class="form-control" name="company_name" id="company_name"
+                                   value="{% if initial_data.company_name %}{{ initial_data.company_name }}{% endif %}"
+                                   maxlength="200">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Requirements -->
+            <div class="form-section">
+                <h3><i class="fas fa-cogs me-2"></i>System Requirements & Needs Assessment</h3>
+                <div class="form-group">
+                    <label for="system_type">What type of solar system are you interested in? *</label>
+                    <select class="form-control" name="system_type" id="system_type" required>
+                        <option value="">Select system type</option>
+                        <option value="grid_tied">Grid-Tied System - Connected to utility power</option>
+                        <option value="off_grid">Off-Grid System - Independent power generation</option>
+                        <option value="hybrid">Hybrid System - Battery backup with grid connection</option>
+                        <option value="backup">Backup Power System - Emergency power only</option>
+                        <option value="not_sure">Not Sure - Please advise me</option>
+                    </select>
+                    <div class="form-text">Choose "Not Sure" if you'd like our expert recommendation</div>
+                </div>
+
+                <!-- Guided Requirements Sections -->
+                <div id="requirements-guide" class="guided-requirements mt-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Step-by-step guidance:</strong> Click on each section below to provide detailed information about your power needs.
+                        This helps us create an accurate quotation for your specific situation.
+                    </div>
+
+                    <!-- 1. Household/Business Profile -->
+                    <div class="requirement-block mb-3">
+                        <h5 class="requirement-header" onclick="toggleSection('household-profile')" style="cursor: pointer; color: var(--primary-color, #38b6ff);">
+                            <i class="fas fa-users me-2"></i>1. Household/Business Profile
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </h5>
+                        <div id="household-profile" class="requirement-content" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>How many people live/work here? *</label>
+                                        <select class="form-control" id="num_people">
+                                            <option value="">Select...</option>
+                                            <option value="1">1 person</option>
+                                            <option value="2">2 people</option>
+                                            <option value="3">3 people</option>
+                                            <option value="4">4 people</option>
+                                            <option value="5">5 people</option>
+                                            <option value="6-10">6-10 people</option>
+                                            <option value="11-20">11-20 people</option>
+                                            <option value="21-50">21-50 people</option>
+                                            <option value="50+">More than 50 people</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>What type of property? *</label>
+                                        <select class="form-control" id="property_usage">
+                                            <option value="">Select...</option>
+                                            <option value="home">Private home/residential</option>
+                                            <option value="office">Office space</option>
+                                            <option value="shop">Shop/retail</option>
+                                            <option value="restaurant">Restaurant/cafe</option>
+                                            <option value="school">School/educational</option>
+                                            <option value="factory">Factory/industrial</option>
+                                            <option value="church">Church/mosque</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Typical daily schedule/activity hours?</label>
+                                <div class="schedule-options">
+                                    <label class="schedule-option">
+                                        <input type="checkbox" value="morning"> Morning (6AM-12PM)
+                                    </label>
+                                    <label class="schedule-option">
+                                        <input type="checkbox" value="afternoon"> Afternoon (12PM-6PM)
+                                    </label>
+                                    <label class="schedule-option">
+                                        <input type="checkbox" value="evening"> Evening (6PM-10PM)
+                                    </label>
+                                    <label class="schedule-option">
+                                        <input type="checkbox" value="night"> Night (10PM-6AM)
+                                    </label>
+                                    <label class="schedule-option">
+                                        <input type="checkbox" value="weekends"> Weekends only
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">Select when you typically use electricity</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Power Consumption Calculator -->
+                    <div class="requirement-block mb-3">
+                        <h5 class="requirement-header" onclick="toggleSection('power-calculator')" style="cursor: pointer; color: var(--primary-color, #38b6ff);">
+                            <i class="fas fa-calculator me-2"></i>2. Power Consumption Calculator
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </h5>
+                        <div id="power-calculator" class="requirement-content" style="display: none;">
+                            <div class="calculator-intro">
+                                <p>Use this calculator to estimate your power needs. Select appliances you use regularly:</p>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="appliances-section">
+                                        <h6>Select Your Appliances:</h6>
+                                        <div class="appliance-grid">
+                                            <!-- Essential Items -->
+                                            <div class="appliance-category">
+                                                <h6><i class="fas fa-home me-1"></i>Essential Household</h6>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="200" data-hours="4">
+                                                    <span>Television (32") - 200W, 4 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="150" data-hours="8">
+                                                    <span>Fridge/Freezer - 150W, 8 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="60" data-hours="6">
+                                                    <span>Lighting (LED) - 60W total, 6 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="120" data-hours="2">
+                                                    <span>Computer/Laptop - 120W, 2 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="2000" data-hours="0.5">
+                                                    <span>Electric Kettle - 2000W, 0.5 hours/day</span>
+                                                </label>
+                                            </div>
+
+                                            <!-- Kitchen Items -->
+                                            <div class="appliance-category">
+                                                <h6><i class="fas fa-utensils me-1"></i>Kitchen</h6>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="800" data-hours="0.5">
+                                                    <span>Microwave - 800W, 0.5 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="1200" data-hours="0.25">
+                                                    <span>Toaster - 1200W, 15 min/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="100" data-hours="1">
+                                                    <span>Fan - 100W, 1 hour/day</span>
+                                                </label>
+                                            </div>
+
+                                            <!-- Office/Commercial -->
+                                            <div class="appliance-category">
+                                                <h6><i class="fas fa-briefcase me-1"></i>Office/Commercial</h6>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="200" data-hours="8">
+                                                    <span>Computers - 200W each, 8 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="300" data-hours="8">
+                                                    <span>Printer/Photocopier - 300W, 8 hours/day</span>
+                                                </label>
+                                                <label class="appliance-item">
+                                                    <input type="checkbox" class="appliance-checkbox" data-watts="500" data-hours="8">
+                                                    <span>A/C Unit - 500W, 8 hours/day</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="calculator-results">
+                                        <h6><i class="fas fa-chart-bar me-1"></i>Your Power Needs</h6>
+                                        <div class="result-box">
+                                            <div class="result-item">
+                                                <span class="label">Daily Consumption:</span>
+                                                <span class="value" id="daily-consumption">0 kWh</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="label">Monthly Cost (KPLC):</span>
+                                                <span class="value" id="monthly-cost">KES 0</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="label">Monthly Savings (Solar):</span>
+                                                <span class="value text-success" id="monthly-savings">KES 0</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">* Estimates based on average usage</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Special Requirements -->
+                    <div class="requirement-block mb-3">
+                        <h5 class="requirement-header" onclick="toggleSection('special-reqs')" style="cursor: pointer; color: var(--primary-color, #38b6ff);">
+                            <i class="fas fa-star me-2"></i>3. Special Requirements & Concerns
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </h5>
+                        <div id="special-reqs" class="requirement-content" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Do you need backup power? *</label>
+                                        <div class="radio-options">
+                                            <label>
+                                                <input type="radio" name="backup_need" value="yes"> Yes - Critical for my operations
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="backup_need" value="partial"> Partial - Emergency only
+                                            </label>
+                                            <label>
+                                                <input type="radio" name="backup_need" value="no" checked> No - Cost saving only
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Installation Timeline</label>
+                                        <select class="form-control" id="installation_timeline">
+                                            <option value="">Select...</option>
+                                            <option value="immediate">Immediate (1-2 weeks)</option>
+                                            <option value="1-3 Months">Within 1-3 Months</option>
+                                            <option value="3-6 Months">Within 3-6 Months</option>
+                                            <option value="planning">Long-term planning</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Any specific concerns or requirements?</label>
+                                <div class="concerns-options">
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="low_cost"> Low cost priority
+                                    </label>
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="reliability"> Maximum reliability
+                                    </label>
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="warranty"> Long warranty needed
+                                    </label>
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="maintenance"> Easy maintenance
+                                    </label>
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="monitoring"> Remote monitoring required
+                                    </label>
+                                    <label class="concern-item">
+                                        <input type="checkbox" value="expansion"> Future expansion possible
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Roof & Installation Assessment -->
+                    <div class="requirement-block mb-3">
+                        <h5 class="requirement-header" onclick="toggleSection('roof-assessment')" style="cursor: pointer; color: var(--primary-color, #38b6ff);">
+                            <i class="fas fa-home me-2"></i>4. Roof & Space Assessment
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </h5>
+                        <div id="roof-assessment" class="requirement-content" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Roof Type</label>
+                                        <select class="form-control" id="roof_type_detail">
+                                            <option value="">Select...</option>
+                                            <option value="tiles">Clay/Concrete Tiles</option>
+                                            <option value="iron">Iron Sheets/Mabati</option>
+                                            <option value="concrete">Concrete Flat Roof</option>
+                                            <option value="asbestos">Asbestos</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Available Space</label>
+                                        <select class="form-control" id="space_available">
+                                            <option value="">Select...</option>
+                                            <option value="limited">Limited space (<50 sq meters)</option>
+                                            <option value="moderate">Moderate space (50-100 sq meters)</option>
+                                            <option value="plenty">Plenty of space (>100 sq meters)</option>
+                                            <option value="ground">Ground installation possible</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Installation Constraints</label>
+                                <div class="constraint-options">
+                                    <label class="constraint-item">
+                                        <input type="checkbox" value="height"> Roof is very high/up to 3 stories
+                                    </label>
+                                    <label class="constraint-item">
+                                        <input type="checkbox" value="trees"> Nearby trees/blocking views
+                                    </label>
+                                    <label class="constraint-item">
+                                        <input type="checkbox" value="neighbors"> Close to neighbors/fences
+                                    </label>
+                                    <label class="constraint-item">
+                                        <input type="checkbox" value="aesthetic"> Must look good/not noticeable
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden compiled requirements -->
+                <textarea class="form-control" name="system_requirements" id="system_requirements"
+                          rows="4" maxlength="2000" style="display: none;"></textarea>
+                <div class="form-text">
+                    <i class="fas fa-magic me-1"></i>
+                    Your requirements will be automatically compiled from the sections above.
+                    The more details you provide, the more accurate our quotation will be.
+                </div>
+
+                <!-- Hidden validation field -->
+                <input type="hidden" name="system_requirements_valid" id="system_requirements_valid" value="0">
+            </div>
+
+            <!-- Location and Installation -->
+            <div class="form-section">
+                <h3><i class="fas fa-map-marker-alt me-2"></i>Location & Installation</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="location">City/Location *</label>
+                            <input type="text" class="form-control" name="location" id="location"
+                                   value="{% if initial_data.location %}{{ initial_data.location }}{% endif %}"
+                                   required maxlength="100" placeholder="e.g., Nairobi, Kilimani">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="property_type">Property Type *</label>
+                            <select class="form-control" name="property_type" id="property_type" required>
+                                <option value="residential" {% if initial_data.property_type == 'residential' %}selected{% endif %}>Residential</option>
+                                <option value="commercial" {% if initial_data.property_type == 'commercial' %}selected{% endif %}>Commercial</option>
+                                <option value="industrial" {% if initial_data.property_type == 'industrial' %}selected{% endif %}>Industrial</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="roof_access">Roof Access Difficulty</label>
+                    <select class="form-control" name="roof_access" id="roof_access">
+                        <option value="not_sure" selected>I'm not sure</option>
+                        <option value="easy">Easy access (flat roof or ground level)</option>
+                        <option value="difficult">Difficult access (high, steep, or complex roof)</option>
+                        <option value="limited">Limited access (space constraints)</option>
+                    </select>
+                    <div class="form-text">This helps us estimate installation complexity</div>
+                </div>
+            </div>
+
+            <!-- Budget and Urgency -->
+            <div class="form-section">
+                <h3><i class="fas fa-dollar-sign me-2"></i>Budget & Timeline</h3>
+                <div class="form-group">
+                    <label for="estimated_budget">Estimated Budget (Optional)</label>
+                    <input type="number" class="form-control" name="estimated_budget" id="estimated_budget"
+                           min="0" step="1000" placeholder="e.g., 150000">
+                    <div class="form-text">In Kenyan Shillings. Leave blank if no specific budget.</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Urgency Level *</label>
+                    <div class="urgency-options">
+                        <label class="urgency-option {% if urgency == 'low' %}selected{% endif %}">
+                            <input type="radio" name="urgency" value="low" required>
+                            <div class="urgency-label">Low Priority</div>
+                            <div class="urgency-desc">No rush - within 1-2 weeks</div>
+                        </label>
+                        <label class="urgency-option {% if urgency == 'medium' or not urgency %}selected{% endif %}">
+                            <input type="radio" name="urgency" value="medium" checked required>
+                            <div class="urgency-label">Normal Priority</div>
+                            <div class="urgency-desc">Within 3-5 business days</div>
+                        </label>
+                        <label class="urgency-option {% if urgency == 'high' %}selected{% endif %}">
+                            <input type="radio" name="urgency" value="high" required>
+                            <div class="urgency-label">High Priority</div>
+                            <div class="urgency-desc">Urgent - within 3 days</div>
+                        </label>
+                        <label class="urgency-option {% if urgency == 'critical' %}selected{% endif %}">
+                            <input type="radio" name="urgency" value="critical" required>
+                            <div class="urgency-label">Critical</div>
+                            <div class="urgency-desc">ASAP - immediate attention</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="preferred_contact_time">Preferred Contact Time (Optional)</label>
+                    <input type="text" class="form-control" name="preferred_contact_time" id="preferred_contact_time"
+                           placeholder="e.g., Morning, Afternoon, or specific hours"
+                           maxlength="100">
+                    <div class="form-text">When would you prefer us to call you?</div>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="form-section">
+                <h3><i class="fas fa-sticky-note me-2"></i>Additional Notes</h3>
+                <div class="form-group">
+                    <textarea class="form-control" name="customer_notes" id="customer_notes" rows="4"
+                              placeholder="Any other information you'd like to share with us..."
+                              maxlength="1000"></textarea>
+                    <div class="form-text">Optional additional information about your project</div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <i class="fas fa-paper-plane me-2"></i>Request My Quotation
+            </button>
+        </form>
+
+        <div class="text-center mt-4" style="color: #666; font-size: 0.9rem;">
+            <p>By submitting this form, you agree to our terms of service and privacy policy.</p>
+            <p>We'll contact you within the timeframe you selected above.</p>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('quotationRequestForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const urgencyOptions = document.querySelectorAll('.urgency-option');
+    const systemRequirementsField = document.getElementById('system_requirements');
+
+    // Toggle requirement sections
+    window.toggleSection = function(sectionId) {
+        const content = document.getElementById(sectionId);
+        const icon = content.previousElementSibling.querySelector('.fa-chevron-down, .fa-chevron-up');
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            if (icon)icon.className = 'fas fa-chevron-up float-end';
+        } else {
+            content.style.display = 'none';
+            if (icon) icon.className = 'fas fa-chevron-down float-end';
+        }
+    };
+
+    // Power consumption calculator variables
+    let totalDailyConsumption = 0;
+    const KPLC_RATE_PER_KWH = 25; // KSh per kWh
+
+    // Update calculator results
+    function updateCalculatorResults() {
+        const dailyConsumptionEl = document.getElementById('daily-consumption');
+        const monthlyCostEl = document.getElementById('monthly-cost');
+        const monthlySavingsEl = document.getElementById('monthly-savings');
+
+        const monthlyConsumption = totalDailyConsumption * 30;
+        const monthlyCost = Math.round(monthlyConsumption * KPLC_RATE_PER_KWH);
+        const monthlySavings = Math.round(monthlyCost * 0.35); // Estimate 35% savings
+
+        dailyConsumptionEl.textContent = totalDailyConsumption.toFixed(1) + ' kWh';
+        monthlyCostEl.textContent = 'KES ' + monthlyCost.toLocaleString();
+        monthlySavingsEl.textContent = 'KES ' + monthlySavings.toLocaleString();
+    }
+
+    // Handle appliance checkbox changes
+    document.querySelectorAll('.appliance-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const watts = parseFloat(this.dataset.watts);
+            const hours = parseFloat(this.dataset.hours);
+
+            if (this.checked) {
+                totalDailyConsumption += watts * hours / 1000; // Convert to kWh
+            } else {
+                totalDailyConsumption -= watts * hours / 1000;
+            }
+
+            updateCalculatorResults();
+        });
+    });
+
+    // Compile requirements on form submission
+    form.addEventListener('submit', function(e) {
+        let compiledRequirements = [];
+
+        // Get household profile
+        const numPeople = document.getElementById('num_people').value;
+        const propertyUsage = document.getElementById('property_usage').value;
+        if (numPeople && propertyUsage) {
+            compiledRequirements.push(`• Household/Business Profile: ${numPeople} people in a ${propertyUsage.replace('_', ' ')}`);
+        }
+
+        // Get schedule
+        const scheduleCheckboxes = document.querySelectorAll('#household-profile input[type="checkbox"]:checked');
+        if (scheduleCheckboxes.length > 0) {
+            const schedule = Array.from(scheduleCheckboxes).map(cb => cb.value).join(', ');
+            compiledRequirements.push(`• Activity Hours: ${schedule}`);
+        }
+
+        // Get power calculator results
+        if (totalDailyConsumption > 0) {
+            compiledRequirements.push(`• Estimated Daily Consumption: ${totalDailyConsumption.toFixed(1)} kWh`);
+            compiledRequirements.push(`• Estimated Monthly Cost Savings: KES ${(Math.round(totalDailyConsumption * 30 * KPLC_RATE_PER_KWH * 0.35)).toLocaleString()}`);
+        }
+
+        // Get appliances selected
+        const selectedAppliances = document.querySelectorAll('#power-calculator input[type="checkbox"]:checked');
+        if (selectedAppliances.length > 0) {
+            const appliances = Array.from(selectedAppliances).map(cb =>
+                cb.closest('.appliance-item').querySelector('span').textContent.split(' - ')[0]
+            ).join(', ');
+            compiledRequirements.push(`• Selected Appliances/Equipment: ${appliances}`);
+        }
+
+        // Get backup needs
+        const backupNeed = document.querySelector('input[name="backup_need"]:checked');
+        if (backupNeed) {
+            compiledRequirements.push(`• Backup Power Requirements: ${backupNeed.value === 'yes' ? 'Critical for operations' : backupNeed.value === 'partial' ? 'Emergency only' : 'Cost saving only'}`);
+        }
+
+        // Get installation timeline
+        const timeline = document.getElementById('installation_timeline').value;
+        if (timeline) {
+            compiledRequirements.push(`• Preferred Installation Timeline: ${timeline}`);
+        }
+
+        // Get specific concerns
+        const concerns = document.querySelectorAll('#special-reqs input[type="checkbox"]:checked');
+        if (concerns.length > 0) {
+            const concernList = Array.from(concerns).map(cb => cb.value.replace('_', ' ')).join(', ');
+            compiledRequirements.push(`• Specific Requirements: ${concernList}`);
+        }
+
+        // Get roof details
+        const roofType = document.getElementById('roof_type_detail').value;
+        const spaceAvailable = document.getElementById('space_available').value;
+        if (roofType || spaceAvailable) {
+            let roofInfo = '• Installation Details:';
+            if (roofType) roofInfo += ` Roof type - ${roofType.replace('_', ' ')}`;
+            if (spaceAvailable) roofInfo += ` Space - ${spaceAvailable.replace('_', ' ')}`;
+            compiledRequirements.push(roofInfo);
+        }
+
+        // Get installation constraints
+        const constraints = document.querySelectorAll('#roof-assessment input[type="checkbox"]:checked');
+        if (constraints.length > 0) {
+            const constraintList = Array.from(constraints).map(cb => cb.value.replace('_', ' ')).join(', ');
+            compiledRequirements.push(`• Installation Constraints: ${constraintList}`);
+        }
+
+        // Set compiled requirements in hidden field
+        if (compiledRequirements.length > 0) {
+            systemRequirementsField.value = compiledRequirements.join('\n');
+        } else {
+            // Fallback if no guided data provided
+            systemRequirementsField.value = "Detailed requirements will be discussed with customer during initial consultation.";
+        }
+
+        // Handle urgency option selection
+        urgencyOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                urgencyOptions.forEach(opt => opt.classList.remove('selected'));
+                // Add selected class to clicked option
+                this.classList.add('selected');
+                // Check the radio button
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+            });
+
+            // Also handle radio button changes
+            const radio = option.querySelector('input[type="radio"]');
+            radio.addEventListener('change', function() {
+                urgencyOptions.forEach(opt => opt.classList.remove('selected'));
+                if (this.checked) {
+                    this.closest('.urgency-option').classList.add('selected');
+                }
+            });
+        });
+
+        // Form validation
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.style.borderColor = '#dc3545';
+                isValid = false;
+            } else {
+                field.style.borderColor = '#28a745';
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+            return false;
+        }
+
+        // Disable submit button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+
+        // Re-enable on any error (will be handled by Django if needed)
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Request My Quotation';
+        }, 10000); // Re-enable after 10 seconds if no response
+    });
+
+    // Clear error styling on input
+    form.addEventListener('input', function(e) {
+        if (e.target.hasAttribute('required')) {
+            e.target.style.borderColor = '#e9ecef'; // Reset to default
+        }
+    });
+
+    // Add keyboard accessibility for appliance items
+    document.addEventListener('keydown', function(e) {
+        if (e.target.closest('.appliance-item')) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const checkbox = e.target.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.click();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

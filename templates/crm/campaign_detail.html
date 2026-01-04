@@ -1,0 +1,229 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ campaign.name }} - Campaign Details - {{ block.super }}{% endblock %}
+
+{% block page_title %}Campaign Details{% endblock %}
+
+{% block page_subtitle %}{{ campaign.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:campaign_list' %}">Campaigns</a></li>
+<li class="breadcrumb-item active">{{ campaign.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Campaign Overview -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="card-title mb-0">Campaign Overview</h5>
+                    <div>
+                        <a href="{% url 'crm:campaign_update' campaign.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit me-2"></i>Edit Campaign
+                        </a>
+                        <a href="{% url 'crm:campaign_delete' campaign.pk %}" 
+                           class="btn btn-danger btn-sm ms-2"
+                           onclick="return confirm('Are you sure you want to delete this campaign?')">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Campaign Type:</strong></p>
+                        <p>{{ campaign.get_campaign_type_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Status:</strong></p>
+                        <p><span class="badge bg-{{ campaign.status|yesno:'success,warning,danger' }}">
+                            {{ campaign.get_status_display }}
+                        </span></p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Start Date:</strong></p>
+                        <p>{{ campaign.start_date }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>End Date:</strong></p>
+                        <p>{{ campaign.end_date }}</p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Budget:</strong></p>
+                        <p>KES {{ campaign.budget|intcomma }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Target Revenue:</strong></p>
+                        <p>{% if campaign.target_revenue %}KES {{ campaign.target_revenue|intcomma }}{% else %}Not set{% endif %}</p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Target Leads:</strong></p>
+                        <p>{{ campaign.target_leads|intcomma }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Actual Leads:</strong></p>
+                        <p>{{ campaign.actual_leads|intcomma }}</p>
+                    </div>
+                    
+                    <div class="col-12">
+                        <p class="mb-1"><strong>Landing Page:</strong></p>
+                        <p>{% if campaign.landing_page_url %}
+                            <a href="{{ campaign.landing_page_url }}" target="_blank">{{ campaign.landing_page_url }}</a>
+                        {% else %}
+                            Not set
+                        {% endif %}</p>
+                    </div>
+                    
+                    <div class="col-12">
+                        <p class="mb-1"><strong>Description:</strong></p>
+                        <p>{{ campaign.description|linebreaks|default:"No description provided." }}</p>
+                    </div>
+                    
+                    <div class="col-12">
+                        <p class="mb-1"><strong>Campaign Message:</strong></p>
+                        <p>{{ campaign.message|linebreaks|default:"No message content." }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Performance -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">Campaign Performance</h5>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">Lead Generation Progress</h6>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>{{ campaign.actual_leads }} of {{ campaign.target_leads }} leads</span>
+                                <span>{{ campaign.lead_conversion_rate|floatformat:1 }}%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ campaign.lead_conversion_rate }}%" 
+                                     aria-valuenow="{{ campaign.lead_conversion_rate }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">Budget Utilization</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>Budget: KES {{ campaign.budget|intcomma }}</span>
+                                <span>Spent: KES {{ campaign.budget|intcomma }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Details Sidebar -->
+    <div class="col-md-4">
+        <!-- Campaign Owner -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Campaign Owner</h5>
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        {% if campaign.owner.profile_photo %}
+                            <img src="{{ campaign.owner.profile_photo.url }}" alt="" class="rounded-circle" width="50">
+                        {% else %}
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px;">
+                                {{ campaign.owner.get_initials }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">{{ campaign.owner.get_full_name }}</h6>
+                        <p class="text-muted small mb-0">{{ campaign.owner.email }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Timeline -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Campaign Timeline</h5>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Campaign Created</h6>
+                            <p class="text-muted small mb-0">{{ campaign.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Campaign Start</h6>
+                            <p class="text-muted small mb-0">{{ campaign.start_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-danger"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Campaign End</h6>
+                            <p class="text-muted small mb-0">{{ campaign.end_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    transform: translateX(25%);
+}
+
+.timeline-content {
+    padding-left: 1rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_content %}
+<div style="background-color: #ffffff; padding: 30px; border-radius: 10px; margin: 20px 0;">
+    <h2 style="color: {{ primary_color }}; margin-bottom: 20px; font-size: 24px;">
+        Re: Your Inquiry - {{ inquiry_type_display }}
+    </h2>
+    
+    <p style="margin-bottom: 15px; color: #333; line-height: 1.6;">
+        Dear {{ contact_message.first_name }},
+    </p>
+    
+    <p style="margin-bottom: 20px; color: #333; line-height: 1.6;">
+        Thank you for contacting {{ company_name }}. We have received your inquiry regarding {{ inquiry_type_display|lower }} and appreciate your interest in our solar energy solutions.
+    </p>
+    
+    <!-- Original Message Summary -->
+    <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid {{ primary_color }}; margin: 20px 0; border-radius: 5px;">
+        <h4 style="color: #666; margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">Your Original Message:</h4>
+        <p style="color: #555; margin-bottom: 8px;"><strong>Property Type:</strong> {{ contact_message.get_property_type_display }}</p>
+        {% if contact_message.location %}
+        <p style="color: #555; margin-bottom: 8px;"><strong>Location:</strong> {{ contact_message.location }}</p>
+        {% endif %}
+        {% if contact_message.monthly_bill %}
+        <p style="color: #555; margin-bottom: 8px;"><strong>Monthly Bill:</strong> KES {{ contact_message.monthly_bill|floatformat:2 }}</p>
+        {% endif %}
+        <p style="color: #555; margin-bottom: 0;"><strong>Message:</strong> {{ contact_message.message|truncatewords:30 }}</p>
+    </div>
+    
+    <!-- Admin Response -->
+    <div style="margin: 25px 0;">
+        <h4 style="color: {{ primary_color }}; margin-bottom: 15px;">Our Response:</h4>
+        <div style="color: #333; line-height: 1.8; font-size: 16px;">
+            {{ response_message|linebreaks }}
+        </div>
+    </div>
+    
+    <!-- Next Steps -->
+    <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 25px 0;">
+        <h4 style="color: {{ primary_color }}; margin-bottom: 15px;">Next Steps:</h4>
+        <ul style="color: #333; margin: 0; padding-left: 20px; line-height: 1.6;">
+            {% if contact_message.inquiry_type == 'quotation' %}
+            <li>We will prepare a detailed quotation based on your requirements</li>
+            <li>Our team will contact you within 24 hours to schedule a site visit</li>
+            <li>You can also use our <a href="{{ company_website }}/calculator/" style="color: {{ primary_color }};">online calculator</a> for an immediate estimate</li>
+            {% elif contact_message.inquiry_type == 'installation' %}
+            <li>Our technical team will review your installation requirements</li>
+            <li>We'll schedule a consultation to discuss the best solution for your needs</li>
+            <li>You'll receive a detailed installation timeline and process overview</li>
+            {% elif contact_message.inquiry_type == 'maintenance' %}
+            <li>Our maintenance team will contact you to schedule a service visit</li>
+            <li>We'll provide a comprehensive system health check</li>
+            <li>Any required maintenance or repairs will be clearly outlined</li>
+            {% else %}
+            <li>Our team will review your inquiry and provide additional information</li>
+            <li>Feel free to contact us if you have any follow-up questions</li>
+            <li>We're here to help you with all your solar energy needs</li>
+            {% endif %}
+        </ul>
+    </div>
+    
+    <!-- Contact Information -->
+    <div style="border-top: 2px solid #e9ecef; padding-top: 20px; margin-top: 30px;">
+        <h4 style="color: {{ primary_color }}; margin-bottom: 15px;">Contact Us Anytime:</h4>
+        <div style="color: #555; line-height: 1.6;">
+            <p style="margin-bottom: 8px;"><strong>Phone:</strong> {{ company_phone }}</p>
+            <p style="margin-bottom: 8px;"><strong>Email:</strong> <a href="mailto:{{ company_email }}" style="color: {{ primary_color }};">{{ company_email }}</a></p>
+            <p style="margin-bottom: 8px;"><strong>Website:</strong> <a href="{{ company_website }}" style="color: {{ primary_color }};">{{ company_website }}</a></p>
+            {% if company_address %}
+            <p style="margin-bottom: 0;"><strong>Office:</strong> {{ company_address }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <p style="margin-top: 25px; color: #666; font-style: italic; line-height: 1.6;">
+        Thank you for choosing {{ company_name }} for your solar energy needs. We look forward to helping you harness the power of the sun!
+    </p>
+</div>
+{% endblock %}

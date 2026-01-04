@@ -1,0 +1,438 @@
+{% comment %}
+JavaScript for Universal Customer Modal Component
+Include this in your template's extra_js block
+
+Configuration:
+Set window.customerModalConfig before opening modal:
+{
+    targetSelectId: 'id_client',  // Select element to update with new customer
+    includeBusinessFields: true,  // Show business information fields
+    includeSolarFields: false,    // Show solar information fields by default
+    onCustomerCreated: function(customer) {}, // Custom callback
+    apiEndpoint: '/pos/api/customer/create/'  // API endpoint for customer creation
+}
+{% endcomment %}
+
+<script>
+console.log('Customer modal JS loading...');
+
+// Universal Customer Modal Configuration
+window.customerModalConfig = window.customerModalConfig || {
+    targetSelectId: null,
+    includeBusinessFields: true,
+    includeSolarFields: false,
+    onCustomerCreated: null,
+    apiEndpoint: '/pos/api/customer/create/'
+};
+
+// Initialize customer modal functionality
+function initializeCustomerModal() {
+    // Handle solar fields toggle
+    const showSolarFieldsCheckbox = document.getElementById('show-solar-fields');
+    const solarInfoSection = document.getElementById('solar-info-section');
+    
+    if (showSolarFieldsCheckbox && solarInfoSection) {
+        showSolarFieldsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                solarInfoSection.style.display = 'block';
+                // Set default values for required solar fields
+                const monthlyConsumption = solarInfoSection.querySelector('[name="monthly_consumption"]');
+                const monthlyBill = solarInfoSection.querySelector('[name="average_monthly_bill"]');
+                const roofArea = solarInfoSection.querySelector('[name="roof_area"]');
+                
+                if (monthlyConsumption && !monthlyConsumption.value) monthlyConsumption.value = '0';
+                if (monthlyBill && !monthlyBill.value) monthlyBill.value = '0';
+                if (roofArea && !roofArea.value) roofArea.value = '0';
+            } else {
+                solarInfoSection.style.display = 'none';
+            }
+        });
+        
+        // Set initial state
+        showSolarFieldsCheckbox.checked = window.customerModalConfig.includeSolarFields;
+        if (showSolarFieldsCheckbox.checked) {
+            showSolarFieldsCheckbox.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Handle business type changes
+    const businessTypeSelect = document.querySelector('#universalCustomerModal [name="business_type"]');
+    const companyNameField = document.querySelector('#universalCustomerModal [name="company"]');
+    
+    if (businessTypeSelect && companyNameField) {
+        businessTypeSelect.addEventListener('change', function() {
+            if (this.value === 'individual') {
+                companyNameField.value = '';
+                companyNameField.parentElement.style.display = 'none';
+            } else {
+                companyNameField.parentElement.style.display = 'block';
+            }
+        });
+    }
+    
+    // Show/hide business fields based on config
+    const businessInfoSection = document.getElementById('business-info-section');
+    if (businessInfoSection && !window.customerModalConfig.includeBusinessFields) {
+        businessInfoSection.style.display = 'none';
+    }
+    
+    // Form validation
+    const customerForm = document.getElementById('universal-customer-form');
+    if (customerForm) {
+        customerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveUniversalCustomer();
+        });
+        
+        // Real-time validation
+        const requiredFields = customerForm.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            field.addEventListener('blur', function() {
+                validateField(this);
+            });
+            
+            field.addEventListener('input', function() {
+                if (this.classList.contains('is-invalid')) {
+                    validateField(this);
+                }
+            });
+        });
+        
+        // Email validation
+        const emailField = customerForm.querySelector('[name="email"]');
+        if (emailField) {
+            emailField.addEventListener('blur', function() {
+                validateEmailField(this);
+            });
+        }
+    }
+}
+
+// Open customer modal
+function openCustomerModal(config = {}) {
+    console.log('openCustomerModal function called with config:', config);
+    
+    // Merge configuration
+    Object.assign(window.customerModalConfig, config);
+    console.log('Merged config:', window.customerModalConfig);
+    
+    // Reset form
+    console.log('Resetting form...');
+    resetCustomerModalForm();
+    
+    // Configure modal based on settings
+    console.log('Configuring modal...');
+    configureCustomerModal();
+    
+    // Show modal
+    const modal = document.getElementById('universalCustomerModal');
+    console.log('Modal element found:', modal);
+    
+    if (modal) {
+        console.log('Bootstrap available:', !!window.bootstrap);
+        console.log('jQuery available:', !!window.jQuery);
+        
+        if (window.bootstrap) {
+            console.log('Using Bootstrap modal...');
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } else if (window.jQuery) {
+            console.log('Using jQuery modal...');
+            $('#universalCustomerModal').modal('show');
+        } else {
+            console.log('Using fallback modal display...');
+            modal.style.display = 'block';
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    } else {
+        console.error('Modal element not found! Make sure universalCustomerModal exists in the DOM');
+    }
+}
+
+// Configure modal appearance and behavior
+function configureCustomerModal() {
+    const businessSection = document.getElementById('business-info-section');
+    const solarSection = document.getElementById('solar-info-section');
+    const showSolarCheckbox = document.getElementById('show-solar-fields');
+    
+    // Configure business fields
+    if (businessSection) {
+        businessSection.style.display = window.customerModalConfig.includeBusinessFields ? 'block' : 'none';
+    }
+    
+    // Configure solar fields
+    if (solarSection && showSolarCheckbox) {
+        showSolarCheckbox.checked = window.customerModalConfig.includeSolarFields;
+        solarSection.style.display = window.customerModalConfig.includeSolarFields ? 'block' : 'none';
+    }
+}
+
+// Reset customer modal form
+function resetCustomerModalForm() {
+    const form = document.getElementById('universal-customer-form');
+    if (form) {
+        form.reset();
+        form.classList.remove('was-validated');
+        
+        // Clear validation states
+        const fields = form.querySelectorAll('.form-control, .form-select');
+        fields.forEach(field => {
+            field.classList.remove('is-valid', 'is-invalid');
+        });
+        
+        // Set default values
+        const countryField = form.querySelector('[name="country"]');
+        if (countryField) countryField.value = 'Kenya';
+        
+        const businessTypeField = form.querySelector('[name="business_type"]');
+        if (businessTypeField) businessTypeField.value = 'individual';
+    }
+}
+
+// Validate individual field
+function validateField(field) {
+    const value = field.value.trim();
+    const isValid = field.checkValidity() && value !== '';
+    
+    field.classList.toggle('is-valid', isValid);
+    field.classList.toggle('is-invalid', !isValid);
+    
+    return isValid;
+}
+
+// Validate email field
+function validateEmailField(field) {
+    const value = field.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = emailRegex.test(value);
+    
+    field.classList.toggle('is-valid', isValid);
+    field.classList.toggle('is-invalid', !isValid);
+    
+    return isValid;
+}
+
+// Validate entire form
+function validateCustomerForm() {
+    const form = document.getElementById('universal-customer-form');
+    if (!form) return false;
+    
+    let isValid = true;
+    const requiredFields = form.querySelectorAll('[required]');
+    
+    requiredFields.forEach(field => {
+        if (!validateField(field)) {
+            isValid = false;
+        }
+    });
+    
+    // Validate email format
+    const emailField = form.querySelector('[name="email"]');
+    if (emailField && !validateEmailField(emailField)) {
+        isValid = false;
+    }
+    
+    // Validate solar fields if visible
+    const solarSection = document.getElementById('solar-info-section');
+    if (solarSection && solarSection.style.display !== 'none') {
+        const monthlyConsumption = form.querySelector('[name="monthly_consumption"]');
+        const monthlyBill = form.querySelector('[name="average_monthly_bill"]');
+        const roofArea = form.querySelector('[name="roof_area"]');
+        
+        if (monthlyConsumption && (!monthlyConsumption.value || monthlyConsumption.value < 0)) {
+            monthlyConsumption.value = '0';
+        }
+        if (monthlyBill && (!monthlyBill.value || monthlyBill.value < 0)) {
+            monthlyBill.value = '0';
+        }
+        if (roofArea && (!roofArea.value || roofArea.value < 0)) {
+            roofArea.value = '0';
+        }
+    }
+    
+    form.classList.add('was-validated');
+    return isValid;
+}
+
+// Save customer via API
+function saveUniversalCustomer() {
+    if (!validateCustomerForm()) {
+        showCustomerNotification('error', 'Validation Error', 'Please fill in all required fields correctly.');
+        return;
+    }
+    
+    const form = document.getElementById('universal-customer-form');
+    const formData = new FormData(form);
+    
+    // Show loading state
+    showCustomerLoading(true);
+    setSaveButtonState(true);
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Prepare data
+    const data = {
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        company: formData.get('company') || '',
+        address: formData.get('address') || '',
+        city: formData.get('city') || '',
+        country: formData.get('country') || 'Kenya',
+        business_type: formData.get('business_type') || 'individual',
+        tax_number: formData.get('tax_number') || '',
+        monthly_consumption: formData.get('monthly_consumption') || '0',
+        average_monthly_bill: formData.get('average_monthly_bill') || '0',
+        property_type: formData.get('property_type') || 'residential',
+        roof_area: formData.get('roof_area') || '0',
+        roof_type: formData.get('roof_type') || 'iron_sheets'
+    };
+    
+    // Make API call
+    fetch(window.customerModalConfig.apiEndpoint, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showCustomerLoading(false);
+        setSaveButtonState(false);
+        
+        if (data.success) {
+            // Success handling
+            showCustomerNotification('success', 'Success', 'Customer created successfully!');
+            
+            // Create customer object from API response
+            const customer = {
+                id: data.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                display_name: data.display_name
+            };
+            
+            // Update target select if specified
+            if (window.customerModalConfig.targetSelectId) {
+                updateCustomerSelect(customer);
+            }
+            
+            // Call custom callback if provided
+            if (typeof window.customerModalConfig.onCustomerCreated === 'function') {
+                window.customerModalConfig.onCustomerCreated(customer);
+            }
+            
+            // Dispatch custom event
+            const event = new CustomEvent('customerCreated', {
+                detail: { customer: customer }
+            });
+            document.dispatchEvent(event);
+            
+            // Close modal
+            closeCustomerModal();
+            
+        } else {
+            showCustomerNotification('error', 'Error', data.message || 'Failed to create customer.');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating customer:', error);
+        showCustomerLoading(false);
+        setSaveButtonState(false);
+        showCustomerNotification('error', 'Error', 'Network error. Please try again.');
+    });
+}
+
+// Update customer select dropdown
+function updateCustomerSelect(customer) {
+    const selectElement = document.getElementById(window.customerModalConfig.targetSelectId);
+    if (selectElement) {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.display_name;
+        option.selected = true;
+        
+        // Insert alphabetically or at the end
+        selectElement.appendChild(option);
+        
+        // Trigger change event
+        selectElement.dispatchEvent(new Event('change'));
+    }
+}
+
+// Show/hide loading overlay
+function showCustomerLoading(show) {
+    const loading = document.getElementById('customer-modal-loading');
+    if (loading) {
+        loading.style.display = show ? 'flex' : 'none';
+    }
+}
+
+// Set save button state
+function setSaveButtonState(loading) {
+    const saveBtn = document.getElementById('save-customer-btn');
+    if (saveBtn) {
+        if (loading) {
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            saveBtn.disabled = true;
+        } else {
+            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Add Customer';
+            saveBtn.disabled = false;
+        }
+    }
+}
+
+// Close customer modal
+function closeCustomerModal() {
+    const modal = document.getElementById('universalCustomerModal');
+    if (modal) {
+        if (window.bootstrap) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+        } else if (window.jQuery) {
+            $('#universalCustomerModal').modal('hide');
+        } else {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+// Show notification (fallback if main notification system not available)
+function showCustomerNotification(type, title, message) {
+    if (typeof notify !== 'undefined' && notify.show) {
+        notify.show(type, title, message);
+    } else if (window.Swal) {
+        // SweetAlert fallback
+        Swal.fire({
+            icon: type === 'error' ? 'error' : 'success',
+            title: title,
+            text: message,
+            timer: 3000,
+            showConfirmButton: false
+        });
+    } else {
+        // Basic alert fallback
+        alert(`${title}: ${message}`);
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCustomerModal();
+});
+
+// Also initialize if jQuery is available
+if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function($) {
+        initializeCustomerModal();
+    });
+}
+</script>

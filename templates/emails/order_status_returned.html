@@ -1,0 +1,111 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Order Returned #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[RETURNED] Your Order Return Has Been Processed</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>We have successfully processed the return of your solar equipment order. We understand that sometimes products don't meet expectations, and we're committed to ensuring your satisfaction.</p>
+
+<div class="highlight-box">
+    <h3>Return Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Return Date:</strong> {{ return_date|date:"F d, Y \a\t g:i A" }}</p>
+    <p><strong>Original Order Value:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Return Reason:</strong> {{ return_reason|default:"Customer return request" }}</p>
+    {% if return_reference %}
+    <p><strong>Return Reference:</strong> {{ return_reference }}</p>
+    {% endif %}
+</div>
+
+<div class="status-box" style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #0c5460; margin: 0 0 10px 0;">[REFUND] Refund Processing</h4>
+    <p style="margin: 0; color: #0c5460;">
+        Your refund is being processed and will be completed within <strong>7-10 business days</strong>. 
+        The refund amount will be credited to your original payment method.
+    </p>
+    <ul style="margin: 10px 0 0 20px; color: #0c5460;">
+        <li>Refund Amount: KES {{ refund_amount|floatformat:2|add:","|cut:" " }}</li>
+        <li>Processing Time: 7-10 business days</li>
+        <li>Refund Method: Original payment method</li>
+    </ul>
+</div>
+
+<h3>Returned Items:</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Product</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Quantity</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Condition</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in returned_items %}
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.product_name }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.quantity }}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">{{ item.condition|default:"Good" }}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd; color: #17a2b8;">[RETURNED]</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Return Process Completed:</h3>
+<ul>
+    <li><strong>Items Received:</strong> All returned items have been received and inspected</li>
+    <li><strong>Condition Verified:</strong> Items have been checked for damage and functionality</li>
+    <li><strong>Refund Approved:</strong> Full refund has been approved and is being processed</li>
+    <li><strong>Inventory Updated:</strong> Items have been returned to our inventory system</li>
+</ul>
+
+{% if return_reason %}
+<div class="status-box" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4>[FEEDBACK] Return Reason</h4>
+    <p>{{ return_reason }}</p>
+    <p style="margin-top: 10px; font-style: italic;">
+        We value your feedback and will use this information to improve our products and services.
+    </p>
+</div>
+{% endif %}
+
+<h3>We Value Your Feedback:</h3>
+<div class="status-box" style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #856404; margin: 0 0 10px 0;">[IMPROVEMENT] Help Us Improve</h4>
+    <p style="margin: 0; color: #856404;">
+        Your experience helps us serve our customers better. We'd appreciate any additional feedback 
+        about how we can improve our products or services. Thank you for giving us the opportunity to serve you.
+    </p>
+</div>
+
+<h3>Future Opportunities:</h3>
+<ul>
+    <li><strong>Stay Connected:</strong> Receive updates about new products and improvements</li>
+    <li><strong>Alternative Solutions:</strong> Explore different solar products that might better meet your needs</li>
+    <li><strong>Consultation:</strong> Schedule a free consultation to discuss alternative energy solutions</li>
+    <li><strong>Special Offers:</strong> Be notified about promotions and discounts on future orders</li>
+</ul>
+
+<h3>Return Timeline:</h3>
+<ul>
+    <li>[COMPLETE] <strong>Return Request Initiated</strong></li>
+    <li>[COMPLETE] <strong>Items Collected/Received</strong></li>
+    <li>[COMPLETE] <strong>Quality Inspection</strong></li>
+    <li>[COMPLETE] <strong>Return Approved</strong></li>
+    <li>[ACTIVE] <strong>Refund Processing</strong> (7-10 business days)</li>
+    <li>[PENDING] <strong>Refund Completed</strong></li>
+</ul>
+
+<div class="cta-box">
+    <p><strong>Questions About Your Return?</strong></p>
+    <a href="tel:{{ company_phone }}" class="btn-primary">Call Support: {{ company_phone }}</a>
+    <a href="mailto:{{ company_email }}" class="btn-secondary">Email Support</a>
+</div>
+
+<p>Thank you for choosing Olivian Group. While we're sorry this order didn't work out, we hope to have the opportunity to serve you again in the future with products that better meet your needs.</p>
+
+{% endblock %}

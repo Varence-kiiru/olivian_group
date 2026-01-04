@@ -1,0 +1,1432 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-gradient: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    --success-gradient: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    --info-gradient: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    --warning-gradient: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    --danger-gradient: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+    --secondary-gradient: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    --purple-gradient: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+    --orange-gradient: linear-gradient(135deg, #fd7e14 0%, #e8680f 100%);
+    --pink-gradient: linear-gradient(135deg, #e83e8c 0%, #d63384 100%);
+    --teal-gradient: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --shadow-heavy: 0 8px 25px rgba(0, 0, 0, 0.15);
+    --border-radius: 12px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Professional Buttons with Enhanced Styling */
+.btn {
+    border-radius: 10px;
+    padding: 0.875rem 2.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    border: none;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-light);
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: var(--transition);
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-submit {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-submit:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-heavy);
+    color: white;
+}
+
+.btn-cancel {
+    background: #ffffff;
+    color: #6c757d;
+    border: 2px solid #e9ecef;
+    box-shadow: var(--shadow-light);
+}
+
+.btn-cancel:hover {
+    background: #f8f9fa;
+    color: #495057;
+    border-color: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* Professional Form Sections with Unique Styling */
+.form-section {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%);
+    border-radius: var(--border-radius);
+    padding: 2.5rem;
+    margin-bottom: 3rem;
+    border: 2px solid rgba(0, 123, 255, 0.08);
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.form-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.form-section::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    opacity: 0.03;
+    transition: var(--transition);
+    border-radius: 50%;
+}
+
+.form-section:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+    border-color: rgba(0, 123, 255, 0.15);
+}
+
+.form-section:hover::after {
+    opacity: 0.06;
+}
+
+.form-section h5 {
+    color: #1a202c;
+    margin-bottom: 2.5rem;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.form-section .section-icon {
+    margin-right: 1rem;
+    font-size: 1.5rem;
+    opacity: 0.9;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Unique Section Colors */
+.form-section:nth-child(1) { /* Basic Information - Blue */
+    border-left-color: #007bff;
+}
+.form-section:nth-child(1)::before {
+    background: var(--primary-gradient);
+}
+.form-section:nth-child(1) h5 .section-icon {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(2) { /* Description - Teal */
+    border-left-color: #17a2b8;
+}
+.form-section:nth-child(2)::before {
+    background: var(--info-gradient);
+}
+.form-section:nth-child(2) h5 .section-icon {
+    background: var(--info-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(3) { /* Technical Specs - Success */
+    border-left-color: #28a745;
+}
+.form-section:nth-child(3)::before {
+    background: var(--success-gradient);
+}
+.form-section:nth-child(3) h5 .section-icon {
+    background: var(--success-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(4) { /* Pricing - Warning */
+    border-left-color: #ffc107;
+}
+.form-section:nth-child(4)::before {
+    background: var(--warning-gradient);
+}
+.form-section:nth-child(4) h5 .section-icon {
+    background: var(--orange-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(5) { /* Inventory - Orange */
+    border-left-color: #fd7e14;
+}
+.form-section:nth-child(5)::before {
+    background: var(--orange-gradient);
+}
+.form-section:nth-child(5) h5 .section-icon {
+    background: var(--orange-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(6) { /* Marketing - Pink */
+    border-left-color: #e83e8c;
+}
+.form-section:nth-child(6)::before {
+    background: var(--pink-gradient);
+}
+.form-section:nth-child(6) h5 .section-icon {
+    background: var(--pink-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(7) { /* Files - Purple */
+    border-left-color: #6f42c1;
+}
+.form-section:nth-child(7)::before {
+    background: var(--purple-gradient);
+}
+.form-section:nth-child(7) h5 .section-icon {
+    background: var(--purple-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(8) { /* Images - Teal */
+    border-left-color: #20c997;
+}
+.form-section:nth-child(8)::before {
+    background: var(--teal-gradient);
+}
+.form-section:nth-child(8) h5 .section-icon {
+    background: var(--teal-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-section:nth-child(9) { /* Documents - Success */
+    border-left-color: #28a745;
+}
+.form-section:nth-child(9)::before {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+.form-section:nth-child(9) h5 .section-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Professional Form Controls */
+.form-control, .form-select {
+    border: 2px solid #e1e5e9;
+    border-radius: 10px;
+    padding: 0.875rem 1.125rem;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    background: #ffffff;
+    transform: translateY(-1px);
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: #b3d1ff;
+    transform: translateY(-0.5px);
+}
+
+.form-label {
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+}
+
+.form-label::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+.required-field::after {
+    content: ' ✱';
+    color: #ef4444;
+    font-weight: 800;
+    margin-left: 0.5rem;
+    text-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+}
+
+.form-text {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.625rem;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.form-text::before {
+    content: '💡';
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Professional Cards */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-heavy);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    padding: 2rem;
+    position: relative;
+}
+
+.card-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary-gradient);
+    opacity: 0.3;
+}
+
+/* Professional Alerts */
+.alert-custom {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--shadow-medium);
+    padding: 1.75rem 2.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 250, 0.98) 100%);
+    backdrop-filter: blur(15px);
+    border-left: 5px solid currentColor;
+}
+
+.alert-custom::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: currentColor;
+    opacity: 0.8;
+}
+
+.alert-custom .alert-icon {
+    font-size: 1.75rem;
+    margin-right: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    opacity: 0.9;
+}
+
+/* Enhanced Formset Cards */
+.image-form, .document-form {
+    border: 2px solid #e1e5e9 !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f1f3f4 50%, #ffffff 100%);
+    margin-bottom: 2rem !important;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    position: relative;
+    box-shadow: var(--shadow-light);
+}
+
+.image-form::before, .document-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #007bff, #17a2b8, #28a745, #ffc107);
+}
+
+.image-form:hover, .document-form:hover {
+    border-color: #007bff !important;
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Form Actions Container */
+.form-actions-container {
+    background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%);
+    border-radius: var(--border-radius);
+    padding: 3rem;
+    margin-top: 4rem;
+    border: 3px solid rgba(0, 123, 255, 0.08);
+    box-shadow: var(--shadow-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.form-actions-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--primary-gradient);
+}
+
+.form-actions-container::after {
+    content: '';
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    width: 60px;
+    height: 60px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007bff' fill-opacity='0.08'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E") center no-repeat;
+}
+
+/* Professional Page Layout */
+.page-title-box {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%);
+    border-radius: var(--border-radius);
+    padding: 3rem;
+    margin-bottom: 4rem;
+    border: 2px solid rgba(0, 123, 255, 0.08);
+    box-shadow: var(--shadow-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-title-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: var(--primary-gradient);
+}
+
+.page-title-box::after {
+    content: '';
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007bff' fill-opacity='0.05'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z'/%3E%3C/svg%3E") center no-repeat;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1a202c;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+    letter-spacing: 1px;
+}
+
+.page-subtitle {
+    font-size: 1.25rem;
+    color: #718096;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    opacity: 0.9;
+}
+
+.page-content {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-light);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+/* Enhanced Breadcrumb */
+.breadcrumb {
+    background: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.breadcrumb-item a {
+    color: #007bff;
+    text-decoration: none;
+    transition: var(--transition);
+    font-weight: 600;
+}
+
+.breadcrumb-item a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+    transform: translateY(-1px);
+}
+
+.breadcrumb-item.active {
+    color: #4a5568;
+    font-weight: 700;
+}
+
+/* Enhanced Custom Elements */
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3E%3Cpath d='M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z'/%3E%3C/svg%3E");
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+.form-check-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.15);
+}
+
+.form-check-label {
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.95rem;
+}
+
+.form-check-label:hover {
+    color: #007bff;
+    transform: translateY(-1px);
+}
+
+/* Professional Spacing */
+.g-3 {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 2rem;
+}
+
+/* Enhanced Responsive Design */
+@media (max-width: 768px) {
+    .form-section {
+        padding: 2rem 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        font-size: 0.9rem;
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+
+    .form-section h5 {
+        font-size: 1.15rem;
+        margin-bottom: 2rem;
+        letter-spacing: 1px;
+    }
+
+    .page-title-box {
+        padding: 2.5rem 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+    }
+
+    .form-actions-container {
+        padding: 2.5rem 2rem;
+        margin-top: 3rem;
+    }
+
+    .card-header {
+        padding: 1.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .form-section {
+        padding: 1.75rem 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .page-title-box {
+        padding: 2rem 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .form-actions-container {
+        padding: 2rem 1.5rem;
+        margin-top: 2.5rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+    }
+
+    .form-section h5 {
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        padding: 1.5rem;
+    }
+}
+
+/* Professional Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-section {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.form-section:nth-child(2) { animation-delay: 0.1s; }
+.form-section:nth-child(3) { animation-delay: 0.2s; }
+.form-section:nth-child(4) { animation-delay: 0.3s; }
+.form-section:nth-child(5) { animation-delay: 0.4s; }
+.form-section:nth-child(6) { animation-delay: 0.5s; }
+.form-section:nth-child(7) { animation-delay: 0.6s; }
+.form-section:nth-child(8) { animation-delay: 0.7s; }
+.form-section:nth-child(9) { animation-delay: 0.8s; }
+
+/* Loading States */
+@keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+}
+
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--border-radius);
+}
+
+/* Focus Enhancement */
+.form-control:focus + label,
+.form-select:focus + label {
+    color: #007bff;
+    font-weight: 800;
+    transform: translateY(-1px);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .form-section {
+        background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
+        color: #e2e8f0;
+        border-color: rgba(102, 102, 255, 0.15);
+    }
+
+    .form-control, .form-select {
+        background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+
+    .form-label {
+        color: #e2e8f0;
+    }
+
+    .page-title {
+        color: #e2e8f0;
+    }
+
+    .page-subtitle {
+        color: #a0aec0;
+    }
+
+    .alert-custom {
+        background: linear-gradient(135deg, rgba(45, 55, 72, 0.95) 0%, rgba(26, 32, 44, 0.95) 100%);
+        color: #e2e8f0;
+    }
+
+    .card {
+        background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
+        color: #e2e8f0;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%);
+        border-color: #4a5568;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .form-section,
+    .page-title-box,
+    .form-actions-container {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+        break-inside: avoid;
+    }
+
+    .btn, .breadcrumb {
+        display: none;
+    }
+
+    .form-section {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'products:manage' %}">Product Management</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </div>
+            <h4 class="page-title">
+                <i class="fas fa-box me-2 text-primary"></i>{{ title }}
+            </h4>
+            <p class="page-subtitle">Manage your solar products with comprehensive details, images, and documentation</p>
+        </div>
+    </div>
+</div>
+
+<!-- System Messages -->
+{% if messages %}
+<div class="row">
+    <div class="col-12">
+        {% for message in messages %}
+            <div class="alert alert-custom alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="alert-icon me-3">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle text-success"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-circle text-warning"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle text-info"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="text-uppercase">
+                            {% if message.tags == 'success' %}Success!{% elif message.tags == 'error' %}Error!{% elif message.tags == 'warning' %}Warning!{% else %}Information:{% endif %}
+                        </strong> {{ message }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-content">
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-info-circle section-icon"></i>
+                        Basic Information
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.name.id_for_label }}" class="form-label required-field">Product Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.sku.id_for_label }}" class="form-label required-field">SKU</label>
+                            {{ form.sku }}
+                            {% if form.sku.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.sku.errors.0 }}
+                                </div>
+                            {% endif %}
+                            {% if form.sku.help_text %}
+                                <small class="form-text">{{ form.sku.help_text }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.slug.id_for_label }}" class="form-label">URL Slug</label>
+                            {{ form.slug }}
+                            {% if form.slug.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.slug.errors.0 }}
+                                </div>
+                            {% endif %}
+                            {% if form.slug.help_text %}
+                                <small class="form-text">{{ form.slug.help_text }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.category.id_for_label }}" class="form-label required-field">Category</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.category.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.product_type.id_for_label }}" class="form-label required-field">Product Type</label>
+                            {{ form.product_type }}
+                            {% if form.product_type.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.product_type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.brand.id_for_label }}" class="form-label">Brand</label>
+                            {{ form.brand }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.model_number.id_for_label }}" class="form-label">Model Number</label>
+                            {{ form.model_number }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-align-left section-icon"></i>
+                        Description & Details
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.short_description.id_for_label }}" class="form-label">Short Description</label>
+                            {{ form.short_description }}
+                            <small class="form-text">Brief summary of the product (appears in listings)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Full Description</label>
+                            {{ form.description }}
+                            <small class="form-text">Detailed product information (appears on product pages)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.features.id_for_label }}" class="form-label">Key Features</label>
+                            {{ form.features }}
+                            <small class="form-text">Bullet points of product features (one per line)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.applications.id_for_label }}" class="form-label">Applications</label>
+                            {{ form.applications }}
+                            <small class="form-text">Use cases and applications for this product</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Specifications Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-cogs section-icon"></i>
+                        Technical Specifications
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ form.power_rating.id_for_label }}" class="form-label">Power Rating (W)</label>
+                            {{ form.power_rating }}
+                            <small class="form-text">Solar panel power output in Watts</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.power_rating_kva.id_for_label }}" class="form-label">Power Rating (KVA)</label>
+                            {{ form.power_rating_kva }}
+                            <small class="form-text">Alternative power rating in KVA</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ form.efficiency.id_for_label }}" class="form-label">Efficiency (%)</label>
+                            {{ form.efficiency }}
+                            <small class="form-text">Energy conversion efficiency</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.voltage.id_for_label }}" class="form-label">Voltage (V)</label>
+                            {{ form.voltage }}
+                            <small class="form-text">Operating voltage range</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.current.id_for_label }}" class="form-label">Current (A)</label>
+                            {{ form.current }}
+                            <small class="form-text">Operating current range</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.dimensions.id_for_label }}" class="form-label">Dimensions</label>
+                            {{ form.dimensions }}
+                            <small class="form-text">Physical dimensions (Length x Width x Height)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.weight.id_for_label }}" class="form-label">Weight (kg)</label>
+                            {{ form.weight }}
+                            <small class="form-text">Product weight</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.warranty_years.id_for_label }}" class="form-label">Warranty (Years)</label>
+                            {{ form.warranty_years }}
+                            <small class="form-text">Product warranty period</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.operating_temperature.id_for_label }}" class="form-label">Operating Temperature</label>
+                            {{ form.operating_temperature }}
+                            <small class="form-text">Suitable operating temperature range</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.certifications.id_for_label }}" class="form-label">Certifications</label>
+                            {{ form.certifications }}
+                            <small class="form-text">Product certifications and standards</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-tags section-icon"></i>
+                        Pricing & Ordering
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.cost_price.id_for_label }}" class="form-label">Cost Price (KES)</label>
+                            {{ form.cost_price }}
+                            <small class="form-text">Internal cost for profit calculations</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.selling_price.id_for_label }}" class="form-label">Selling Price (KES)</label>
+                            {{ form.selling_price }}
+                            <small class="form-text">Regular customer price</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.sale_price.id_for_label }}" class="form-label">Sale Price (KES)</label>
+                            {{ form.sale_price }}
+                            <small class="form-text">Discounted price (optional)</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.minimum_order_quantity.id_for_label }}" class="form-label">Minimum Order Quantity</label>
+                            {{ form.minimum_order_quantity }}
+                            <small class="form-text">Minimum units per order</small>
+                        </div>
+                        {% if form.non_field_errors %}
+                        <div class="col-12">
+                            <div class="alert alert-danger alert-custom mt-4">
+                                <i class="fas fa-exclamation-triangle alert-icon me-3"></i>
+                                <strong>Pricing Validation Errors:</strong>
+                                <ul class="mb-0 mt-3">
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Inventory Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-warehouse section-icon"></i>
+                        Inventory Management
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <div class="form-check mb-3">
+                                        {{ form.track_quantity }}
+                                        <label class="form-check-label fw-bold" for="{{ form.track_quantity.id_for_label %}">
+                                            <i class="fas fa-boxes fa-2x text-primary mb-3 mt-2"></i><br>
+                                            Track Quantity
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Enable inventory tracking</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.quantity_in_stock.id_for_label }}" class="form-label">Quantity in Stock</label>
+                            {{ form.quantity_in_stock }}
+                            <small class="form-text">Current available units</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.low_stock_threshold.id_for_label }}" class="form-label">Low Stock Alert</label>
+                            {{ form.low_stock_threshold }}
+                            <small class="form-text">Trigger notification at this level</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <div class="form-check mb-3">
+                                        {{ form.allow_backorders }}
+                                        <label class="form-check-label fw-bold" for="{{ form.allow_backorders.id_for_label %}">
+                                            <i class="fas fa-clock fa-2x text-success mb-3 mt-2"></i><br>
+                                            Allow Backorders
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Accept orders when out of stock</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Marketing & Visibility Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-bullhorn section-icon"></i>
+                        Marketing & Visibility
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.meta_title.id_for_label }}" class="form-label">SEO Title</label>
+                            {{ form.meta_title }}
+                            {% if form.meta_title.help_text %}
+                                <small class="form-text">{{ form.meta_title.help_text }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.meta_description.id_for_label }}" class="form-label">SEO Description</label>
+                            {{ form.meta_description }}
+                            <small class="form-text">Meta description for search engines</small>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="form-check mb-3">
+                                        {{ form.featured }}
+                                        <label class="form-check-label fw-bold" for="{{ form.featured.id_for_label %}">
+                                            <i class="fas fa-star fa-2x text-warning mb-3 mt-2"></i><br>
+                                            Featured Product
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Show in featured sections</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="form-check mb-3">
+                                        {{ form.show_to_customers }}
+                                        <label class="form-check-label fw-bold" for="{{ form.show_to_customers.id_for_label %}">
+                                            <i class="fas fa-eye fa-2x text-info mb-3 mt-2"></i><br>
+                                            Customer Visible
+                                        </label>
+                                    </div>
+                                    {% if form.show_to_customers.help_text %}
+                                        <small class="text-muted">{{ form.show_to_customers.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="form-check mb-3">
+                                        {{ form.customer_inquiry_only }}
+                                        <label class="form-check-label fw-bold" for="{{ form.customer_inquiry_only.id_for_label %}">
+                                            <i class="fas fa-question-circle fa-2x text-secondary mb-3 mt-2"></i><br>
+                                            Inquiry Only
+                                        </label>
+                                    </div>
+                                    {% if form.customer_inquiry_only.help_text %}
+                                        <small class="text-muted">{{ form.customer_inquiry_only.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                            {{ form.tags }}
+                            <small class="form-text">Comma-separated tags for categorization</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Files & Documents Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-file-upload section-icon"></i>
+                        Files & Documents
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.installation_manual.id_for_label }}" class="form-label">Installation Manual</label>
+                            {{ form.installation_manual }}
+                            {% if form.installation_manual.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.installation_manual.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text">Upload installation manual (PDF, DOC, DOCX - Max 10MB)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.datasheet.id_for_label }}" class="form-label">Product Datasheet</label>
+                            {{ form.datasheet }}
+                            {% if form.datasheet.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ form.datasheet.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text">Upload product specifications (PDF - Max 10MB)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Images Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-images section-icon"></i>
+                        Product Images
+                    </h5>
+                    <div class="mb-4">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-2"></i>Upload product images. The first image marked as "Primary" will be displayed as the main product image on the website.
+                        </small>
+                    </div>
+                    {{ image_formset.management_form }}
+                    <div id="image-forms">
+                        {% for form in image_formset %}
+                        <div class="card mb-3 image-form border">
+                            <div class="card-body">
+                                <!-- Hidden ID field -->
+                                {% if form.id %}
+                                    {{ form.id }}
+                                {% endif %}
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Image File</label>
+                                        {{ form.image }}
+                                        {% if form.image.errors %}
+                                            <div class="text-danger small mt-1">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>{{ form.image.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Alt Text</label>
+                                        {{ form.alt_text }}
+                                        <small class="form-text text-muted">Accessibility text for screen readers</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Primary Image</label>
+                                        <div class="form-check">
+                                            {{ form.is_primary }}
+                                            <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
+                                                Primary
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Sort Order</label>
+                                        {{ form.sort_order }}
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end">
+                                        {% if formset.can_delete %}
+                                            <div class="form-check">
+                                                {{ form.DELETE }}
+                                                <label class="form-check-label text-danger" for="{{ form.DELETE.id_for_label }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </label>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if image_formset.non_form_errors %}
+                    <div class="alert alert-danger alert-custom">
+                        <i class="fas fa-exclamation-triangle alert-icon me-2"></i>
+                        <strong>Image Form Errors:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for error in image_formset.non_form_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Product Documents Section -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-file-contract section-icon"></i>
+                        Additional Documents
+                    </h5>
+                    <div class="mb-4">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-2"></i>Add supplementary documents like warranties, certificates, or brochures.
+                        </small>
+                    </div>
+                    {{ document_formset.management_form }}
+                    <div id="document-forms">
+                        {% for form in document_formset %}
+                        <div class="card mb-3 document-form border">
+                            <div class="card-body">
+                            <!-- Hidden ID field -->
+                            {% if form.id %}
+                                {{ form.id }}
+                            {% endif %}
+
+                            <div class="row g-3">
+                                <!-- First Row: Title, Type, File, Delete -->
+                                <div class="col-md-3">
+                                    <label class="form-label">Document Title</label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small mt-1">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ form.title.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Document Type</label>
+                                    {{ form.document_type }}
+                                    {% if form.document_type.errors %}
+                                        <div class="text-danger small mt-1">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ form.document_type.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">File</label>
+                                    {{ form.file }}
+                                    {% if form.file.errors %}
+                                        <div class="text-danger small mt-1">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ form.file.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    {% if formset.can_delete %}
+                                        <div class="form-check">
+                                            {{ form.DELETE }}
+                                            <label class="form-check-label text-danger" for="{{ form.DELETE.id_for_label }}">
+                                                <i class="fas fa-trash"></i> Delete Document
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- Second Row: Description (Full Width Below) -->
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-9">
+                                    <label class="form-label">Description</label>
+                                    {{ form.description }}
+                                    <small class="form-text text-muted">Optional description for this document</small>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if document_formset.non_form_errors %}
+                    <div class="alert alert-danger alert-custom">
+                        <i class="fas fa-exclamation-triangle alert-icon me-2"></i>
+                        <strong>Document Form Errors:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for error in document_formset.non_form_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions-container">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-submit">
+                                <i class="fas fa-save me-2"></i>{{ submit_text }}
+                            </button>
+                            <a href="{% url 'products:manage' %}" class="btn btn-cancel">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                            Fields marked with <span class="text-danger fw-bold">*</span> are required
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Slug Auto-Generation JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productNameField = document.getElementById('{{ form.name.id_for_label }}');
+    const slugField = document.getElementById('{{ form.slug.id_for_label }}');
+
+    if (productNameField && slugField) {
+        let isSlugManuallyEdited = false;
+
+        // Track if user manually edited the slug
+        slugField.addEventListener('input', function() {
+            isSlugManuallyEdited = true;
+        });
+
+        // Auto-generate slug when product name changes
+        productNameField.addEventListener('input', function() {
+            // Only auto-populate if slug hasn't been manually edited or is empty
+            if (!isSlugManuallyEdited || slugField.value.trim() === '') {
+                const slugValue = generateSlug(this.value);
+                if (slugValue && (slugField.value === '' || !isSlugManuallyEdited)) {
+                    slugField.value = slugValue;
+                }
+            }
+        });
+
+        // Reset manual edit flag if slug becomes empty
+        slugField.addEventListener('input', function() {
+            if (this.value.trim() === '') {
+                isSlugManuallyEdited = false;
+            }
+        });
+    }
+
+    // Function to generate URL-friendly slug
+    function generateSlug(text) {
+        if (!text) return '';
+
+        return text
+            .toString()
+            .toLowerCase()
+            .trim()
+            // Replace spaces with hyphens
+            .replace(/\s+/g, '-')
+            // Remove special characters except hyphens
+            .replace(/[^\w\-]+/g, '')
+            // Replace multiple hyphens with single hyphen
+            .replace(/\-\-+/g, '-')
+            // Remove leading/trailing hyphens
+            .replace(/^-+/, '')
+            .replace(/-+$/, '');
+    }
+});
+</script>
+
+{% endblock %}

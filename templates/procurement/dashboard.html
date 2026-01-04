@@ -1,0 +1,269 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Procurement Dashboard - {{ block.super }}{% endblock %}
+
+{% block page_title %}Procurement Dashboard{% endblock %}
+{% block page_subtitle %}Vendor management and purchase operations{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Procurement</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .metric-card .metric-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .metric-card .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .quick-action-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-draft { background: #f8f9fa; color: #6c757d; }
+    .status-sent { background: #e3f2fd; color: #1976d2; }
+    .status-confirmed { background: #e8f5e8; color: #2e7d32; }
+    .status-received { background: #f3e5f5; color: #7b1fa2; }
+    .status-pending { background: #fff3e0; color: #f57c00; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Key Metrics Row -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ total_vendors }}</div>
+                    <div class="metric-label">Active Vendors</div>
+                </div>
+                <div class="text-primary">
+                    <i class="fas fa-truck fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ total_pos }}</div>
+                    <div class="metric-label">Total Purchase Orders</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-file-invoice fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ pending_approvals }}</div>
+                    <div class="metric-label">Pending Approvals</div>
+                </div>
+                <div class="text-warning">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="metric-number">{{ active_rfqs }}</div>
+                    <div class="metric-label">Active RFQs</div>
+                </div>
+                <div class="text-info">
+                    <i class="fas fa-question-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'procurement:vendor_create' %}" class="text-decoration-none">
+                            <div class="quick-action-card text-center">
+                                <i class="fas fa-truck fa-2x text-primary mb-2"></i>
+                                <div class="fw-bold">Add Vendor</div>
+                                <small class="text-muted">Register new supplier</small>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'procurement:po_create' %}" class="text-decoration-none">
+                            <div class="quick-action-card text-center">
+                                <i class="fas fa-file-invoice fa-2x text-success mb-2"></i>
+                                <div class="fw-bold">Create PO</div>
+                                <small class="text-muted">New purchase order</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>Pending Approvals
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if pending_requisitions %}
+                    {% for req in pending_requisitions %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ req.requisition_number }}</strong>
+                            <div class="small text-muted">{{ req.title|truncatechars:30 }}</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="status-badge status-pending">Pending</span>
+                            <div class="small text-muted">{{ req.requested_date }}</div>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'procurement:requisition_list' %}" class="btn btn-outline-primary btn-sm">
+                            View All Requisitions
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No pending approvals</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Purchase Orders -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>Recent Purchase Orders
+                </h5>
+                <a href="{% url 'procurement:po_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_pos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Vendor</th>
+                                    <th>Title</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for po in recent_pos %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'procurement:po_detail' po.pk %}" class="text-decoration-none">
+                                            {{ po.po_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ po.vendor.company_name }}</td>
+                                    <td>{{ po.title|truncatechars:30 }}</td>
+                                    <td>{{ po.currency }} {{ po.total_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ po.status }}">
+                                            {{ po.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ po.order_date }}</td>
+                                    <td>
+                                        <a href="{% url 'procurement:po_detail' po.pk %}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No purchase orders found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Add any dashboard charts here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dashboard functionality can be added here
+        console.log('Procurement dashboard loaded');
+    });
+</script>
+{% endblock %}

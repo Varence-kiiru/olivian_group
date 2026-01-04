@@ -1,0 +1,256 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Currency - {{ object.code }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}Delete Currency{% endblock %}
+{% block page_subtitle %}Confirm currency deletion{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:currency_list' %}">Currencies</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:currency_detail' object.pk %}">{{ object.code }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid #dc3545;
+    }
+    
+    .currency-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .currency-symbol-display {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .danger-box {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #6c757d;
+    }
+    
+    .btn-danger-confirm {
+        background: #dc3545;
+        border-color: #dc3545;
+        color: white;
+        min-width: 120px;
+    }
+    
+    .btn-danger-confirm:hover {
+        background: #c82333;
+        border-color: #bd2130;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="delete-card">
+            <!-- Warning Header -->
+            <div class="text-center mb-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h4 class="text-danger">Delete Currency</h4>
+                <p class="text-muted">This action cannot be undone. Please review the information below carefully.</p>
+            </div>
+            
+            <!-- Currency Information -->
+            <div class="currency-info">
+                <div class="currency-symbol-display">{{ object.symbol }}</div>
+                
+                <div class="info-row">
+                    <span class="info-label">Currency Code</span>
+                    <span class="info-value">{{ object.code }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Currency Name</span>
+                    <span class="info-value">{{ object.name }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Symbol</span>
+                    <span class="info-value">{{ object.symbol }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Exchange Rate</span>
+                    <span class="info-value">{{ object.exchange_rate|floatformat:6 }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">
+                        {% if object.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                        {% if object.is_base_currency %}
+                            <span class="badge bg-primary">Base Currency</span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Created</span>
+                    <span class="info-value">{{ object.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+            
+            <!-- Safety Checks -->
+            {% if object.is_base_currency %}
+            <div class="danger-box">
+                <h6 class="text-danger mb-2">
+                    <i class="fas fa-ban me-2"></i>Cannot Delete Base Currency
+                </h6>
+                <p class="mb-0 small">
+                    This currency is marked as the base currency and cannot be deleted. 
+                    You must first designate another currency as the base currency before deleting this one.
+                </p>
+            </div>
+            {% endif %}
+            
+            {% if object.bankaccount_set.count > 0 %}
+            <div class="danger-box">
+                <h6 class="text-danger mb-2">
+                    <i class="fas fa-ban me-2"></i>Currency In Use
+                </h6>
+                <p class="mb-2 small">
+                    This currency is currently being used by {{ object.bankaccount_set.count }} bank account{{ object.bankaccount_set.count|pluralize }}.
+                    You must reassign or delete these accounts before deleting this currency:
+                </p>
+                <ul class="small mb-0">
+                    {% for account in object.bankaccount_set.all|slice:":5" %}
+                    <li>{{ account.account_name }} ({{ account.bank.name }})</li>
+                    {% endfor %}
+                    {% if object.bankaccount_set.count > 5 %}
+                    <li class="text-muted">... and {{ object.bankaccount_set.count|add:"-5" }} more</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if not object.is_base_currency and object.bankaccount_set.count == 0 %}
+            <div class="warning-box">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                </h6>
+                <p class="mb-0 small">
+                    You are about to permanently delete the currency "<strong>{{ object.code }} - {{ object.name }}</strong>".
+                    This action cannot be undone. All historical exchange rate data for this currency will also be deleted.
+                </p>
+            </div>
+            
+            <!-- Deletion Form -->
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                    <label class="form-check-label" for="confirmDelete">
+                        I understand that this action cannot be undone and I want to permanently delete this currency.
+                    </label>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'financial:currency_detail' object.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    
+                    <button type="submit" class="btn btn-danger-confirm" id="deleteButton" disabled>
+                        <i class="fas fa-trash me-2"></i>Delete Currency
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <!-- Cannot Delete - Show Actions -->
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'financial:currency_detail' object.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Currency
+                </a>
+                
+                <div class="d-flex gap-2">
+                    {% if object.is_base_currency %}
+                    <a href="{% url 'financial:currency_list' %}" class="btn btn-outline-info">
+                        <i class="fas fa-coins me-2"></i>Manage Currencies
+                    </a>
+                    {% endif %}
+                    
+                    {% if object.bankaccount_set.count > 0 %}
+                    <a href="{% url 'financial:account_list' %}?currency={{ object.id }}" class="btn btn-outline-warning">
+                        <i class="fas fa-university me-2"></i>View Accounts
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    if (confirmCheckbox && deleteButton) {
+        confirmCheckbox.addEventListener('change', function() {
+            deleteButton.disabled = !this.checked;
+        });
+    }
+});
+</script>
+{% endblock %}

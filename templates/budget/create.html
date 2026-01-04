@@ -1,0 +1,1022 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Create Budget - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block page_title %}Create Budget{% endblock %}
+{% block page_subtitle %}Set up a new budget with categories and approval workflow{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="/budget/">Budget</a></li>
+<li class="breadcrumb-item active">Create Budget</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-step {
+        display: none;
+    }
+    
+    .form-step.active {
+        display: block;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+    }
+    
+    .step {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 1rem;
+        font-weight: 600;
+        position: relative;
+        color: #6c757d;
+    }
+    
+    .step.active {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .step.completed {
+        background: var(--success-color);
+        color: white;
+    }
+    
+    .step::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        width: 60px;
+        height: 2px;
+        background: #e9ecef;
+        margin-left: 1rem;
+    }
+    
+    .step:last-child::after {
+        display: none;
+    }
+    
+    .step.completed::after {
+        background: var(--success-color);
+    }
+    
+    .category-card {
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    
+    .category-card:hover,
+    .category-card.selected {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.05);
+    }
+    
+    .category-card input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+    }
+    
+    .budget-preview {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .input-group-text {
+        background: white;
+        border-color: #ced4da;
+    }
+    
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .approval-workflow {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .workflow-step {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .workflow-step .step-number {
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .error-message {
+        color: var(--danger-color);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+    
+    .success-message {
+        color: var(--success-color);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step-1">1</div>
+            <div class="step" id="step-2">2</div>
+            <div class="step" id="step-3">3</div>
+            <div class="step" id="step-4">4</div>
+        </div>
+        
+        <!-- Budget Creation Form -->
+        <form id="budgetForm" method="post" action="/budget/create/">
+            {% csrf_token %}
+            
+            <!-- Step 1: Basic Information -->
+            <div class="form-step active" id="form-step-1">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="budget_name" class="form-label">Budget Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="budget_name" name="budget_name" 
+                                           placeholder="e.g., Solar Installation Project Q1" required>
+                                    <div class="error-message" id="error-budget_name"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3"
+                                              placeholder="Brief description of the budget purpose and scope"></textarea>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                            <div class="error-message" id="error-start_date"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                            <div class="error-message" id="error-end_date"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="manager" class="form-label">Budget Manager <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="manager" name="manager" required>
+                                        <option value="">Select a manager</option>
+                                        <option value="1">John Doe - Project Manager</option>
+                                        <option value="2">Jane Smith - Operations Manager</option>
+                                        <option value="3">Mike Johnson - Sales Manager</option>
+                                    </select>
+                                    <div class="error-message" id="error-manager"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="budget-preview">
+                                    <h6 class="fw-bold mb-3">Budget Preview</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Total Amount:</span>
+                                        <strong id="preview-total">KES 0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Start Date:</span>
+                                        <span id="preview-start">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>End Date:</span>
+                                        <span id="preview-end">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Duration:</span>
+                                        <span id="preview-duration">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Budget Categories -->
+            <div class="form-step" id="form-step-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tags me-2"></i>Budget Categories & Amounts
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <p class="text-muted mb-4">Allocate budget amounts to different categories. All amounts are in {{ company.default_currency|default:"Kenyan Shillings (KES)" }} and VAT will be calculated at {{ company.vat_rate|default:16 }}%.</p>
+                                
+                                <div id="budget-categories">
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_equipment" name="categories[]" value="equipment">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Equipment</h6>
+                                                        <small class="text-muted">Solar panels, inverters, batteries</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_equipment" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_labor" name="categories[]" value="labor">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Labor</h6>
+                                                        <small class="text-muted">Installation, maintenance, consulting</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_labor" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_materials" name="categories[]" value="materials">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Materials</h6>
+                                                        <small class="text-muted">Cables, mounting systems, tools</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_materials" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_transportation" name="categories[]" value="transportation">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Transportation</h6>
+                                                        <small class="text-muted">Delivery, logistics, fuel</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_transportation" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_marketing" name="categories[]" value="marketing">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Marketing</h6>
+                                                        <small class="text-muted">Advertising, promotions, events</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_marketing" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="category-card">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="checkbox" id="cat_other" name="categories[]" value="other">
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1">Other</h6>
+                                                        <small class="text-muted">Miscellaneous expenses</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">KES</span>
+                                                    <input type="number" class="form-control category-amount" 
+                                                           name="amount_other" placeholder="0" min="0" step="1000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="budget-preview">
+                                    <h6 class="fw-bold mb-3">Budget Summary</h6>
+                                    <div id="category-breakdown">
+                                        <!-- Dynamic category breakdown will appear here -->
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <strong id="subtotal">KES 0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>VAT (16%):</span>
+                                        <strong id="vat-amount">KES 0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold">Total Budget:</span>
+                                        <strong id="total-budget" class="text-primary">KES 0</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Approval Workflow -->
+            <div class="form-step" id="form-step-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-check-circle me-2"></i>Approval Workflow
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <p class="text-muted mb-4">Set up the approval workflow for expense requests within this budget.</p>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">Approval Threshold</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <span class="input-group-text">KES</span>
+                                                <input type="number" class="form-control" id="approval_threshold" 
+                                                       name="approval_threshold" placeholder="50000" min="0" step="1000">
+                                            </div>
+                                            <small class="text-muted">Expenses above this amount require approval</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">Approval Workflow Steps</label>
+                                    <div class="approval-workflow">
+                                        <div class="workflow-step">
+                                            <div class="step-number">1</div>
+                                            <div class="flex-grow-1">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-4">
+                                                        <strong>Budget Manager</strong>
+                                                        <br><small class="text-muted">Initial approval</small>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <select class="form-select form-select-sm" name="approver_1">
+                                                            <option value="">Auto (Budget Manager)</option>
+                                                            <option value="1">John Doe</option>
+                                                            <option value="2">Jane Smith</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">≤ KES</span>
+                                                            <input type="number" class="form-control" name="limit_1" placeholder="100000">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="workflow-step">
+                                            <div class="step-number">2</div>
+                                            <div class="flex-grow-1">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-4">
+                                                        <strong>Department Manager</strong>
+                                                        <br><small class="text-muted">Secondary approval</small>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <select class="form-select form-select-sm" name="approver_2">
+                                                            <option value="">Select approver</option>
+                                                            <option value="2">Jane Smith - Operations</option>
+                                                            <option value="3">Mike Johnson - Sales</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">≤ KES</span>
+                                                            <input type="number" class="form-control" name="limit_2" placeholder="500000">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="workflow-step">
+                                            <div class="step-number">3</div>
+                                            <div class="flex-grow-1">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-4">
+                                                        <strong>Senior Management</strong>
+                                                        <br><small class="text-muted">Final approval</small>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <select class="form-select form-select-sm" name="approver_3">
+                                                            <option value="">Select approver</option>
+                                                            <option value="1">CEO - David Wilson</option>
+                                                            <option value="4">CFO - Sarah Brown</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">Any amount</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="auto_approval" name="auto_approval">
+                                        <label class="form-check-label" for="auto_approval">
+                                            Enable automatic approval for small amounts (under KES 10,000)
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" checked>
+                                        <label class="form-check-label" for="email_notifications">
+                                            Send email notifications for approval requests
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="budget-preview">
+                                    <h6 class="fw-bold mb-3">Workflow Summary</h6>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Approval Threshold:</small>
+                                        <br><strong id="workflow-threshold">KES 0</strong>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Number of Approvers:</small>
+                                        <br><strong id="workflow-approvers">0</strong>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Auto Approval:</small>
+                                        <br><strong id="workflow-auto">Disabled</strong>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Notifications:</small>
+                                        <br><strong id="workflow-notifications">Enabled</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Review & Submit -->
+            <div class="form-step" id="form-step-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-eye me-2"></i>Review & Submit
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Please review all information before creating the budget. Once created, some settings may require approval to modify.
+                                </div>
+                                
+                                <div id="budget-review">
+                                    <!-- Review content will be populated by JavaScript -->
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="terms_agreement" name="terms_agreement" required>
+                                    <label class="form-check-label" for="terms_agreement">
+                                        I confirm that all information is accurate and I have the authority to create this budget
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="budget-preview">
+                                    <h6 class="fw-bold mb-3">Final Summary</h6>
+                                    <div id="final-summary">
+                                        <!-- Final summary will be populated -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Navigation -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+                            <i class="fas fa-arrow-left me-2"></i>Previous
+                        </button>
+                        
+                        <div id="form-messages" class="flex-grow-1 text-center">
+                            <!-- Success/Error messages will appear here -->
+                        </div>
+                        
+                        <div>
+                            <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                                Next<i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                                <i class="fas fa-check me-2"></i>Create Budget
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <p class="mb-0">Creating budget...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dynamic company settings
+const CURRENCY = '{{ company.default_currency|default:"KES" }}';
+const VAT_RATE = {{ company.vat_rate|default:16 }};
+
+let currentStep = 1;
+const totalSteps = 4;
+
+$(document).ready(function() {
+    setupFormValidation();
+    setupEventHandlers();
+    updatePreview();
+});
+
+function setupEventHandlers() {
+    // Category checkbox handlers
+    $('.category-card input[type="checkbox"]').on('change', function() {
+        const card = $(this).closest('.category-card');
+        const amountInput = card.find('.category-amount');
+        
+        if ($(this).is(':checked')) {
+            card.addClass('selected');
+            amountInput.prop('disabled', false);
+        } else {
+            card.removeClass('selected');
+            amountInput.prop('disabled', true).val('');
+        }
+        updateBudgetSummary();
+    });
+    
+    // Amount input handlers
+    $('.category-amount').on('input', function() {
+        updateBudgetSummary();
+    });
+    
+    // Date handlers
+    $('#start_date, #end_date').on('change', function() {
+        updatePreview();
+        calculateDuration();
+    });
+    
+    // Approval threshold handler
+    $('#approval_threshold').on('input', function() {
+        updateWorkflowPreview();
+    });
+    
+    // Workflow handlers
+    $('input[name^="approver_"], input[name^="limit_"]').on('change input', function() {
+        updateWorkflowPreview();
+    });
+    
+    $('#auto_approval, #email_notifications').on('change', function() {
+        updateWorkflowPreview();
+    });
+    
+    // Form submission
+    $('#budgetForm').on('submit', function(e) {
+        e.preventDefault();
+        submitBudget();
+    });
+}
+
+function nextStep() {
+    if (validateCurrentStep()) {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            showStep(currentStep);
+        }
+    }
+}
+
+function previousStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+    }
+}
+
+function showStep(step) {
+    // Hide all steps
+    $('.form-step').removeClass('active');
+    
+    // Show current step
+    $(`#form-step-${step}`).addClass('active');
+    
+    // Update step indicators
+    $('.step').removeClass('active completed');
+    for (let i = 1; i < step; i++) {
+        $(`#step-${i}`).addClass('completed');
+    }
+    $(`#step-${step}`).addClass('active');
+    
+    // Update navigation buttons
+    $('#prevBtn').toggle(step > 1);
+    $('#nextBtn').toggle(step < totalSteps);
+    $('#submitBtn').toggle(step === totalSteps);
+    
+    // Special handling for review step
+    if (step === 4) {
+        populateReviewStep();
+    }
+}
+
+function validateCurrentStep() {
+    let isValid = true;
+    $('.error-message').text('');
+    
+    switch (currentStep) {
+        case 1:
+            isValid = validateBasicInfo();
+            break;
+        case 2:
+            isValid = validateCategories();
+            break;
+        case 3:
+            isValid = validateApprovalWorkflow();
+            break;
+        case 4:
+            isValid = validateFinalStep();
+            break;
+    }
+    
+    return isValid;
+}
+
+function validateBasicInfo() {
+    let isValid = true;
+    
+    if (!$('#budget_name').val().trim()) {
+        $('#error-budget_name').text('Budget name is required');
+        isValid = false;
+    }
+    
+    if (!$('#start_date').val()) {
+        $('#error-start_date').text('Start date is required');
+        isValid = false;
+    }
+    
+    if (!$('#end_date').val()) {
+        $('#error-end_date').text('End date is required');
+        isValid = false;
+    } else if ($('#start_date').val() && $('#end_date').val() <= $('#start_date').val()) {
+        $('#error-end_date').text('End date must be after start date');
+        isValid = false;
+    }
+    
+    if (!$('#manager').val()) {
+        $('#error-manager').text('Budget manager is required');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function validateCategories() {
+    const selectedCategories = $('input[name="categories[]"]:checked').length;
+    if (selectedCategories === 0) {
+        showMessage('Please select at least one budget category', 'error');
+        return false;
+    }
+    
+    let totalAmount = 0;
+    $('input[name="categories[]"]:checked').each(function() {
+        const category = $(this).val();
+        const amount = parseFloat($(`input[name="amount_${category}"]`).val()) || 0;
+        totalAmount += amount;
+    });
+    
+    if (totalAmount <= 0) {
+        showMessage('Total budget amount must be greater than zero', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+function validateApprovalWorkflow() {
+    // Basic validation - could be enhanced based on requirements
+    return true;
+}
+
+function validateFinalStep() {
+    if (!$('#terms_agreement').is(':checked')) {
+        showMessage('Please agree to the terms before submitting', 'error');
+        return false;
+    }
+    return true;
+}
+
+function updatePreview() {
+    const name = $('#budget_name').val() || 'Untitled Budget';
+    const startDate = $('#start_date').val() || '-';
+    const endDate = $('#end_date').val() || '-';
+    
+    $('#preview-start').text(startDate !== '-' ? new Date(startDate).toLocaleDateString() : '-');
+    $('#preview-end').text(endDate !== '-' ? new Date(endDate).toLocaleDateString() : '-');
+}
+
+function calculateDuration() {
+    const startDate = $('#start_date').val();
+    const endDate = $('#end_date').val();
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 0) {
+            $('#preview-duration').text(`${diffDays} days`);
+        } else {
+            $('#preview-duration').text('Same day');
+        }
+    } else {
+        $('#preview-duration').text('-');
+    }
+}
+
+function updateBudgetSummary() {
+    let subtotal = 0;
+    const breakdown = $('#category-breakdown');
+    breakdown.empty();
+    
+    $('input[name="categories[]"]:checked').each(function() {
+        const category = $(this).val();
+        const amount = parseFloat($(`input[name="amount_${category}"]`).val()) || 0;
+        const categoryName = $(this).closest('.category-card').find('h6').text();
+        
+        if (amount > 0) {
+            subtotal += amount;
+            breakdown.append(`
+                <div class="d-flex justify-content-between mb-1">
+                    <span>${categoryName}:</span>
+                    <span>KES ${amount.toLocaleString()}</span>
+                </div>
+            `);
+        }
+    });
+    
+    const vat = subtotal * 0.16;
+    const total = subtotal + vat;
+    
+    $('#subtotal').text(`KES ${subtotal.toLocaleString()}`);
+    $('#vat-amount').text(`KES ${vat.toLocaleString()}`);
+    $('#total-budget').text(`KES ${total.toLocaleString()}`);
+    $('#preview-total').text(`KES ${total.toLocaleString()}`);
+}
+
+function updateWorkflowPreview() {
+    const threshold = parseFloat($('#approval_threshold').val()) || 0;
+    const autoApproval = $('#auto_approval').is(':checked');
+    const notifications = $('#email_notifications').is(':checked');
+    
+    let approverCount = 0;
+    $('select[name^="approver_"]').each(function() {
+        if ($(this).val()) approverCount++;
+    });
+    
+    $('#workflow-threshold').text(`KES ${threshold.toLocaleString()}`);
+    $('#workflow-approvers').text(approverCount);
+    $('#workflow-auto').text(autoApproval ? 'Enabled' : 'Disabled');
+    $('#workflow-notifications').text(notifications ? 'Enabled' : 'Disabled');
+}
+
+function populateReviewStep() {
+    const reviewHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Basic Information</h6>
+                <p><strong>Name:</strong> ${$('#budget_name').val()}</p>
+                <p><strong>Description:</strong> ${$('#description').val() || 'No description'}</p>
+                <p><strong>Period:</strong> ${$('#start_date').val()} to ${$('#end_date').val()}</p>
+                <p><strong>Manager:</strong> ${$('#manager option:selected').text()}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Budget Categories</h6>
+                <div id="review-categories"></div>
+            </div>
+        </div>
+    `;
+    
+    $('#budget-review').html(reviewHtml);
+    
+    // Populate categories
+    const categoriesHtml = [];
+    $('input[name="categories[]"]:checked').each(function() {
+        const category = $(this).val();
+        const amount = parseFloat($(`input[name="amount_${category}"]`).val()) || 0;
+        const categoryName = $(this).closest('.category-card').find('h6').text();
+        categoriesHtml.push(`<p><strong>${categoryName}:</strong> KES ${amount.toLocaleString()}</p>`);
+    });
+    $('#review-categories').html(categoriesHtml.join(''));
+    
+    // Update final summary
+    updateBudgetSummary();
+    const finalSummaryHtml = `
+        <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal:</span>
+            <strong>${$('#subtotal').text()}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+            <span>VAT (16%):</span>
+            <strong>${$('#vat-amount').text()}</strong>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span class="fw-bold">Total:</span>
+            <strong class="text-primary">${$('#total-budget').text()}</strong>
+        </div>
+    `;
+    $('#final-summary').html(finalSummaryHtml);
+}
+
+function submitBudget() {
+    if (!validateCurrentStep()) return;
+    
+    $('#loadingModal').modal('show');
+    
+    // Collect form data
+    const formData = new FormData($('#budgetForm')[0]);
+    
+    $.ajax({
+        url: '/budget/create/',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#loadingModal').modal('hide');
+            showMessage('Budget created successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '/budget/';
+            }, 2000);
+        },
+        error: function(xhr) {
+            $('#loadingModal').modal('hide');
+            const errorMsg = xhr.responseJSON?.message || 'Error creating budget. Please try again.';
+            showMessage(errorMsg, 'error');
+        }
+    });
+}
+
+function showMessage(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    $('#form-messages').html(`
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            <i class="fas ${iconClass} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+}
+
+function setupFormValidation() {
+    // Real-time validation setup
+    $('input[required], select[required]').on('blur', function() {
+        const field = $(this);
+        const fieldName = field.attr('name');
+        const errorElement = $(`#error-${fieldName}`);
+        
+        if (!field.val().trim()) {
+            errorElement.text(`${field.prev('label').text().replace(' *', '')} is required`);
+        } else {
+            errorElement.text('');
+        }
+    });
+}
+
+// Initialize form
+showStep(1);
+</script>
+{% endblock %}

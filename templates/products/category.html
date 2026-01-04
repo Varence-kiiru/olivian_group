@@ -1,0 +1,202 @@
+{% extends 'website/base.html' %}
+{% load static core_extras %}
+
+{% block title %}{{ category.name }} - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'products:list' %}">Products</a></li>
+<li class="breadcrumb-item active">{{ category.name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/products.css' %}" rel="stylesheet">
+<style>
+/* Quick spacing adjustment */
+.hero-section {
+    padding: 120px 0 80px !important;
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 100px 0 60px !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section category-hero" style="min-height: 50vh;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="hero-content">
+                    <h1 class="hero-title">{{ category.name }}</h1>
+                    {% if category.description %}
+                        <p class="hero-subtitle">{{ category.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Category Products -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">{{ category.name }} Products</h2>
+            <p class="section-subtitle">
+                {% if products.count %}
+                    {{ products.count }} product{{ products.count|pluralize }} available
+                {% else %}
+                    No products available in this category
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Product Search -->
+        <div class="product-search">
+            <div class="row">
+                <div class="col-md-8 mx-auto">
+                    <form method="get" class="d-flex">
+                        <input type="text" class="form-control me-2" name="search" placeholder="Search in {{ category.name }}..." value="{{ request.GET.search }}">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="row category-products">
+            {% for product in products %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}"
+                             class="card-img-top" alt="{{ product.images.first.alt_text|default:product.name }}"
+                             style="height: 200px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light"
+                             style="height: 200px;">
+                            <i class="fas fa-image fa-3x text-muted"></i>
+                        </div>
+                    {% endif %}
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text flex-grow-1">{{ product.short_description }}</p>
+
+                        <!-- Stock Status -->
+                        <div class="mb-2">
+                            <small class="badge bg-success">{{ product.stock_status_for_customers }}</small>
+                        </div>
+
+                        <div class="mt-auto">
+                            {% if product.customer_display_price %}
+                                <div class="mb-2">
+                                    {% if discount_percentage %}
+                                        <!-- Holiday Discount Pricing -->
+                                        <span class="h6 text-muted text-decoration-line-through">KES {{ product.selling_price|floatformat:0 }}</span><br>
+                                        <span class="h5 text-success fw-bold mb-0">KES {{ product.selling_price|apply_discount:discount_percentage|floatformat:0 }}</span><br>
+                                        <span class="badge bg-success ms-1">{{ discount_percentage }}% OFF</span>
+                                        <small class="text-success d-block">
+                                            <strong>Save KES {{ product.selling_price|calculate_savings:discount_percentage|floatformat:0 }}</strong>
+                                        </small>
+                                    {% elif product.is_on_sale %}
+                                        <!-- Regular Product Sale -->
+                                        <span class="h6 text-muted text-decoration-line-through">KES {{ product.selling_price|floatformat:0 }}</span><br>
+                                        <span class="h5 text-primary mb-0">KES {{ product.sale_price|floatformat:0 }}</span>
+                                        <span class="badge bg-danger ms-1">{{ product.discount_percentage }}% OFF</span>
+                                    {% else %}
+                                        <!-- Regular Price -->
+                                        <span class="h5 text-primary mb-0">KES {{ product.selling_price|floatformat:0 }}</span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="mb-2">
+                                    <span class="h6 text-info">Contact for Price</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="d-grid gap-2">
+                                <a href="{{ product.get_absolute_url }}" class="btn btn-outline-primary btn-sm">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h4>No Products Available</h4>
+                    <p class="text-muted">
+                        {% if request.GET.search %}
+                            No products in {{ category.name }} match your search for "{{ request.GET.search }}".
+                        {% else %}
+                            No products are currently available in the {{ category.name }} category.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'products:list' %}" class="btn btn-primary">Browse All Products</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="row">
+            <div class="col-12 d-flex justify-content-center">
+                <nav aria-label="Product pagination">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2>Need Help with {{ category.name }}?</h2>
+                <p class="lead mb-4">Our solar experts can help you choose the right {{ category.name|lower }} for your specific needs and budget.</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'quotations:calculator' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-calculator me-2"></i>Get Custom Quote
+                    </a>
+                    <a href="{% url 'core:contact' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-comments me-2"></i>Speak to Expert
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,941 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ company.name }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ company.name }}{% endblock %}
+{% block page_subtitle %}Company profile and business relationship details{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:company_list' %}">Companies</a></li>
+<li class="breadcrumb-item active">{{ company.name|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .company-header {
+        background: linear-gradient(135deg, #6f42c1, #e83e8c);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .company-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+
+    .company-logo {
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: bold;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        margin-bottom: 1rem;
+    }
+
+    .company-type {
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .info-card h6 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .info-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        color: #6c757d;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .contact-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .contact-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .contact-avatar {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .primary-badge {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .quick-action {
+        flex: 1;
+        min-width: 200px;
+        padding: 1rem;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .quick-action:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .lead-item {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .lead-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-new { background: #e3f2fd; color: #1976d2; }
+    .status-contacted { background: #f3e5f5; color: #7b1fa2; }
+    .status-qualified { background: #fff3e0; color: #f57c00; }
+    .status-proposal { background: #e8f5e8; color: #2e7d32; }
+    .status-won { background: #d4edda; color: #155724; }
+    .status-lost { background: #f8d7da; color: #721c24; }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        margin-left: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .website-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .website-link:hover {
+        text-decoration: underline;
+    }
+    
+    .revenue-display {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .revenue-amount {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .btn-group-vertical .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .related-records {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .record-link {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 0.5rem;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .record-link:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Company Header -->
+<div class="company-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <div class="company-logo">
+                    {{ company.name.0|upper }}
+                </div>
+                <div class="ms-4">
+                    <h2 class="mb-2">{{ company.name }}</h2>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="company-type">{{ company.get_company_type_display }}</span>
+                        {% if company.industry %}
+                            <span class="opacity-75">{{ company.industry }}</span>
+                        {% endif %}
+                    </div>
+                    {% if company.city %}
+                        <div class="opacity-75">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ company.city }}{% if company.county %}, {{ company.county }}{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="d-flex flex-column align-items-end gap-2">
+                {% if company.annual_revenue %}
+                    <div class="revenue-display">
+                        <div class="revenue-amount">KES {{ company.annual_revenue|floatformat:0 }}</div>
+                        <div class="small">Annual Revenue</div>
+                    </div>
+                {% endif %}
+                <small class="opacity-75">Member since {{ company.created_at|date:"M Y" }}</small>
+                <small class="opacity-75">Last updated {{ company.updated_at|date:"M d, Y" }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid">
+    <div class="stat-item">
+        <div class="stat-number">{{ company.contacts.count }}</div>
+        <div class="stat-label">Contacts</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ company.leads.count }}</div>
+        <div class="stat-label">Leads</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ opportunities_count|default:"0" }}</div>
+        <div class="stat-label">Opportunities</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">
+            {% if total_opportunity_value %}
+                KES {{ total_opportunity_value|floatformat:0 }}
+            {% else %}
+                KES 0
+            {% endif %}
+        </div>
+        <div class="stat-label">Total Value</div>
+    </div>
+    {% if company.employee_count %}
+    <div class="stat-item">
+        <div class="stat-number">{{ company.employee_count }}</div>
+        <div class="stat-label">Employees</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    {% if company.email %}
+    <a href="mailto:{{ company.email }}" class="quick-action">
+        <i class="fas fa-envelope"></i>
+        <strong>Send Email</strong>
+        <div class="small text-muted">{{ company.email }}</div>
+    </a>
+    {% endif %}
+    
+    {% if company.phone %}
+    <a href="tel:{{ company.phone }}" class="quick-action">
+        <i class="fas fa-phone"></i>
+        <strong>Call</strong>
+        <div class="small text-muted">{{ company.phone }}</div>
+    </a>
+    {% endif %}
+    
+    {% if company.website %}
+    <a href="{{ company.website }}" target="_blank" class="quick-action">
+        <i class="fas fa-globe"></i>
+        <strong>Visit Website</strong>
+        <div class="small text-muted">{{ company.website }}</div>
+    </a>
+    {% endif %}
+    
+    <a href="{% url 'crm:contact_create' %}?company={{ company.pk }}" class="quick-action">
+        <i class="fas fa-user-plus"></i>
+        <strong>Add Contact</strong>
+        <div class="small text-muted">New team member</div>
+    </a>
+    
+    <a href="{% url 'crm:lead_create' %}?company={{ company.pk }}" class="quick-action">
+        <i class="fas fa-handshake"></i>
+        <strong>Create Lead</strong>
+        <div class="small text-muted">New opportunity</div>
+    </a>
+    
+    <a href="{% url 'crm:company_update' company.pk %}" class="quick-action">
+        <i class="fas fa-edit"></i>
+        <strong>Edit Company</strong>
+        <div class="small text-muted">Update information</div>
+    </a>
+</div>
+
+<div class="row">
+    <!-- Left Column - Company Information -->
+    <div class="col-lg-8">
+        <!-- Company Information -->
+        <div class="info-card">
+            <h6><i class="fas fa-info-circle me-2"></i>Company Information</h6>
+            
+            <div class="info-grid">
+                {% if company.registration_number %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Registration Number</div>
+                        <p class="info-value">{{ company.registration_number }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.tax_number %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">KRA PIN</div>
+                        <p class="info-value">{{ company.tax_number }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.email %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Email</div>
+                        <p class="info-value">
+                            <a href="mailto:{{ company.email }}" class="text-decoration-none">{{ company.email }}</a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.phone %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Phone</div>
+                        <p class="info-value">
+                            <a href="tel:{{ company.phone }}" class="text-decoration-none">{{ company.phone }}</a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.website %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Website</div>
+                        <p class="info-value">
+                            <a href="{{ company.website }}" target="_blank" class="website-link">Visit Website</a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.address_line_1 or company.city %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Address</div>
+                        <p class="info-value">
+                            {% if company.address_line_1 %}{{ company.address_line_1 }}<br>{% endif %}
+                            {% if company.address_line_2 %}{{ company.address_line_2 }}<br>{% endif %}
+                            {% if company.city %}{{ company.city }}{% endif %}
+                            {% if company.county %}, {{ company.county }}{% endif %}
+                            {% if company.postal_code %} {{ company.postal_code }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Company Contacts -->
+        {% if company.contacts.exists %}
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Company Contacts</h6>
+                <a href="{% url 'crm:contact_create' %}?company={{ company.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Contact
+                </a>
+            </div>
+            
+            {% for contact in company.contacts.all %}
+            <div class="contact-card">
+                <div class="d-flex align-items-center">
+                    <div class="contact-avatar">
+                        {{ contact.first_name.0|upper }}{{ contact.last_name.0|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ contact.get_full_name }}</strong>
+                                {% if contact == company.primary_contact %}
+                                    <span class="primary-badge ms-2">Primary</span>
+                                {% endif %}
+                                {% if contact.position %}
+                                    <div class="small text-muted">{{ contact.position }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <div class="small">
+                                    <i class="fas fa-envelope me-1"></i>{{ contact.email }}
+                                </div>
+                                {% if contact.phone %}
+                                    <div class="small">
+                                        <i class="fas fa-phone me-1"></i>{{ contact.phone }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                {% if contact.leads.exists %}
+                                    <span class="badge bg-primary me-1">{{ contact.leads.count }} Leads</span>
+                                {% endif %}
+                                {% if contact.activities.exists %}
+                                    <span class="badge bg-info">{{ contact.activities.count }} Activities</span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'crm:contact_detail' contact.pk %}" class="btn btn-outline-primary btn-sm">
+                                    View Profile
+                                </a>
+                                <a href="mailto:{{ contact.email }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-envelope"></i>
+                                </a>
+                                {% if contact.phone %}
+                                    <a href="tel:{{ contact.phone }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-phone"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Company Leads -->
+        {% if company.leads.exists %}
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-handshake me-2"></i>Recent Leads</h6>
+                <a href="{% url 'crm:lead_create' %}?company={{ company.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Lead
+                </a>
+            </div>
+            
+            {% for lead in company.leads.all|slice:":5" %}
+            <div class="lead-item">
+                <span class="lead-status status-{{ lead.status }}">{{ lead.get_status_display }}</span>
+                
+                <div class="mb-2">
+                    <strong>{{ lead.title }}</strong>
+                    <div class="small text-muted">{{ lead.contact.get_full_name }}</div>
+                </div>
+                
+                {% if lead.estimated_value %}
+                    <div class="small text-success mb-2">
+                        <i class="fas fa-dollar-sign me-1"></i>KES {{ lead.estimated_value|floatformat:0 }}
+                    </div>
+                {% endif %}
+                
+                {% if lead.description %}
+                    <p class="small text-muted mb-2">{{ lead.description|truncatewords:15 }}</p>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Created {{ lead.created_at|date:"M d, Y" }}
+                        {% if lead.assigned_to %}
+                            • Assigned to {{ lead.assigned_to.get_full_name }}
+                        {% endif %}
+                    </small>
+                    <a href="{% url 'crm:lead_detail' lead.pk %}" class="btn btn-outline-primary btn-sm">
+                        View Details
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if company.leads.count > 5 %}
+            <div class="text-center mt-3">
+                <a href="{% url 'crm:lead_list' %}?company={{ company.pk }}" class="btn btn-outline-primary">
+                    View All Leads ({{ company.leads.count }})
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Recent Activities -->
+        {% if company.activities.exists %}
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activities</h6>
+                <a href="{% url 'crm:activity_create' %}?company={{ company.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Activity
+                </a>
+            </div>
+            
+            <div class="timeline">
+                {% for activity in company.activities.all|slice:":5" %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ activity.title }}</strong>
+                            <div class="small text-muted">{{ activity.get_type_display }}</div>
+                        </div>
+                        <span class="badge bg-{{ activity.status }}">
+                            {{ activity.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    {% if activity.description %}
+                    <p class="small text-muted mt-2 mb-2">
+                        {{ activity.description|truncatewords:30 }}
+                    </p>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            {{ activity.scheduled_datetime|date:"M d, Y H:i" }}
+                            {% if activity.assigned_to %}
+                                • {{ activity.assigned_to.get_full_name }}
+                            {% endif %}
+                        </small>
+                        <a href="{% url 'crm:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if company.activities.count > 5 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'crm:activity_list' %}?company={{ company.pk }}" class="btn btn-outline-primary">
+                        View All Activities ({{ company.activities.count }})
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notes -->
+        {% if company.notes %}
+        <div class="info-card">
+            <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+            <div class="bg-light p-3 rounded">
+                {{ company.notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Right Column - Sidebar Information -->
+    <div class="col-lg-4">
+        <div class="action-buttons">
+            <!-- Business Details -->
+            <div class="info-card">
+                <h6><i class="fas fa-chart-bar me-2"></i>Business Details</h6>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Company Type:</span>
+                        <strong>{{ company.get_company_type_display }}</strong>
+                    </div>
+                </div>
+                
+                {% if company.industry %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Industry:</span>
+                        <strong>{{ company.industry }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.annual_revenue %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Annual Revenue:</span>
+                        <strong class="text-success">KES {{ company.annual_revenue|floatformat:0 }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if company.employee_count %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Employees:</span>
+                        <strong>{{ company.employee_count }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Contacts:</span>
+                        <strong>{{ company.contacts.count }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Active Leads:</span>
+                        <strong>{{ active_leads_count|default:"0" }}</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Related Records -->
+            <div class="info-card">
+                <h6><i class="fas fa-link me-2"></i>Related Records</h6>
+                
+                <div class="related-records">
+                    {% if company.contacts.exists %}
+                    <a href="{% url 'crm:contact_list' %}?company={{ company.pk }}" class="record-link">
+                        <div>
+                            <i class="fas fa-users me-2"></i>
+                            <strong>Contacts</strong>
+                        </div>
+                        <span class="badge bg-primary">{{ company.contacts.count }}</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if company.leads.exists %}
+                    <a href="{% url 'crm:lead_list' %}?company={{ company.pk }}" class="record-link">
+                        <div>
+                            <i class="fas fa-handshake me-2"></i>
+                            <strong>Leads</strong>
+                        </div>
+                        <span class="badge bg-success">{{ company.leads.count }}</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if opportunities_count > 0 %}
+                    <a href="{% url 'crm:opportunity_list' %}?company={{ company.pk }}" class="record-link">
+                        <div>
+                            <i class="fas fa-chart-line me-2"></i>
+                            <strong>Opportunities</strong>
+                        </div>
+                        <span class="badge bg-warning">{{ opportunities_count }}</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if activities_count > 0 %}
+                    <a href="{% url 'crm:activity_list' %}?company={{ company.pk }}" class="record-link">
+                        <div>
+                            <i class="fas fa-calendar me-2"></i>
+                            <strong>Activities</strong>
+                        </div>
+                        <span class="badge bg-info">{{ activities_count }}</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="info-card">
+                <h6><i class="fas fa-cogs me-2"></i>Actions</h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crm:company_update' company.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Company
+                    </a>
+                    
+                    <a href="{% url 'crm:contact_create' %}?company={{ company.pk }}" class="btn btn-success">
+                        <i class="fas fa-user-plus me-2"></i>Add Contact
+                    </a>
+                    
+                    <a href="{% url 'crm:lead_create' %}?company={{ company.pk }}" class="btn btn-info">
+                        <i class="fas fa-handshake me-2"></i>Create Lead
+                    </a>
+                    
+                    <button class="btn btn-warning" onclick="exportCompany()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                    
+                    <button class="btn btn-outline-danger" onclick="deleteCompany()">
+                        <i class="fas fa-trash me-2"></i>Delete Company
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportCompany() {
+    const format = prompt('Choose export format (csv, excel, pdf):');
+    if (!format) return;
+    
+    const validFormats = ['csv', 'excel', 'pdf'];
+    if (!validFormats.includes(format.toLowerCase())) {
+        alert('Invalid format. Please choose csv, excel, or pdf.');
+        return;
+    }
+    
+    // Show loading indicator
+    const btn = document.querySelector('.btn-warning');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+    btn.disabled = true;
+    
+    // Perform export
+    window.location.href = `{% url 'crm:company_export' company.pk %}?format=${format}`;
+    
+    // Reset button after a delay
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 2000);
+}
+
+function deleteCompany() {
+    if (confirm('Are you sure you want to delete this company? This action cannot be undone and will affect all related contacts and leads.')) {
+        fetch(`{% url 'crm:company_delete' company.pk %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '{% url "crm:company_list" %}';
+            } else {
+                alert('Error deleting company. Please try again.');
+            }
+        })
+        .catch(error => {
+            alert('Error deleting company. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

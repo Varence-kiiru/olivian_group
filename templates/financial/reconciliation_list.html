@@ -1,0 +1,402 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Bank Reconciliation - {{ block.super }}{% endblock %}
+
+{% block page_title %}Bank Reconciliation{% endblock %}
+{% block page_subtitle %}Reconcile bank statements with your financial records{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Bank Reconciliation</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .reconciliation-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .reconciliation-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .reconciliation-card.balanced { border-left-color: #28a745; }
+    .reconciliation-card.unbalanced { border-left-color: #dc3545; }
+    .reconciliation-card.pending { border-left-color: #ffc107; }
+    
+    .status-badge {
+        padding: 0.3rem 0.7rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-balanced { background: #d4edda; color: #155724; }
+    .status-unbalanced { background: #f8d7da; color: #721c24; }
+    .status-approved { background: #cce5ff; color: #004085; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    
+    .variance-positive { color: #28a745; font-weight: bold; }
+    .variance-negative { color: #dc3545; font-weight: bold; }
+    .variance-zero { color: #6c757d; font-weight: bold; }
+    
+    .balance-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .balance-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .balance-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-balance-scale me-2"></i>Bank Reconciliations
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'financial:reconciliation_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Reconciliation
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="account" class="form-label">Bank Account</label>
+            <select class="form-select" id="account" name="account">
+                <option value="">All Accounts</option>
+                {% for account in bank_accounts %}
+                <option value="{{ account.id }}" {% if current_account == account.id|stringformat:"s" %}selected{% endif %}>
+                    {{ account.account_name }} - {{ account.account_number }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="balanced" {% if current_status == 'balanced' %}selected{% endif %}>Balanced</option>
+                <option value="unbalanced" {% if current_status == 'unbalanced' %}selected{% endif %}>Unbalanced</option>
+                <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending Approval</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="period" class="form-label">Period</label>
+            <select class="form-select" id="period" name="period">
+                <option value="">All Periods</option>
+                <option value="current_month">Current Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="current_quarter">Current Quarter</option>
+                <option value="last_quarter">Last Quarter</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Reconciliations List -->
+<div class="row">
+    {% for reconciliation in reconciliations %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="reconciliation-card {% if reconciliation.is_balanced %}balanced{% else %}unbalanced{% endif %}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <span class="font-monospace">{{ reconciliation.reconciliation_id }}</span>
+                    </h6>
+                    <div class="text-muted small">{{ reconciliation.bank_account.account_name }}</div>
+                </div>
+                <div class="text-end">
+                    {% if reconciliation.is_balanced %}
+                        <span class="status-badge status-balanced">Balanced</span>
+                    {% else %}
+                        <span class="status-badge status-unbalanced">Unbalanced</span>
+                    {% endif %}
+                    {% if reconciliation.is_approved %}
+                        <div class="mt-1">
+                            <span class="status-badge status-approved">Approved</span>
+                        </div>
+                    {% else %}
+                        <div class="mt-1">
+                            <span class="status-badge status-pending">Pending</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="small text-muted mb-1">Period</div>
+                        <div class="small">
+                            {{ reconciliation.period_start|date:"M d" }} - {{ reconciliation.period_end|date:"M d, Y" }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted mb-1">Reconciliation Date</div>
+                        <div class="small">{{ reconciliation.reconciliation_date|date:"M d, Y" }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="small text-muted mb-1">Book Balance</div>
+                        <div class="fw-bold">
+                            KES {{ reconciliation.closing_book_balance|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted mb-1">Bank Balance</div>
+                        <div class="fw-bold">
+                            KES {{ reconciliation.closing_bank_balance|floatformat:2 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Variance</div>
+                <div class="{% if reconciliation.variance > 0 %}variance-positive{% elif reconciliation.variance < 0 %}variance-negative{% else %}variance-zero{% endif %}">
+                    {% if reconciliation.variance > 0 %}+{% endif %}KES {{ reconciliation.variance|floatformat:2 }}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="small text-muted">
+                    By: {{ reconciliation.prepared_by.get_full_name|default:reconciliation.prepared_by.username }}
+                </div>
+                <div class="d-flex gap-1">
+                    <a href="#" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#reconciliationModal{{ reconciliation.id }}">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if not reconciliation.is_approved %}
+                    <a href="#" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-check"></i>
+                    </a>
+                    {% endif %}
+                    <a href="#" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-print"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reconciliation Detail Modal -->
+    <div class="modal fade" id="reconciliationModal{{ reconciliation.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Reconciliation Details - {{ reconciliation.reconciliation_id }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="balance-summary">
+                        <h6 class="mb-3">Balance Summary</h6>
+                        
+                        <div class="balance-item">
+                            <span>Opening Book Balance:</span>
+                            <span>KES {{ reconciliation.opening_book_balance|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Closing Book Balance:</span>
+                            <span>KES {{ reconciliation.closing_book_balance|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Opening Bank Balance:</span>
+                            <span>KES {{ reconciliation.opening_bank_balance|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Closing Bank Balance:</span>
+                            <span>KES {{ reconciliation.closing_bank_balance|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Deposits in Transit:</span>
+                            <span>KES {{ reconciliation.deposits_in_transit|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Outstanding Checks:</span>
+                            <span>KES {{ reconciliation.outstanding_checks|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Bank Errors:</span>
+                            <span>KES {{ reconciliation.bank_errors|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Book Errors:</span>
+                            <span>KES {{ reconciliation.book_errors|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Reconciled Balance:</span>
+                            <span>KES {{ reconciliation.reconciled_balance|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="balance-item">
+                            <span>Variance:</span>
+                            <span class="{% if reconciliation.variance > 0 %}text-success{% elif reconciliation.variance < 0 %}text-danger{% endif %}">
+                                {% if reconciliation.variance > 0 %}+{% endif %}KES {{ reconciliation.variance|floatformat:2 }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if reconciliation.notes %}
+                    <div class="mt-3">
+                        <h6>Notes</h6>
+                        <p class="text-muted">{{ reconciliation.notes }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <strong>Prepared By:</strong><br>
+                            {{ reconciliation.prepared_by.get_full_name }}<br>
+                            <small class="text-muted">{{ reconciliation.created_at|date:"M d, Y H:i" }}</small>
+                        </div>
+                        
+                        {% if reconciliation.reviewed_by %}
+                        <div class="col-md-4">
+                            <strong>Reviewed By:</strong><br>
+                            {{ reconciliation.reviewed_by.get_full_name }}<br>
+                            <small class="text-muted">{{ reconciliation.reviewed_date|date:"M d, Y H:i" }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if reconciliation.approved_by %}
+                        <div class="col-md-4">
+                            <strong>Approved By:</strong><br>
+                            {{ reconciliation.approved_by.get_full_name }}<br>
+                            <small class="text-muted">{{ reconciliation.approved_date|date:"M d, Y H:i" }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    {% if not reconciliation.is_approved %}
+                    <button type="button" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Approve
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-balance-scale fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No reconciliations found</h5>
+            <p class="text-muted">Start by creating your first bank reconciliation.</p>
+            <a href="{% url 'financial:reconciliation_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Reconciliation
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Reconciliations pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_account %}&account={{ current_account }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_account %}&account={{ current_account }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

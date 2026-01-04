@@ -1,0 +1,84 @@
+<!-- Payment Methods Section -->
+<div class="payment-methods">
+    <h5 class="mb-3">Payment Methods We Accept:</h5>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="payment-method-card">
+                <div class="d-flex align-items-center">
+                    <div class="payment-icon me-3">
+                        <i class="fas fa-university text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Bank Transfer</h6>
+                        <small class="text-muted">Direct bank transfers to our business account</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="payment-method-card">
+                <div class="d-flex align-items-center">
+                    <div class="payment-icon me-3">
+                        <i class="fas fa-mobile-alt text-success"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">M-Pesa</h6>
+                        <small class="text-muted">Pay via M-Pesa Till or Paybill</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="payment-method-card">
+                <div class="d-flex align-items-center">
+                    <div class="payment-icon me-3">
+                        <i class="fas fa-money-bill-wave text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Cash Payment</h6>
+                        <small class="text-muted">Cash payments at our office or on delivery</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="payment-method-card">
+                <div class="d-flex align-items-center">
+                    <div class="payment-icon me-3">
+                        <i class="fas fa-credit-card text-info"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Cheque</h6>
+                        <small class="text-muted">Business cheques payable to {{ company.name|default:"Olivian Group" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-method-card {
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.payment-method-card:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(56, 182, 255, 0.05);
+}
+
+.payment-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(56, 182, 255, 0.1);
+    border-radius: 50%;
+    font-size: 1.2rem;
+}
+</style>

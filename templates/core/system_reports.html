@@ -1,0 +1,446 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load core_extras %}  <!-- Add this line -->
+
+{% block title %}System Reports - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Date Range Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date"
+                           value="{{ request.GET.start_date|default:'' }}">
+                </div>
+                <div class="col-auto">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date"
+                           value="{{ request.GET.end_date|default:'' }}">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Statistics -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>User Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <tbody>
+                                    <tr>
+                                        <th>Total Users</th>
+                                        <td>{{ user_stats.total_users }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>New Users</th>
+                                        <td>{{ user_stats.new_users }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Active Users</th>
+                                        <td>{{ user_stats.active_users }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Inactive Users</th>
+                                        <td>{{ user_stats.inactive_users }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Role Distribution -->
+                            <h6 class="mt-4 mb-3">Role Distribution</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Role</th>
+                                            <th>Count</th>
+                                            <th>Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for role, count in user_stats.role_distribution.items %}
+                                        <tr>
+                                            <td>{{ role|title }}</td>
+                                            <td>{{ count }}</td>
+                                            <td>
+                                                {% widthratio count user_stats.total_users 100 %}%
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Most Active Users -->
+                            {% if user_stats.most_active_users %}
+                            <h6 class="mt-4 mb-3">Most Active Users</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Last Activity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in user_stats.most_active_users %}
+                                        <tr>
+                                            <td>{{ user.username }}</td>
+                                            <td>{{ user.last_activity|timesince }} ago</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No user statistics available for the selected period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- System Statistics -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-server me-2"></i>System Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if system_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <tbody>
+                                    <tr>
+                                        <th>Current CPU Usage</th>
+                                        <td>{{ system_stats.current_cpu_usage }}%</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Average CPU Usage</th>
+                                        <td>{{ system_stats.avg_cpu_usage }}%</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Current Memory Usage</th>
+                                        <td>{{ system_stats.current_memory_usage }}%</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Average Memory Usage</th>
+                                        <td>{{ system_stats.avg_memory_usage }}%</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Disk Details</th>
+                                        <td>
+                                            Total: {{ system_stats.disk_details.total }}<br>
+                                            Available: {{ system_stats.disk_details.available }}<br>
+                                            Used: {{ system_stats.disk_details.used }}<br>
+                                            Usage: {{ system_stats.disk_usage }}%
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Account Disk Usage</th>
+                                        <td>{{ system_stats.account_disk_usage }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>System Uptime</th>
+                                        <td>{{ system_stats.uptime }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Memory Details</th>
+                                        <td>
+                                            Total: {{ system_stats.memory_details.total }}<br>
+                                            Available: {{ system_stats.memory_details.available }}<br>
+                                            Used: {{ system_stats.memory_details.used }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No system statistics available for the selected period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Statistics -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Financial Statistics
+                    </h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshFinancials()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if financial_stats.error %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error: {{ financial_stats.error }}
+                        </div>
+                    {% endif %}
+
+                    {% if financial_stats %}
+                        <!-- Period Summary -->
+                        <div class="alert alert-info mb-4">
+                            <h6 class="alert-heading"><i class="fas fa-calendar me-2"></i>Report Period</h6>
+                            <p class="mb-0">
+                                From: <strong>{{ financial_stats.period.start|date:"M d, Y" }}</strong>
+                                To: <strong>{{ financial_stats.period.end|date:"M d, Y" }}</strong>
+                                ({{ financial_stats.period.days }} days)
+                            </p>
+                        </div>
+
+                        <div class="row mb-4">
+                            <!-- Revenue Card -->
+                            <div class="col-md-4">
+                                <div class="card bg-success bg-opacity-10 h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted">Total Revenue</h6>
+                                        <h4 class="card-title mb-3">KES {{ financial_stats.total_revenue|floatformat:2|default:"0.00" }}</h4>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge {% if financial_stats.revenue_change >= 0 %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                                {{ financial_stats.revenue_change|floatformat:1 }}%
+                                            </span>
+                                            <small class="text-muted">vs previous period</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Transactions: {{ financial_stats.transaction_counts.revenue|default:"0" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expenses Card -->
+                            <div class="col-md-4">
+                                <div class="card bg-danger bg-opacity-10 h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted">Total Expenses</h6>
+                                        <h4 class="card-title mb-3">KES {{ financial_stats.total_expenses|floatformat:2|default:"0.00" }}</h4>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge {% if financial_stats.expenses_change <= 0 %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                                {{ financial_stats.expenses_change|floatformat:1 }}%
+                                            </span>
+                                            <small class="text-muted">vs previous period</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Transactions: {{ financial_stats.transaction_counts.expense|default:"0" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Net Profit Card -->
+                            <div class="col-md-4">
+                                <div class="card {% if financial_stats.net_profit >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted">Net Profit/Loss</h6>
+                                        <h4 class="card-title mb-3">KES {{ financial_stats.net_profit|floatformat:2|default:"0.00" }}</h4>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge {% if financial_stats.profit_change >= 0 %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                                {{ financial_stats.profit_change|floatformat:1 }}%
+                                            </span>
+                                            <small class="text-muted">vs previous period</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Profit Margin: 
+                                                {% if financial_stats.total_revenue > 0 %}
+                                                    {{ financial_stats.net_profit|divide:financial_stats.total_revenue|multiply:100|floatformat:1 }}%
+                                                {% else %}
+                                                    0.0%
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transactions Summary -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Transaction Type</th>
+                                        <th>Count</th>
+                                        <th>Total Amount</th>
+                                        <th>Average Amount</th>
+                                        <th>Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-arrow-up text-success me-2"></i>Income
+                                        </td>
+                                        <td>{{ financial_stats.transaction_counts.revenue|default:"0" }}</td>
+                                        <td>KES {{ financial_stats.total_revenue|floatformat:2|default:"0.00" }}</td>
+                                        <td>
+                                            {% if financial_stats.transaction_counts.revenue > 0 %}
+                                                KES {{ financial_stats.total_revenue|divide:financial_stats.transaction_counts.revenue|floatformat:2 }}
+                                            {% else %}
+                                                KES 0.00
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if financial_stats.revenue_change >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ financial_stats.revenue_change|floatformat:1 }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-arrow-down text-danger me-2"></i>Expenses
+                                        </td>
+                                        <td>{{ financial_stats.transaction_counts.expense|default:"0" }}</td>
+                                        <td>KES {{ financial_stats.total_expenses|floatformat:2|default:"0.00" }}</td>
+                                        <td>
+                                            {% if financial_stats.transaction_counts.expense > 0 %}
+                                                KES {{ financial_stats.total_expenses|divide:financial_stats.transaction_counts.expense|floatformat:2 }}
+                                            {% else %}
+                                                KES 0.00
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if financial_stats.expenses_change <= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ financial_stats.expenses_change|floatformat:1 }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No financial statistics available for the selected period.
+                            {% if request.GET.start_date and request.GET.end_date %}
+                                <br>
+                                <small>Try selecting a different date range or verify that transactions exist for this period.</small>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-download me-2"></i>Export Reports
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <a href="{% url 'core:export_user_report' %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" 
+                       class="btn btn-primary w-100">
+                        <i class="fas fa-users me-2"></i>Export User Report
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'core:export_system_report' %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" 
+                       class="btn btn-info w-100">
+                        <i class="fas fa-server me-2"></i>Export System Report
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'core:export_financial_report' %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" 
+                       class="btn btn-success w-100">
+                        <i class="fas fa-chart-line me-2"></i>Export Financial Report
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'core:export_all_data' %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" 
+                       class="btn btn-warning w-100">
+                        <i class="fas fa-database me-2"></i>Export All Data
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Date range validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDate = document.getElementById('start_date');
+        const endDate = document.getElementById('end_date');
+
+        // Set max date to today
+        const today = new Date().toISOString().split('T')[0];
+        startDate.max = today;
+        endDate.max = today;
+
+        // Ensure end date is not before start date
+        startDate.addEventListener('change', function() {
+            endDate.min = this.value;
+        });
+
+        endDate.addEventListener('change', function() {
+            startDate.max = this.value;
+        });
+    });
+
+    // Refresh financial statistics
+    async function refreshFinancials() {
+        const button = document.querySelector('button[onclick="refreshFinancials()"]');
+        const icon = button.querySelector('i');
+        button.disabled = true;
+        icon.classList.add('fa-spin');
+
+        try {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            
+            const response = await fetch(`/core/api/financial-stats/?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) throw new Error('Failed to fetch financial statistics');
+            
+            const data = await response.json();
+            if (data.success) {
+                location.reload();  // Refresh the page to show updated stats
+            } else {
+                throw new Error(data.error || 'Unknown error occurred');
+            }
+        } catch (error) {
+            console.error('Error refreshing financial stats:', error);
+            alert('Failed to refresh financial statistics: ' + error.message);
+        } finally {
+            button.disabled = false;
+            icon.classList.remove('fa-spin');
+        }
+    }
+</script>
+{% endblock %}

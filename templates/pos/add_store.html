@@ -1,0 +1,201 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Add Store - {{ block.super }}{% endblock %}
+
+{% block page_title %}Add New Store{% endblock %}
+{% block page_subtitle %}Create a new store location{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:store_management' %}">Store Management</a></li>
+<li class="breadcrumb-item active">Add Store</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-store me-2"></i>Store Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">Store Name *</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.code.id_for_label }}" class="form-label">Store Code *</label>
+                                {{ form.code }}
+                                <div class="form-text">Unique identifier (e.g., ST001, MAIN)</div>
+                                {% if form.code.errors %}
+                                    <div class="text-danger">{{ form.code.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Contact Information</h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Address Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">Address</h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.address_line_1.id_for_label }}" class="form-label">Address Line 1 *</label>
+                                {{ form.address_line_1 }}
+                                {% if form.address_line_1.errors %}
+                                    <div class="text-danger">{{ form.address_line_1.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.address_line_2.id_for_label }}" class="form-label">Address Line 2</label>
+                                {{ form.address_line_2 }}
+                                {% if form.address_line_2.errors %}
+                                    <div class="text-danger">{{ form.address_line_2.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">City *</label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="text-danger">{{ form.city.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.county.id_for_label }}" class="form-label">County *</label>
+                                {{ form.county }}
+                                {% if form.county.errors %}
+                                    <div class="text-danger">{{ form.county.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.postal_code.id_for_label }}" class="form-label">Postal Code</label>
+                                {{ form.postal_code }}
+                                {% if form.postal_code.errors %}
+                                    <div class="text-danger">{{ form.postal_code.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">Settings</h6>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.currency.id_for_label }}" class="form-label">Currency</label>
+                                {{ form.currency }}
+                                {% if form.currency.errors %}
+                                    <div class="text-danger">{{ form.currency.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.opening_time.id_for_label }}" class="form-label">Opening Time</label>
+                                {{ form.opening_time }}
+                                {% if form.opening_time.errors %}
+                                    <div class="text-danger">{{ form.opening_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.closing_time.id_for_label }}" class="form-label">Closing Time</label>
+                                {{ form.closing_time }}
+                                {% if form.closing_time.errors %}
+                                    <div class="text-danger">{{ form.closing_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
+                                {{ form.timezone }}
+                                {% if form.timezone.errors %}
+                                    <div class="text-danger">{{ form.timezone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-save me-2"></i>Create Store
+                        </button>
+                        <a href="{% url 'pos:store_management' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add form classes for Bootstrap styling
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form-control class to all form inputs
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        if (!input.classList.contains('btn')) {
+            input.classList.add('form-control');
+        }
+    });
+});
+</script>
+{% endblock %}

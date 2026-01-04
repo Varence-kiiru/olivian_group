@@ -1,0 +1,341 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Service Area: {{ service_area.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-map-marked-alt mr-2"></i>
+                        Service Area: {{ service_area.name }}
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:service_area_edit' service_area.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'core:service_area_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h5 class="mb-3">
+                                <i class="fas fa-info-circle text-primary"></i> Basic Information
+                            </h5>
+
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold" width="150">Name:</td>
+                                    <td>{{ service_area.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Area Type:</td>
+                                    <td>
+                                        <span class="badge bg-{{ service_area.area_type|default:'secondary' }}">
+                                            {{ service_area.get_area_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">County:</td>
+                                    <td>{{ service_area.county|default:'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Coverage Type:</td>
+                                    <td>
+                                        <span class="badge bg-{{ service_area.coverage_type|default:'primary' }}">
+                                            {{ service_area.get_coverage_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Status:</td>
+                                    <td>
+                                        {% if service_area.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Display Order:</td>
+                                    <td>{{ service_area.order }}</td>
+                                </tr>
+                            </table>
+
+                            {% if service_area.description %}
+                            <div class="mt-3">
+                                <strong>Description:</strong>
+                                <p class="mt-2">{{ service_area.description }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-md-6">
+                            <h5 class="mb-3">
+                                <i class="fas fa-address-book text-success"></i> Contact Information
+                            </h5>
+
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold" width="150">Contact Person:</td>
+                                    <td>{{ service_area.contact_person|default:'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Phone:</td>
+                                    <td>
+                                        {% if service_area.contact_phone %}
+                                            <a href="tel:{{ service_area.contact_phone }}" class="text-decoration-none">
+                                                {{ service_area.contact_phone }}
+                                                <i class="fas fa-phone text-success ms-1"></i>
+                                            </a>
+                                        {% else %}
+                                            Not specified
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Response Time:</td>
+                                    <td>{{ service_area.estimated_response_time|default:'Not specified' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Geographic Information -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="mb-3">
+                                <i class="fas fa-globe text-info"></i> Geographic Information
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td class="fw-bold" width="150">Coordinates:</td>
+                                            <td>
+                                                {% if service_area.latitude and service_area.longitude %}
+                                                    <div class="d-flex align-items-center">
+                                                        <code class="me-2">{{ service_area.latitude|floatformat:6 }}, {{ service_area.longitude|floatformat:6 }}</code>
+                                                        <a href="https://www.google.com/maps?q={{ service_area.latitude }},{{ service_area.longitude }}"
+                                                           target="_blank" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-external-link-alt"></i> View on Map
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-danger">No coordinates available</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% if service_area.center_point %}
+                                        <tr>
+                                            <td class="fw-bold">Center Point:</td>
+                                            <td><code>{{ service_area.center_point }}</code></td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if service_area.radius_km %}
+                                        <tr>
+                                            <td class="fw-bold">Service Radius:</td>
+                                            <td>{{ service_area.radius_km }} km</td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+
+                                <div class="col-md-6">
+                                    {% if service_area.boundary_geojson %}
+                                    <div class="mb-3">
+                                        <strong>Boundary GeoJSON:</strong>
+                                        <div class="mt-2">
+                                            <pre class="bg-light p-2 rounded small" style="max-height: 200px; overflow-y: auto;">{{ service_area.boundary_geojson|truncatechars:500 }}</pre>
+                                            {% if service_area.boundary_geojson|length > 500 %}
+                                            <small class="text-muted">Showing first 500 characters</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timestamps -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="mb-3">
+                                <i class="fas fa-clock text-muted"></i> Timestamps
+                            </h5>
+
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold" width="150">Created:</td>
+                                    <td>{{ service_area.created_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Last Updated:</td>
+                                    <td>{{ service_area.updated_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{% url 'core:service_area_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                        </div>
+                        <div>
+                            <a href="{% url 'core:service_area_edit' service_area.pk %}" class="btn btn-warning me-2">
+                                <i class="fas fa-edit"></i> Edit Area
+                            </a>
+                            <button type="button" class="btn btn-danger" id="delete-area-btn">
+                                <i class="fas fa-trash"></i> Delete Area
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Preview (if coordinates available) -->
+            {% if service_area.latitude and service_area.longitude %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-map-marked-alt mr-2"></i>
+                        Location Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="map" style="height: 400px; width: 100%;" class="rounded">
+                        <!-- Map will be loaded here -->
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Click on the map to open full Google Maps view
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if service_area.latitude and service_area.longitude %}
+<!-- Google Maps Integration -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=initMap">
+</script>
+
+<script>
+// Service area data for JavaScript
+const serviceAreaData = {
+    name: "{{ service_area.name|escapejs }}",
+    contact_person: "{{ service_area.contact_person|escapejs }}",
+    contact_phone: "{{ service_area.contact_phone|escapejs }}",
+    area_type: "{{ service_area.get_area_type_display|escapejs }}",
+    latitude: {{ service_area.latitude|default:0 }},
+    longitude: {{ service_area.longitude|default:0 }}
+};
+
+function initMap() {
+    if (!serviceAreaData.latitude || !serviceAreaData.longitude) {
+        document.getElementById('map').innerHTML = '<div class="alert alert-warning">No coordinates available for this location.</div>';
+        return;
+    }
+
+    const location = { lat: serviceAreaData.latitude, lng: serviceAreaData.longitude };
+
+    const map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 12,
+        center: location,
+        mapTypeId: 'roadmap'
+    });
+
+    const marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        title: serviceAreaData.name
+    });
+
+    // Add info window
+    let content = `<div><strong>${serviceAreaData.name}</strong><br>`;
+
+    if (serviceAreaData.contact_person) {
+        content += `Contact: ${serviceAreaData.contact_person}<br>`;
+    }
+
+    if (serviceAreaData.contact_phone) {
+        content += `Phone: ${serviceAreaData.contact_phone}<br>`;
+    }
+
+    content += `Type: ${serviceAreaData.area_type}</div>`;
+
+    const infoWindow = new google.maps.InfoWindow({
+        content: content
+    });
+
+    marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+    });
+}
+</script>
+{% endif %}
+
+<style>
+.table-borderless td {
+    border: none;
+    padding: 0.5rem 0;
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+h5 {
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+pre {
+    font-size: 0.75rem;
+}
+
+.card-footer .btn {
+    min-width: 120px;
+}
+</style>
+
+<script>
+document.getElementById('delete-area-btn').addEventListener('click', function() {
+    Swal.fire({
+        title: 'Delete Service Area?',
+        text: "This action cannot be undone. This will permanently delete '{{ service_area.name }}' and all associated data.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = "{% url 'core:service_area_delete' service_area.pk %}";
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="background: #dc3545; color: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
+    <h2 style="margin: 0; color: white;">
+        <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>Admin Notification
+    </h2>
+</div>
+
+<div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin: 20px 0;">
+    <h3 style="color: #dc3545; margin-bottom: 20px;">{{ subject }}</h3>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            {{ message }}
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
+            <p style="margin: 0; color: #6c757d; font-size: 14px;">
+                <strong>Triggered by:</strong> {{ user_name }}<br>
+                <strong>Time:</strong> {{ timestamp|date:"M d, Y H:i:s" }}<br>
+                <strong>System:</strong> {{ company_name }} Management Portal
+            </p>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 30px;">
+    <a href="{{ company_website }}/accounts/login/" 
+       style="background: {{ primary_color }}; color: white; padding: 12px 30px; 
+              text-decoration: none; border-radius: 5px; font-weight: bold;
+              display: inline-block;">
+        Access Admin Panel
+    </a>
+</div>
+
+<div style="text-align: center; margin-top: 30px;">
+    <p style="color: #6c757d; font-size: 14px; margin: 0;">
+        This is an automated system notification for {{ company_name }} administrators.
+    </p>
+</div>
+{% endblock %}
