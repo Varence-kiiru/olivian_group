@@ -808,6 +808,84 @@
     visibility: visible;
 }
 
+/* Mobile adjustments: sticky input, responsive avatars, and safe-area support */
+:root {
+    --footer-height: 88px;
+}
+
+/* Use the dynamic viewport unit (--vh) set by JS for mobile soft-keyboard handling */
+.chat-room-card {
+    height: calc(var(--vh, 1vh) * 100 - 160px);
+}
+
+.chat-room-card .card-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: inherit;
+}
+
+.chat-messages {
+    padding-bottom: calc(var(--footer-height) + 16px);
+}
+
+/* Load earlier button stays visible at top without jump */
+.load-more-container {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0));
+}
+
+@media (max-width: 767.98px) {
+    :root { --footer-height: 72px; }
+
+    .avatar-placeholder {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+
+    .message-avatar { margin: 0 0.5rem; }
+
+    .message-content {
+        max-width: 82% !important;
+        padding: 0.5rem 0.75rem;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+
+    .message-item { margin-bottom: 0.75rem; }
+
+    .message-text { font-size: 0.95rem; }
+
+    .chat-room-card { height: calc(var(--vh, 1vh) * 100 - 56px); }
+
+    .chat-room-card .card-footer { padding: 0.5rem; }
+
+    .message-input {
+        padding: 0.5rem 0.75rem;
+        min-height: 40px;
+    }
+
+    #send-button {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.4rem 0.6rem;
+    }
+
+    /* Ensure file preview fits on small screens */
+    #file-preview .file-preview-content { display:flex; align-items:center; gap:0.5rem; }
+    #file-preview { padding: 0.4rem 0.5rem; }
+}
+
+/* Small utilities */
+.chat-alert .alert-content { display:flex; align-items:center; gap:0.5rem; }
+
 .mobile-sidebar {
     position: fixed;
     top: 0;

@@ -364,6 +364,20 @@ function initializeLastMessageId() {
     }
 }
 
+// Helpers for mobile viewport and debouncing
+function updateVh() {
+    // Set a --vh custom property to handle mobile keyboard resizing
+    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+}
+
+function debounce(fn, wait) {
+    let t;
+    return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), wait);
+    };
+}
+
 function sendMessageAjax(content, replyTo = null, file = null) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const formData = new FormData();
@@ -899,6 +913,10 @@ function loadOlderMessages() {
     loadMoreBtn.style.display = 'none';
     loadingSpinner.style.display = 'inline-block';
 
+    // Preserve scroll position to avoid content jump
+    const previousScrollHeight = messagesContainer.scrollHeight;
+    const previousScrollTop = messagesContainer.scrollTop;
+
     // Get the oldest message ID currently loaded
     const messageItems = messagesList.querySelectorAll('.message-item[data-message-id]');
     let oldestMessageId = null;
@@ -915,7 +933,7 @@ function loadOlderMessages() {
     .then(response => response.json())
     .then(data => {
         if (data.messages && data.messages.length > 0) {
-            // Add older messages to the top (in reverse order since they come oldest first)
+            // Add older messages to the top (they are oldest-first)
             const messageContainer = messagesList.querySelector('.load-more-container');
 
             data.messages.forEach(message => {
@@ -954,6 +972,11 @@ function loadOlderMessages() {
             if (!data.has_more) {
                 loadMoreContainer.style.display = 'none';
             }
+
+            // After inserting, adjust scroll so view stays anchored
+            const newScrollHeight = messagesContainer.scrollHeight;
+            const scrollDiff = newScrollHeight - previousScrollHeight;
+            messagesContainer.scrollTop = previousScrollTop + scrollDiff;
         }
 
         // Re-enable button and hide loading
@@ -1153,6 +1176,12 @@ clearExistingNotifications();
 
 // Initialize after cleanup
 document.addEventListener('DOMContentLoaded', function() {
+    // Set CSS vh unit for mobile keyboards
+    updateVh();
+
+    // Recalculate --vh on resize (debounced)
+    window.addEventListener('resize', debounce(updateVh, 150));
+
     scrollToBottom();
 
     // Load reactions for existing messages
@@ -1160,6 +1189,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize typing events
     initTypingEvents();
+
+    // Ensure input-focused behavior on mobile keeps the input visible
+    if (messageInput) {
+        messageInput.addEventListener('focus', function() {
+            // small delay to allow mobile keyboard to open
+            setTimeout(() => { scrollToBottom(); }, 350);
+        });
+        messageInput.addEventListener('blur', function() {
+            // slight delay to allow keyboard to close then reflow
+            setTimeout(() => { updateVh(); }, 200);
+        });
+    }
 
     // Start smart polling instead of fixed intervals
     startSmartPolling();

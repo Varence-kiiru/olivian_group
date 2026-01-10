@@ -17,20 +17,34 @@ const Dashboard = {
 
         if (sidebarToggle && sidebar) {
             sidebarToggle.addEventListener('click', function() {
+                const becomingVisible = !sidebar.classList.contains('show');
                 sidebar.classList.toggle('show');
                 if (window.innerWidth <= 768) {
                     mainContent.style.marginLeft = sidebar.classList.contains('show') ? '280px' : '0';
+                    if (becomingVisible) {
+                        try { const val = sessionStorage.getItem('sidebarScrollTop'); if (val !== null) sidebar.scrollTop = parseInt(val,10)||0; } catch (err) {}
+                        setTimeout(function(){
+                            const active = sidebar.querySelector('.nav-link.active');
+                            if (active) active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        }, 80);
+                    } else {
+                        try { sessionStorage.setItem('sidebarScrollTop', String(sidebar.scrollTop || 0)); } catch (err) {}
+                    }
                 }
             });
         }
 
-        // Auto-collapse sidebar on mobile
+        // Auto-collapse sidebar on mobile - but NOT for dropdown toggles
         if (window.innerWidth <= 768) {
-            const menuLinks = document.querySelectorAll('.sidebar .nav-link');
+            const menuLinks = document.querySelectorAll('.sidebar .nav-link:not(.dropdown-toggle)');
             menuLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    sidebar.classList.remove('show');
-                    mainContent.style.marginLeft = '0';
+                link.addEventListener('click', (e) => {
+                    // Only close if it's not a dropdown toggle or submenu item
+                    if (!link.classList.contains('dropdown-toggle') && !link.closest('.dropdown-menu-nav')) {
+                        try { sessionStorage.setItem('sidebarScrollTop', String(sidebar.scrollTop || 0)); } catch (err) {}
+                        sidebar.classList.remove('show');
+                        mainContent.style.marginLeft = '0';
+                    }
                 });
             });
         }

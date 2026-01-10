@@ -307,6 +307,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 
+# Chat auto-join configuration
+# If set to a list of room names, new users will be auto-added only to those general rooms.
+# If left unset or None, new users will be auto-added to all `room_type='general'` rooms.
+CHAT_AUTO_JOIN_GENERAL_ROOMS = config('CHAT_AUTO_JOIN_GENERAL_ROOMS', default=None)
+
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"

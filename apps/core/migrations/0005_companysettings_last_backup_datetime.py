@@ -8,11 +8,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('core', '0004_alter_legaldocument_document_type'),
     ]
-
+    # Duplicate of 0005_add_backup_timestamp.py - no-op to avoid applying the same schema change twice.
     operations = [
-        migrations.AddField(
-            model_name='companysettings',
-            name='last_backup_datetime',
-            field=models.DateTimeField(blank=True, help_text='Date and time of the last successful system backup', null=True),
-        ),
+        # Intentionally empty: schema change handled by 0005_add_backup_timestamp.py
     ]

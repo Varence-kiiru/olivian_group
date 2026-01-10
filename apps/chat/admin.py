@@ -19,7 +19,7 @@ def has_chat_admin_permission(user):
 
 @admin.register(ChatRoom)
 class ChatRoomAdmin(admin.ModelAdmin):
-    list_display = ['name', 'room_type', 'is_active', 'created_at', 'created_by', 'participants_count']
+    list_display = ['name', 'room_type', 'is_active', 'is_auto_join', 'created_at', 'created_by', 'participants_count']
     list_filter = ['room_type', 'is_active', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'created_by']

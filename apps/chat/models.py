@@ -28,6 +28,8 @@ class ChatRoom(models.Model):
 
     # For private rooms (direct messaging)
     participants = models.ManyToManyField(User, related_name='chat_rooms', blank=True)
+    # Whether new users should be auto-added to this room (used by signals)
+    is_auto_join = models.BooleanField(default=True, help_text='If true, users will be auto-added based on group or general auto-join rules')
 
     class Meta:
         ordering = ['-created_at']

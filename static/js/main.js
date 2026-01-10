@@ -410,6 +410,7 @@ const OlivianSolar = {
                     // Close mobile sidebar
                     if (window.innerWidth <= 768) {
                         const sidebar = document.getElementById('sidebar');
+                        try { sessionStorage.setItem('sidebarScrollTop', String(sidebar.scrollTop || 0)); } catch (err) {}
                         sidebar.classList.remove('show');
                     }
 
