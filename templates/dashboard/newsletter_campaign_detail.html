@@ -1,0 +1,387 @@
+{% extends "dashboard/base.html" %}
+
+{% block page_title %}Campaign: {{ campaign.title }}{% endblock %}
+{% block page_subtitle %}View campaign details and analytics{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_dashboard' %}">Newsletter</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_campaign_list' %}">Campaigns</a></li>
+<li class="breadcrumb-item active">{{ campaign.title|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">{{ campaign.title }}</h4>
+                <p class="text-muted mb-0">{{ campaign.subject }}</p>
+                <div class="mt-2">
+                    <span class="badge bg-{% if campaign.status == 'sent' %}success{% elif campaign.status == 'sending' %}warning{% elif campaign.status == 'scheduled' %}info{% else %}secondary{% endif %} fs-6">
+                        {{ campaign.get_status_display }}
+                    </span>
+                    {% if campaign.sent_at %}
+                    <small class="text-muted ms-2">Sent {{ campaign.sent_at|date:"M d, Y g:i A" }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="btn-group">
+                {% if campaign.can_send %}
+                <form method="post" action="{% url 'core:newsletter_campaign_send' campaign.pk %}"
+                      class="me-2" onsubmit="return sendCampaignDetailConfirm(event)">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane me-1"></i>Send Now
+                    </button>
+                </form>
+                {% endif %}
+                {% if not campaign.sent_at %}
+                <a href="{% url 'core:newsletter_campaign_update' campaign.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% endif %}
+                <a href="{% url 'core:newsletter_campaign_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ total_sent|default:0 }}</div>
+            <div class="stats-label">Emails Sent</div>
+            <i class="fas fa-paper-plane stats-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ total_opens|default:0 }}</div>
+            <div class="stats-label">Opens</div>
+            <i class="fas fa-envelope-open stats-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ open_rate|floatformat:1 }}%</div>
+            <div class="stats-label">Open Rate</div>
+            <i class="fas fa-chart-line stats-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ click_rate|floatformat:1 }}%</div>
+            <div class="stats-label">Click Rate</div>
+            <i class="fas fa-mouse-pointer stats-icon"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Campaign Details -->
+    <div class="col-lg-8 mb-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Title:</dt>
+                            <dd class="col-sm-8">{{ campaign.title }}</dd>
+
+                            <dt class="col-sm-4">Subject:</dt>
+                            <dd class="col-sm-8">{{ campaign.subject }}</dd>
+
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-{% if campaign.status == 'sent' %}success{% elif campaign.status == 'sending' %}warning{% elif campaign.status == 'scheduled' %}info{% else %}secondary{% endif %}">
+                                    {{ campaign.get_status_display }}
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Template:</dt>
+                            <dd class="col-sm-8">{{ campaign.template_type|title }}</dd>
+
+                            {% if campaign.call_to_action_url %}
+                            <dt class="col-sm-4">CTA URL:</dt>
+                            <dd class="col-sm-8">
+                                <a href="{{ campaign.call_to_action_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">
+                                    {{ campaign.call_to_action_url }}
+                                    <i class="fas fa-external-link-alt ms-1 small"></i>
+                                </a>
+                            </dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Created:</dt>
+                            <dd class="col-sm-8">{{ campaign.created_at|date:"M d, Y g:i A" }}</dd>
+
+                            {% if campaign.sent_at %}
+                            <dt class="col-sm-4">Sent:</dt>
+                            <dd class="col-sm-8">{{ campaign.sent_at|date:"M d, Y g:i A" }}</dd>
+                            {% endif %}
+
+                            {% if campaign.created_by %}
+                            <dt class="col-sm-4">Created by:</dt>
+                            <dd class="col-sm-8">{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</dd>
+                            {% endif %}
+
+                            {% if campaign.preview_text %}
+                            <dt class="col-sm-4">Preview:</dt>
+                            <dd class="col-sm-8"><em>"{{ campaign.preview_text }}"</em></dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Content Preview -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Email Content</h5>
+            </div>
+            <div class="card-body">
+                <div class="border p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                    {{ campaign.content|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics & Stats -->
+    <div class="col-lg-4 mb-4">
+        <!-- Delivery Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Delivery Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="text-success mb-2">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                        <div class="h5 mb-0">{{ total_sent|default:0 }}</div>
+                        <small class="text-muted">Sent</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-danger mb-2">
+                            <i class="fas fa-times-circle fa-2x"></i>
+                        </div>
+                        <div class="h5 mb-0">{{ total_failed|default:0 }}</div>
+                        <small class="text-muted">Failed</small>
+                    </div>
+                </div>
+                {% if total_sent %}
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted">Delivery Rate</small>
+                    <div class="progress mt-1" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ delivery_rate|floatformat:1 }}%"></div>
+                    </div>
+                    <small class="text-success">{{ delivery_rate|floatformat:1 }}% delivered</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Engagement Stats -->
+        {% if total_sent %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Engagement</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Opens</small>
+                        <small class="text-muted">{{ total_opens }}/{{ total_sent }}</small>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-info" style="width: {{ open_rate }}%"></div>
+                    </div>
+                    <small class="text-info">{{ open_rate|floatformat:1 }}%</small>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Clicks</small>
+                        <small class="text-muted">{{ total_clicks }}/{{ total_sent }}</small>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: {{ click_rate }}%"></div>
+                    </div>
+                    <small class="text-warning">{{ click_rate|floatformat:1 }}%</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                {% if send_logs %}
+                    <div class="list-group list-group-flush">
+                        {% for log in send_logs %}
+                        <div class="list-group-item px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted">{{ log.subscriber.email }}</small>
+                                    <div class="mt-1">
+                                        {% if log.opened_at %}
+                                        <span class="badge bg-info badge-sm">
+                                            <i class="fas fa-envelope-open me-1"></i>Opened
+                                        </span>
+                                        {% endif %}
+                                        {% if log.clicked_at %}
+                                        <span class="badge bg-warning badge-sm ms-1">
+                                            <i class="fas fa-mouse-pointer me-1"></i>Clicked
+                                        </span>
+                                        {% endif %}
+                                        {% if log.delivery_status == 'failed' %}
+                                        <span class="badge bg-danger badge-sm">
+                                            <i class="fas fa-times me-1"></i>Failed
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ log.sent_at|date:"M d" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No activity yet</p>
+                        {% if campaign.can_send %}
+                        <small class="text-muted">Send campaign to see activity</small>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Logs Table (if campaign sent) -->
+{% if send_logs %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Send Logs</h5>
+                <small class="text-muted">Showing {{ send_logs|length }} of {{ total_sent }} recipients</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Sent</th>
+                                <th>Opened</th>
+                                <th>Clicked</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in send_logs %}
+                            <tr>
+                                <td>
+                                    <strong>{{ log.subscriber.get_full_name|default:log.subscriber.email }}</strong>
+                                    <br><small class="text-muted">{{ log.subscriber.email }}</small>
+                                </td>
+                                <td>
+                                    {% if log.delivery_status == 'sent' %}
+                                        <span class="badge bg-success">Sent</span>
+                                    {% elif log.delivery_status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% elif log.delivery_status == 'bounced' %}
+                                        <span class="badge bg-warning">Bounced</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ log.get_delivery_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.sent_at|date:"M d, g:i A" }}</td>
+                                <td>
+                                    {% if log.opened_at %}
+                                        <span class="text-success">
+                                            <i class="fas fa-check"></i> {{ log.opened_at|date:"M d, g:i A" }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.clicked_at %}
+                                        <span class="text-warning">
+                                            <i class="fas fa-check"></i> {{ log.clicked_at|date:"M d, g:i A" }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'core:newsletter_subscriber_detail' log.subscriber.pk %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-user"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_sent > send_logs|length %}
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        Showing first {{ send_logs|length }} recipients.
+                        Full analytics available in the complete logs.
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function sendCampaignDetailConfirm(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    Swal.fire({
+        title: 'Send Campaign?',
+        text: 'Are you sure you want to send this campaign?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, send it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+
+    return false;
+}
+</script>
+{% endblock %}

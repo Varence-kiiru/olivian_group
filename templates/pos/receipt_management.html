@@ -1,0 +1,1107 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Receipt Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Receipt Management{% endblock %}
+{% block page_subtitle %}Print, email, and manage sales receipts{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Receipt Management</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-container {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        height: calc(100vh - 200px);
+    }
+    
+    .receipts-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .receipt-preview {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+    }
+    
+    .filter-bar {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .receipt-list {
+        max-height: calc(100vh - 400px);
+        overflow-y: auto;
+    }
+    
+    .receipt-item {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .receipt-item:hover {
+        border-color: #38b6ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(56, 182, 255, 0.2);
+    }
+    
+    .receipt-item.selected {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+    }
+    
+    .receipt-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .receipt-number {
+        font-weight: 600;
+        color: #38b6ff;
+        font-size: 1.1rem;
+    }
+    
+    .receipt-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-printed { background: #d4edda; color: #155724; }
+    .status-emailed { background: #cce5ff; color: #004085; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    
+    .receipt-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .detail-label {
+        color: #6c757d;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-weight: 600;
+    }
+    
+    .receipt-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-print { background: #28a745; color: white; }
+    .btn-email { background: #007bff; color: white; }
+    .btn-download { background: #6c757d; color: white; }
+    
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .receipt-template {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .receipt-header-section {
+        text-align: center;
+        border-bottom: 2px dashed #dee2e6;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .company-logo {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .receipt-info-section {
+        margin-bottom: 1rem;
+    }
+    
+    .receipt-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+    
+    .receipt-items {
+        border-top: 1px dashed #dee2e6;
+        border-bottom: 1px dashed #dee2e6;
+        padding: 1rem 0;
+        margin: 1rem 0;
+    }
+    
+    .item-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-name {
+        flex-grow: 1;
+        margin-right: 1rem;
+    }
+    
+    .item-qty {
+        width: 40px;
+        text-align: center;
+    }
+    
+    .item-price {
+        width: 80px;
+        text-align: right;
+    }
+    
+    .receipt-totals {
+        margin-bottom: 1rem;
+    }
+    
+    .total-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+    
+    .grand-total {
+        font-weight: bold;
+        border-top: 1px solid #dee2e6;
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .receipt-footer {
+        text-align: center;
+        border-top: 2px dashed #dee2e6;
+        padding-top: 1rem;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+    }
+    
+    .barcode {
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+        margin: 1rem 0;
+    }
+    
+    .receipt-controls {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .control-group {
+        margin-bottom: 1rem;
+    }
+    
+    .control-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .btn-group-toggle {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .template-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .template-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .template-option:hover {
+        border-color: #38b6ff;
+    }
+    
+    .template-option.selected {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+    }
+    
+    .template-preview {
+        width: 100%;
+        height: 80px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .print-queue {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .queue-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+    }
+    
+    .queue-item:last-child {
+        border-bottom: none;
+    }
+    
+    .queue-status {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    .status-queued { background: #fff3cd; color: #856404; }
+    .status-printing { background: #cce5ff; color: #004085; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-container">
+    <!-- Receipts List Section -->
+    <div class="receipts-section">
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small">Date Range</label>
+                    <select class="form-select form-select-sm">
+                        <option>Today</option>
+                        <option>Yesterday</option>
+                        <option>This Week</option>
+                        <option>This Month</option>
+                        <option>Custom Range</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label small">Status</label>
+                    <select class="form-select form-select-sm">
+                        <option>All Receipts</option>
+                        <option>Printed</option>
+                        <option>Emailed</option>
+                        <option>Pending</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label small">Search</label>
+                    <input type="text" class="form-control form-control-sm" 
+                           placeholder="Receipt number, customer...">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label small">&nbsp;</label>
+                    <button class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="row mb-3">
+            <div class="col-3">
+                <div class="text-center">
+                    <div class="h5 text-primary mb-0">127</div>
+                    <small class="text-muted">Total Today</small>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="text-center">
+                    <div class="h5 text-success mb-0">98</div>
+                    <small class="text-muted">Printed</small>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="text-center">
+                    <div class="h5 text-info mb-0">45</div>
+                    <small class="text-muted">Emailed</small>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="text-center">
+                    <div class="h5 text-warning mb-0">12</div>
+                    <small class="text-muted">Pending</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Receipt List -->
+        <div class="receipt-list">
+            <!-- Sample Receipt Items -->
+            <div class="receipt-item selected" onclick="selectReceipt('RCP-20250115-001')">
+                <div class="receipt-actions">
+                    <button class="action-btn btn-print" title="Print" onclick="event.stopPropagation(); printReceipt('RCP-20250115-001')">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="action-btn btn-email" title="Email" onclick="event.stopPropagation(); emailReceipt('RCP-20250115-001')">
+                        <i class="fas fa-envelope"></i>
+                    </button>
+                    <button class="action-btn btn-download" title="Download" onclick="event.stopPropagation(); downloadReceipt('RCP-20250115-001')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                
+                <div class="receipt-header">
+                    <div class="receipt-number">RCP-20250115-001</div>
+                    <div class="receipt-status status-printed">Printed</div>
+                </div>
+                
+                <div class="receipt-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Customer</div>
+                        <div class="detail-value">John Kimani</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Amount</div>
+                        <div class="detail-value">KES 25,000.00</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Time</div>
+                        <div class="detail-value">14:23</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Payment</div>
+                        <div class="detail-value">M-Pesa</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="receipt-item" onclick="selectReceipt('RCP-20250115-002')">
+                <div class="receipt-actions">
+                    <button class="action-btn btn-print" title="Print" onclick="event.stopPropagation(); printReceipt('RCP-20250115-002')">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="action-btn btn-email" title="Email" onclick="event.stopPropagation(); emailReceipt('RCP-20250115-002')">
+                        <i class="fas fa-envelope"></i>
+                    </button>
+                    <button class="action-btn btn-download" title="Download" onclick="event.stopPropagation(); downloadReceipt('RCP-20250115-002')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                
+                <div class="receipt-header">
+                    <div class="receipt-number">RCP-20250115-002</div>
+                    <div class="receipt-status status-emailed">Emailed</div>
+                </div>
+                
+                <div class="receipt-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Customer</div>
+                        <div class="detail-value">Sarah Wanjiku</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Amount</div>
+                        <div class="detail-value">KES 18,500.00</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Time</div>
+                        <div class="detail-value">13:45</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Payment</div>
+                        <div class="detail-value">Cash</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="receipt-item" onclick="selectReceipt('RCP-20250115-003')">
+                <div class="receipt-actions">
+                    <button class="action-btn btn-print" title="Print" onclick="event.stopPropagation(); printReceipt('RCP-20250115-003')">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="action-btn btn-email" title="Email" onclick="event.stopPropagation(); emailReceipt('RCP-20250115-003')">
+                        <i class="fas fa-envelope"></i>
+                    </button>
+                    <button class="action-btn btn-download" title="Download" onclick="event.stopPropagation(); downloadReceipt('RCP-20250115-003')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                
+                <div class="receipt-header">
+                    <div class="receipt-number">RCP-20250115-003</div>
+                    <div class="receipt-status status-pending">Pending</div>
+                </div>
+                
+                <div class="receipt-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Customer</div>
+                        <div class="detail-value">Walk-in Customer</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Amount</div>
+                        <div class="detail-value">KES 15,200.00</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Time</div>
+                        <div class="detail-value">12:30</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Payment</div>
+                        <div class="detail-value">Card</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Receipt Preview Section -->
+    <div class="receipt-preview">
+        <!-- Receipt Controls -->
+        <div class="receipt-controls">
+            <h6 class="mb-3">
+                <i class="fas fa-cog me-2"></i>Receipt Options
+            </h6>
+            
+            <!-- Template Selection -->
+            <div class="control-group">
+                <label class="control-label">Receipt Template</label>
+                <div class="template-selector">
+                    <div class="template-option selected" onclick="selectTemplate('standard')">
+                        <div class="template-preview">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="small">Standard</div>
+                    </div>
+                    <div class="template-option" onclick="selectTemplate('thermal')">
+                        <div class="template-preview">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="small">Thermal</div>
+                    </div>
+                    <div class="template-option" onclick="selectTemplate('detailed')">
+                        <div class="template-preview">
+                            <i class="fas fa-list-ul"></i>
+                        </div>
+                        <div class="small">Detailed</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Print Options -->
+            <div class="control-group">
+                <label class="control-label">Print Options</label>
+                <div class="btn-group-toggle">
+                    <button class="btn btn-outline-primary btn-sm active" onclick="toggleOption(this)">
+                        <i class="fas fa-check"></i> Customer Copy
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleOption(this)">
+                        <i class="fas fa-times"></i> Merchant Copy
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm active" onclick="toggleOption(this)">
+                        <i class="fas fa-check"></i> Include Logo
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="d-grid gap-2">
+                <button class="btn btn-success" onclick="printCurrentReceipt()">
+                    <i class="fas fa-print me-2"></i>Print Receipt
+                </button>
+                <button class="btn btn-primary" onclick="emailCurrentReceipt()">
+                    <i class="fas fa-envelope me-2"></i>Email Receipt
+                </button>
+                <button class="btn btn-outline-secondary" onclick="downloadCurrentReceipt()">
+                    <i class="fas fa-download me-2"></i>Download PDF
+                </button>
+            </div>
+        </div>
+        
+        <!-- Print Queue -->
+        <div class="print-queue" id="printQueue" style="display: none;">
+            <h6 class="mb-3">
+                <i class="fas fa-clock me-2"></i>Print Queue
+            </h6>
+            
+            <div class="queue-item">
+                <div>
+                    <div class="fw-bold">RCP-20250115-001</div>
+                    <small class="text-muted">Customer Copy</small>
+                </div>
+                <span class="queue-status status-printing">Printing</span>
+            </div>
+            
+            <div class="queue-item">
+                <div>
+                    <div class="fw-bold">RCP-20250115-002</div>
+                    <small class="text-muted">Merchant Copy</small>
+                </div>
+                <span class="queue-status status-queued">Queued</span>
+            </div>
+        </div>
+        
+        <!-- Receipt Template Preview -->
+        <div class="receipt-template" id="receiptPreview">
+            <!-- Receipt Header -->
+            <div class="receipt-header-section">
+                <img src="{% static 'images/olivian-logo.png' %}" alt="Logo" class="company-logo">
+                <div><strong>THE OLIVIAN GROUP LIMITED</strong></div>
+                <div>Professional Solar Solutions</div>
+                <div>Nairobi, Kenya</div>
+                <div>Tel: +254-700-000-000</div>
+                <div>Email: info@oliviangroup.com</div>
+            </div>
+            
+            <!-- Transaction Info -->
+            <div class="receipt-info-section">
+                <div class="receipt-line">
+                    <span>Receipt No:</span>
+                    <span id="previewReceiptNo">RCP-20250115-001</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Date:</span>
+                    <span id="previewDate">15/01/2025 14:23</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Cashier:</span>
+                    <span id="previewCashier">John Doe</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Terminal:</span>
+                    <span id="previewTerminal">Terminal 1</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Customer:</span>
+                    <span id="previewCustomer">John Kimani</span>
+                </div>
+            </div>
+            
+            <!-- Items -->
+            <div class="receipt-items">
+                <div class="item-line">
+                    <div class="item-name">Solar Panel 300W</div>
+                    <div class="item-qty">1</div>
+                    <div class="item-price">25,000.00</div>
+                </div>
+                <div class="item-line">
+                    <div class="item-name">Installation Kit</div>
+                    <div class="item-qty">1</div>
+                    <div class="item-price">2,500.00</div>
+                </div>
+            </div>
+            
+            <!-- Totals -->
+            <div class="receipt-totals">
+                <div class="total-line">
+                    <span>Subtotal:</span>
+                    <span>KES 21,551.72</span>
+                </div>
+                <div class="total-line">
+                    <span>VAT (16%):</span>
+                    <span>KES 3,448.28</span>
+                </div>
+                <div class="total-line grand-total">
+                    <span>TOTAL:</span>
+                    <span>KES 25,000.00</span>
+                </div>
+            </div>
+            
+            <!-- Payment Info -->
+            <div class="receipt-info-section">
+                <div class="receipt-line">
+                    <span>Payment Method:</span>
+                    <span>M-Pesa</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Amount Paid:</span>
+                    <span>KES 25,000.00</span>
+                </div>
+                <div class="receipt-line">
+                    <span>M-Pesa Ref:</span>
+                    <span>MT2025011512345</span>
+                </div>
+            </div>
+            
+            <!-- Barcode -->
+            <div class="barcode">
+                ||||| |||| | || ||||| ||
+            </div>
+            
+            <!-- Footer -->
+            <div class="receipt-footer">
+                <div>Thank you for your business!</div>
+                <div>Goods once sold cannot be returned</div>
+                <div>For inquiries: info@oliviangroup.com</div>
+                <div>www.oliviangroup.com</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Receipt Modal -->
+<div class="modal fade" id="emailReceiptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Receipt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailReceiptForm">
+                    <div class="mb-3">
+                        <label class="form-label">Customer Email Address</label>
+                        <input type="email" class="form-control" id="customerEmail" 
+                               placeholder="customer@email.com" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="emailSubject" 
+                               value="Your receipt from Olivian Group">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Message (Optional)</label>
+                        <textarea class="form-control" id="emailMessage" rows="3" 
+                                  placeholder="Thank you for your purchase..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includePDF" checked>
+                            <label class="form-check-label" for="includePDF">
+                                Include PDF attachment
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendReceiptEmail()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Receipt Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Action</label>
+                    <select class="form-select" id="bulkAction">
+                        <option value="">Choose action...</option>
+                        <option value="print">Print All Selected</option>
+                        <option value="email">Email All Selected</option>
+                        <option value="download">Download All as ZIP</option>
+                        <option value="delete">Delete Selected</option>
+                    </select>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This action will be performed on all selected receipts.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="executeBulkAction()">
+                    Execute Action
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class ReceiptManager {
+    constructor() {
+        this.selectedReceipt = 'RCP-20250115-001';
+        this.selectedTemplate = 'standard';
+        this.printQueue = [];
+        
+        this.initializeManager();
+    }
+    
+    initializeManager() {
+        this.loadReceiptData();
+        this.updatePreview();
+    }
+    
+    selectReceipt(receiptId) {
+        this.selectedReceipt = receiptId;
+        
+        // Update UI selection
+        document.querySelectorAll('.receipt-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        
+        // Load receipt data and update preview
+        this.loadReceiptData();
+        this.updatePreview();
+    }
+    
+    loadReceiptData() {
+        // Simulate loading receipt data
+        const receipts = {
+            'RCP-20250115-001': {
+                number: 'RCP-20250115-001',
+                date: '15/01/2025 14:23',
+                cashier: 'John Doe',
+                terminal: 'Terminal 1',
+                customer: 'John Kimani',
+                items: [
+                    { name: 'Solar Panel 300W', qty: 1, price: 25000.00 },
+                    { name: 'Installation Kit', qty: 1, price: 2500.00 }
+                ],
+                payment: {
+                    method: 'M-Pesa',
+                    amount: 25000.00,
+                    reference: 'MT2025011512345'
+                }
+            },
+            'RCP-20250115-002': {
+                number: 'RCP-20250115-002',
+                date: '15/01/2025 13:45',
+                cashier: 'Jane Smith',
+                terminal: 'Terminal 2',
+                customer: 'Sarah Wanjiku',
+                items: [
+                    { name: 'Deep Cycle Battery 100Ah', qty: 1, price: 18500.00 }
+                ],
+                payment: {
+                    method: 'Cash',
+                    amount: 18500.00,
+                    change: 500.00
+                }
+            }
+        };
+        
+        this.receiptData = receipts[this.selectedReceipt] || receipts['RCP-20250115-001'];
+    }
+    
+    updatePreview() {
+        const data = this.receiptData;
+        
+        // Update receipt preview
+        document.getElementById('previewReceiptNo').textContent = data.number;
+        document.getElementById('previewDate').textContent = data.date;
+        document.getElementById('previewCashier').textContent = data.cashier;
+        document.getElementById('previewTerminal').textContent = data.terminal;
+        document.getElementById('previewCustomer').textContent = data.customer;
+        
+        // Update items (simplified for demo)
+        // In real implementation, would dynamically generate items section
+        
+        console.log('Updated preview for:', data.number);
+    }
+    
+    selectTemplate(template) {
+        this.selectedTemplate = template;
+        
+        // Update template selection UI
+        document.querySelectorAll('.template-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        document.querySelector(`[onclick="selectTemplate('${template}')"]`).classList.add('selected');
+        
+        // Apply template styles
+        this.applyTemplate(template);
+    }
+    
+    applyTemplate(template) {
+        const preview = document.getElementById('receiptPreview');
+        
+        // Remove existing template classes
+        preview.classList.remove('template-standard', 'template-thermal', 'template-detailed');
+        
+        // Add new template class
+        preview.classList.add(`template-${template}`);
+        
+        // Adjust styling based on template
+        switch (template) {
+            case 'thermal':
+                preview.style.maxWidth = '300px';
+                preview.style.fontSize = '0.8rem';
+                break;
+            case 'detailed':
+                preview.style.maxWidth = '500px';
+                preview.style.fontSize = '0.9rem';
+                break;
+            default:
+                preview.style.maxWidth = '400px';
+                preview.style.fontSize = '0.9rem';
+        }
+    }
+    
+    printReceipt(receiptId) {
+        // Add to print queue
+        this.printQueue.push({
+            id: receiptId,
+            status: 'queued',
+            timestamp: new Date()
+        });
+        
+        this.showPrintQueue();
+        
+        // Simulate printing process
+        setTimeout(() => {
+            this.processPrintQueue();
+        }, 1000);
+        
+        this.showToast(`Receipt ${receiptId} added to print queue`, 'success');
+    }
+    
+    emailReceipt(receiptId) {
+        // Show email modal
+        const modal = new bootstrap.Modal(document.getElementById('emailReceiptModal'));
+        modal.show();
+        
+        // Pre-fill customer email if available
+        const customerEmail = this.getCustomerEmail(receiptId);
+        if (customerEmail) {
+            document.getElementById('customerEmail').value = customerEmail;
+        }
+    }
+    
+    downloadReceipt(receiptId) {
+        // Simulate PDF generation and download
+        this.showToast('Generating PDF...', 'info');
+        
+        setTimeout(() => {
+            // Create a blob URL for download
+            const blob = new Blob(['Sample PDF content'], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${receiptId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showToast('Receipt downloaded successfully', 'success');
+        }, 2000);
+    }
+    
+    showPrintQueue() {
+        const queueElement = document.getElementById('printQueue');
+        queueElement.style.display = 'block';
+    }
+    
+    processPrintQueue() {
+        if (this.printQueue.length > 0) {
+            const item = this.printQueue[0];
+            item.status = 'printing';
+            
+            // Simulate printing time
+            setTimeout(() => {
+                this.printQueue.shift();
+                this.showToast(`Receipt ${item.id} printed successfully`, 'success');
+                
+                if (this.printQueue.length === 0) {
+                    document.getElementById('printQueue').style.display = 'none';
+                } else {
+                    this.processPrintQueue();
+                }
+            }, 3000);
+        }
+    }
+    
+    getCustomerEmail(receiptId) {
+        // Simulate customer email lookup
+        const emails = {
+            'RCP-20250115-001': 'john.kimani@email.com',
+            'RCP-20250115-002': 'sarah.wanjiku@email.com'
+        };
+        return emails[receiptId];
+    }
+    
+    showToast(message, type = 'info') {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+}
+
+// Global functions
+function selectReceipt(receiptId) {
+    receiptManager.selectReceipt(receiptId);
+}
+
+function selectTemplate(template) {
+    receiptManager.selectTemplate(template);
+}
+
+function printReceipt(receiptId) {
+    receiptManager.printReceipt(receiptId);
+}
+
+function emailReceipt(receiptId) {
+    receiptManager.emailReceipt(receiptId);
+}
+
+function downloadReceipt(receiptId) {
+    receiptManager.downloadReceipt(receiptId);
+}
+
+function printCurrentReceipt() {
+    receiptManager.printReceipt(receiptManager.selectedReceipt);
+}
+
+function emailCurrentReceipt() {
+    receiptManager.emailReceipt(receiptManager.selectedReceipt);
+}
+
+function downloadCurrentReceipt() {
+    receiptManager.downloadReceipt(receiptManager.selectedReceipt);
+}
+
+function toggleOption(button) {
+    const icon = button.querySelector('i');
+    if (button.classList.contains('active')) {
+        button.classList.remove('active');
+        icon.className = 'fas fa-times';
+    } else {
+        button.classList.add('active');
+        icon.className = 'fas fa-check';
+    }
+}
+
+function sendReceiptEmail() {
+    const email = document.getElementById('customerEmail').value;
+    const subject = document.getElementById('emailSubject').value;
+    const message = document.getElementById('emailMessage').value;
+    
+    if (!email) {
+        alert('Please enter customer email address');
+        return;
+    }
+    
+    // Simulate sending email
+    receiptManager.showToast('Sending email...', 'info');
+    
+    setTimeout(() => {
+        receiptManager.showToast(`Receipt emailed to ${email}`, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('emailReceiptModal')).hide();
+        
+        // Reset form
+        document.getElementById('emailReceiptForm').reset();
+    }, 2000);
+}
+
+function executeBulkAction() {
+    const action = document.getElementById('bulkAction').value;
+    if (!action) {
+        alert('Please select an action');
+        return;
+    }
+    
+    receiptManager.showToast(`Executing bulk ${action}...`, 'info');
+    bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal')).hide();
+}
+
+// Initialize receipt manager
+const receiptManager = new ReceiptManager();
+</script>
+{% endblock %}

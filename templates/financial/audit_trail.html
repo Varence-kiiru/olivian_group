@@ -1,0 +1,488 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Audit Trail - {{ block.super }}{% endblock %}
+
+{% block page_title %}Audit Trail{% endblock %}
+{% block page_subtitle %}Track all financial system activities and changes{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Audit Trail</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .audit-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .audit-row {
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .audit-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .audit-row.create { border-left-color: #28a745; }
+    .audit-row.update { border-left-color: #ffc107; }
+    .audit-row.delete { border-left-color: #dc3545; }
+    .audit-row.login { border-left-color: #007bff; }
+    .audit-row.logout { border-left-color: #6c757d; }
+    .audit-row.view { border-left-color: #17a2b8; }
+    .audit-row.default { border-left-color: #38b6ff; }
+    
+    .action-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .action-create { background: #d4edda; color: #155724; }
+    .action-update { background: #fff3cd; color: #856404; }
+    .action-delete { background: #f8d7da; color: #721c24; }
+    .action-login { background: #cce5ff; color: #004085; }
+    .action-logout { background: #e2e3e5; color: #383d41; }
+    .action-view { background: #d1ecf1; color: #0c5460; }
+    .action-default { background: #e7f3ff; color: #004085; }
+    
+    .audit-meta {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #38b6ff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .timeline-indicator {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline-indicator::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: 0;
+        top: 12px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid #38b6ff;
+    }
+    
+    .changes-display {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .change-item {
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        background: white;
+        border-radius: 4px;
+        border-left: 3px solid #38b6ff;
+    }
+    
+    .change-field {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .change-old {
+        color: #dc3545;
+        text-decoration: line-through;
+    }
+    
+    .change-new {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .summary-cards {
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid transparent;
+    }
+    
+    .summary-total { border-left-color: #38b6ff; }
+    .summary-users { border-left-color: #28a745; }
+    .summary-today { border-left-color: #ffc107; }
+    .summary-critical { border-left-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Export Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-history me-2"></i>Audit Trail
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-outline-primary" onclick="alert('Export feature coming soon!')">
+            <i class="fas fa-download me-2"></i>Export Audit Log
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row summary-cards">
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-total">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="audit-meta mb-1">Total Activities</div>
+                    <div class="h4 mb-0" style="color: #38b6ff;">{{ total_activities|default:"0" }}</div>
+                </div>
+                <i class="fas fa-chart-bar fa-2x" style="color: #38b6ff;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-users">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="audit-meta mb-1">Active Users</div>
+                    <div class="h4 mb-0 text-success">{{ active_users|default:"0" }}</div>
+                </div>
+                <i class="fas fa-users fa-2x text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-today">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="audit-meta mb-1">Today's Activities</div>
+                    <div class="h4 mb-0 text-warning">{{ today_activities|default:"0" }}</div>
+                </div>
+                <i class="fas fa-clock fa-2x text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-critical">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="audit-meta mb-1">Critical Actions</div>
+                    <div class="h4 mb-0 text-danger">{{ critical_actions|default:"0" }}</div>
+                </div>
+                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-2">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="User, action, object...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="user" class="form-label">User</label>
+            <select class="form-select" id="user" name="user">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if current_user == user.id|stringformat:"s" %}selected{% endif %}>
+                    {{ user.get_full_name|default:user.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="action" class="form-label">Action</label>
+            <select class="form-select" id="action" name="action">
+                <option value="">All Actions</option>
+                <option value="create" {% if current_action == 'create' %}selected{% endif %}>Create</option>
+                <option value="update" {% if current_action == 'update' %}selected{% endif %}>Update</option>
+                <option value="delete" {% if current_action == 'delete' %}selected{% endif %}>Delete</option>
+                <option value="login" {% if current_action == 'login' %}selected{% endif %}>Login</option>
+                <option value="logout" {% if current_action == 'logout' %}selected{% endif %}>Logout</option>
+                <option value="view" {% if current_action == 'view' %}selected{% endif %}>View</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="model" class="form-label">Object Type</label>
+            <select class="form-select" id="model" name="model">
+                <option value="">All Types</option>
+                <option value="account" {% if current_model == 'account' %}selected{% endif %}>Bank Account</option>
+                <option value="transaction" {% if current_model == 'transaction' %}selected{% endif %}>Transaction</option>
+                <option value="asset" {% if current_model == 'asset' %}selected{% endif %}>Fixed Asset</option>
+                <option value="budget" {% if current_model == 'budget' %}selected{% endif %}>Budget</option>
+                <option value="user" {% if current_model == 'user' %}selected{% endif %}>User</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">Date From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" 
+                   value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_to" class="form-label">Date To</label>
+            <input type="date" class="form-control" id="date_to" name="date_to" 
+                   value="{{ current_date_to }}">
+        </div>
+        
+        <div class="col-md-12 text-end">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="fas fa-search me-2"></i>Search
+            </button>
+            <a href="{% url 'financial:audit_trail' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-2"></i>Clear
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Audit Trail Table -->
+<div class="audit-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th width="60">Time</th>
+                    <th width="100">User</th>
+                    <th width="80">Action</th>
+                    <th width="120">Object</th>
+                    <th>Description</th>
+                    <th width="120">IP Address</th>
+                    <th width="80">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in audit_entries %}
+                <tr class="audit-row {{ entry.action|default:'default' }}">
+                    <td>
+                        <div class="timeline-indicator">
+                            <div class="timeline-dot"></div>
+                            <div class="fw-bold">{{ entry.timestamp|date:"H:i" }}</div>
+                            <div class="audit-meta">{{ entry.timestamp|date:"M d" }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">
+                                {{ entry.user.first_name|first|default:entry.user.username|first }}
+                            </div>
+                            <div>
+                                <div class="fw-bold small">{{ entry.user.get_full_name|default:entry.user.username }}</div>
+                                <div class="audit-meta">{{ entry.user.role|default:"User" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-badge action-{{ entry.action|default:'default' }}">
+                            {{ entry.get_action_display|default:entry.action }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ entry.content_type.name|title|default:"Unknown" }}</div>
+                        {% if entry.object_id %}
+                            <div class="audit-meta">ID: {{ entry.object_id }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ entry.description|default:"No description" }}</div>
+                        {% if entry.object_repr %}
+                            <div class="audit-meta">{{ entry.object_repr|truncatechars:50 }}</div>
+                        {% endif %}
+                        {% if entry.changes %}
+                            <div class="changes-display">
+                                <div class="small fw-bold mb-2">Changes:</div>
+                                {% for field, change in entry.changes.items %}
+                                <div class="change-item">
+                                    <div class="change-field">{{ field|title }}:</div>
+                                    <span class="change-old">{{ change.old|default:"(empty)" }}</span>
+                                    →
+                                    <span class="change-new">{{ change.new|default:"(empty)" }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="font-monospace small">{{ entry.ip_address|default:"Unknown" }}</div>
+                        {% if entry.user_agent %}
+                            <div class="audit-meta">{{ entry.user_agent|truncatechars:30 }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm" 
+                                onclick="showAuditDetails({{ entry.id }})" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#auditDetailModal">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No audit entries found</h5>
+                        <p class="text-muted">
+                            {% if current_search or current_user or current_action or current_model %}
+                                Try adjusting your search criteria.
+                            {% else %}
+                                No audit activities recorded yet.
+                            {% endif %}
+                        </p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Audit trail pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_user %}&user={{ current_user }}{% endif %}{% if current_action %}&action={{ current_action }}{% endif %}{% if current_model %}&model={{ current_model }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_user %}&user={{ current_user }}{% endif %}{% if current_action %}&action={{ current_action }}{% endif %}{% if current_model %}&model={{ current_model }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_user %}&user={{ current_user }}{% endif %}{% if current_action %}&action={{ current_action }}{% endif %}{% if current_model %}&model={{ current_model }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_user %}&user={{ current_user }}{% endif %}{% if current_action %}&action={{ current_action }}{% endif %}{% if current_model %}&model={{ current_model }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Audit Detail Modal -->
+<div class="modal fade" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="auditDetailModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Audit Entry Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="auditDetailContent">
+                <!-- Details will be loaded here via JavaScript -->
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                    <div class="mt-2">Loading details...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAuditDetails(entryId) {
+    // This would typically make an AJAX call to get detailed audit information
+    const content = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Basic Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Entry ID:</strong></td><td>${entryId}</td></tr>
+                    <tr><td><strong>Timestamp:</strong></td><td>{{ entry.timestamp|date:"M d, Y H:i:s" }}</td></tr>
+                    <tr><td><strong>User:</strong></td><td>{{ entry.user.get_full_name }}</td></tr>
+                    <tr><td><strong>Action:</strong></td><td>{{ entry.action }}</td></tr>
+                    <tr><td><strong>Object Type:</strong></td><td>{{ entry.content_type.name }}</td></tr>
+                    <tr><td><strong>Object ID:</strong></td><td>{{ entry.object_id }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Technical Details</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>IP Address:</strong></td><td>{{ entry.ip_address }}</td></tr>
+                    <tr><td><strong>User Agent:</strong></td><td>{{ entry.user_agent|truncatechars:50 }}</td></tr>
+                    <tr><td><strong>Session ID:</strong></td><td>{{ entry.session_key|default:"Not available" }}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="mt-3">
+            <h6>Full Description</h6>
+            <p>{{ entry.description|default:"No description available" }}</p>
+        </div>
+    `;
+    
+    document.getElementById('auditDetailContent').innerHTML = content;
+}
+</script>
+{% endblock %}

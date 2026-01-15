@@ -1,0 +1,281 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Store Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Store Management{% endblock %}
+{% block page_subtitle %}Manage store locations and settings{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Store Management</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .store-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .store-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .store-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .add-store-card {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .add-store-card:hover {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .store-icon {
+        font-size: 3rem;
+        color: #38b6ff;
+        margin-bottom: 1rem;
+    }
+    
+    .address-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .quick-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-item {
+        flex: 1;
+        text-align: center;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #38b6ff;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Add New Store -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="store-card add-store-card" onclick="window.location.href='{% url 'pos:add_store' %}'">
+            <div class="text-center">
+                <i class="fas fa-plus-circle fa-4x mb-3"></i>
+                <h5>Add New Store</h5>
+                <p class="mb-0">Create a new store location</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Existing Stores -->
+    {% for store in stores %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="store-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="mb-1">
+                        <i class="fas fa-store store-icon me-2" style="font-size: 1.5rem;"></i>
+                        {{ store.name }}
+                    </h5>
+                    <small class="text-muted">{{ store.code }}</small>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'pos:edit_store' store.id %}">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'pos:terminal_management' %}">
+                            <i class="fas fa-desktop me-2"></i>Manage Terminals
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'pos:delete_store' store.id %}">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="mb-3">
+                {% if store.is_active %}
+                    <span class="store-status status-active">
+                        <i class="fas fa-check-circle me-1"></i>Active
+                    </span>
+                {% else %}
+                    <span class="store-status status-inactive">
+                        <i class="fas fa-times-circle me-1"></i>Inactive
+                    </span>
+                {% endif %}
+            </div>
+            
+            <!-- Address Information -->
+            <div class="address-info">
+                <div class="mb-2">
+                    <small class="text-muted d-block">Address</small>
+                    <strong>{{ store.address_line_1 }}</strong>
+                    {% if store.address_line_2 %}
+                        <br>{{ store.address_line_2 }}
+                    {% endif %}
+                    <br>{{ store.city }}, {{ store.county }}
+                    {% if store.postal_code %}
+                        {{ store.postal_code }}
+                    {% endif %}
+                </div>
+                
+                {% if store.phone or store.email %}
+                <div class="row g-2 mt-2">
+                    {% if store.phone %}
+                    <div class="col-6">
+                        <small class="text-muted d-block">Phone</small>
+                        <strong>{{ store.phone }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if store.email %}
+                    <div class="col-6">
+                        <small class="text-muted d-block">Email</small>
+                        <strong>{{ store.email }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ store.terminals.count }}</div>
+                    <div class="stat-label">Terminals</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ store.terminals.count }}</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ store.currency }}</div>
+                    <div class="stat-label">Currency</div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="mt-3 d-flex gap-2">
+                <a href="{% url 'pos:terminal_management' %}" class="btn btn-primary btn-sm flex-fill">
+                    <i class="fas fa-desktop me-1"></i>Manage Terminals
+                </a>
+                <a href="{% url 'pos:edit_store' store.id %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-store fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No stores found</h4>
+            <p class="text-muted">Create your first store to get started with POS management</p>
+            <a href="{% url 'pos:add_store' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add First Store
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Store Information -->
+{% if stores %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Store Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h3 text-primary">{{ stores.count }}</div>
+                            <small class="text-muted">Total Stores</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h3 text-success">{{ stores.count }}</div>
+                            <small class="text-muted">Active Stores</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h3 text-info">
+                                {% for store in stores %}{{ store.terminals.count }}{% if not forloop.last %} + {% endif %}{% endfor %}
+                            </div>
+                            <small class="text-muted">Total Terminals</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h3 text-warning">KES</div>
+                            <small class="text-muted">Default Currency</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,695 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Activities - {{ block.super }}{% endblock %}
+
+{% block page_title %}CRM Activities{% endblock %}
+{% block page_subtitle %}Track customer interactions and follow-ups{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Activities</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS will be added to static files later -->
+<!-- <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css' rel='stylesheet' />
+<link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css' rel='stylesheet' />
+<link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.css' rel='stylesheet' /> -->
+
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .activity-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid var(--primary-color);
+        transition: transform 0.2s ease;
+    }
+
+    .activity-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .activity-card.call { border-left-color: #28a745; }
+    .activity-card.email { border-left-color: #007bff; }
+    .activity-card.meeting { border-left-color: #ffc107; }
+    .activity-card.task { border-left-color: #dc3545; }
+    .activity-card.note { border-left-color: #6c757d; }
+    .activity-card.follow-up { border-left-color: #17a2b8; }
+
+    .activity-type-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        margin-right: 1rem;
+    }
+
+    .activity-type-icon.call { background: #28a745; }
+    .activity-type-icon.email { background: #007bff; }
+    .activity-type-icon.meeting { background: #ffc107; }
+    .activity-type-icon.task { background: #dc3545; }
+    .activity-type-icon.note { background: #6c757d; }
+    .activity-type-icon.follow-up { background: #17a2b8; }
+
+    .activity-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-scheduled { background: #cce5ff; color: #004085; }
+
+    .activity-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .activity-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .priority-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .priority-high { background: #dc3545; }
+    .priority-medium { background: #ffc107; }
+    .priority-low { background: #28a745; }
+
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .timeline-view {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 1rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+        padding-left: 2rem;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -5px;
+        top: 0;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .timeline-marker.call { border-color: #28a745; color: #28a745; }
+    .timeline-marker.email { border-color: #007bff; color: #007bff; }
+    .timeline-marker.meeting { border-color: #ffc107; color: #ffc107; }
+    .timeline-marker.task { border-color: #dc3545; color: #dc3545; }
+    .timeline-marker.note { border-color: #6c757d; color: #6c757d; }
+    .timeline-marker.follow-up { border-color: #17a2b8; color: #17a2b8; }
+
+    .timeline-content {
+        position: relative;
+    }
+
+    .timeline-content::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 40px;
+        bottom: -40px;
+        width: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+
+    .timeline-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+
+    .timeline-meta {
+        display: flex;
+        gap: 1rem;
+        color: #6c757d;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .timeline-body {
+        padding: 1rem 0;
+        border-top: 1px solid #e9ecef;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .related-items {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .timeline-footer {
+        padding-top: 1rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .view-toggle .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+    }
+
+    #calendar {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .fc-event {
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .fc-event-title {
+        font-weight: 500;
+    }
+
+    .fc-event.call { background-color: #28a745; border-color: #28a745; }
+    .fc-event.email { background-color: #007bff; border-color: #007bff; }
+    .fc-event.meeting { background-color: #ffc107; border-color: #ffc107; color: #000; }
+    .fc-event.task { background-color: #dc3545; border-color: #dc3545; }
+    .fc-event.note { background-color: #6c757d; border-color: #6c757d; }
+    .fc-event.follow-up { background-color: #17a2b8; border-color: #17a2b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>CRM Activities
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'crm:activity_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Activity
+        </a>
+    </div>
+</div>
+
+<!-- View Toggle -->
+<div class="view-toggle">
+    <button class="btn btn-outline-primary active" onclick="switchView('grid')" id="gridViewBtn">
+        <i class="fas fa-th-large me-1"></i>Grid View
+    </button>
+    <button class="btn btn-outline-primary" onclick="switchView('timeline')" id="timelineViewBtn">
+        <i class="fas fa-stream me-1"></i>Timeline View
+    </button>
+    <button class="btn btn-outline-primary" onclick="switchView('calendar')" id="calendarViewBtn">
+        <i class="fas fa-calendar me-1"></i>Calendar View
+    </button>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Activity subject, contact...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="activity_type" class="form-label">Type</label>
+            <select class="form-select" id="activity_type" name="activity_type">
+                <option value="">All Types</option>
+                <option value="call" {% if current_type == 'call' %}selected{% endif %}>Call</option>
+                <option value="email" {% if current_type == 'email' %}selected{% endif %}>Email</option>
+                <option value="meeting" {% if current_type == 'meeting' %}selected{% endif %}>Meeting</option>
+                <option value="task" {% if current_type == 'task' %}selected{% endif %}>Task</option>
+                <option value="note" {% if current_type == 'note' %}selected{% endif %}>Note</option>
+                <option value="follow-up" {% if current_type == 'follow-up' %}selected{% endif %}>Follow-up</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="overdue" {% if current_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="scheduled" {% if current_status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="assigned_to" class="form-label">Assigned To</label>
+            <select class="form-select" id="assigned_to" name="assigned_to">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if current_assigned_to == user.id|stringformat:"s" %}selected{% endif %}>
+                    {{ user.get_full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_range" class="form-label">Date Range</label>
+            <select class="form-select" id="date_range" name="date_range">
+                <option value="">All Dates</option>
+                <option value="today" {% if current_date_range == 'today' %}selected{% endif %}>Today</option>
+                <option value="week" {% if current_date_range == 'week' %}selected{% endif %}>This Week</option>
+                <option value="month" {% if current_date_range == 'month' %}selected{% endif %}>This Month</option>
+                <option value="overdue" {% if current_date_range == 'overdue' %}selected{% endif %}>Overdue</option>
+            </select>
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Activities Grid View -->
+<div id="gridView" class="row">
+    {% for activity in activities %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="activity-card {{ activity.activity_type }}">
+            <!-- Activity Header -->
+            <div class="activity-header">
+                <div class="activity-type-icon {{ activity.activity_type }}">
+                    {% if activity.activity_type == 'call' %}
+                        <i class="fas fa-phone"></i>
+                    {% elif activity.activity_type == 'email' %}
+                        <i class="fas fa-envelope"></i>
+                    {% elif activity.activity_type == 'meeting' %}
+                        <i class="fas fa-users"></i>
+                    {% elif activity.activity_type == 'task' %}
+                        <i class="fas fa-tasks"></i>
+                    {% elif activity.activity_type == 'note' %}
+                        <i class="fas fa-sticky-note"></i>
+                    {% else %}
+                        <i class="fas fa-arrow-right"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="activity-content">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">
+                            <a href="{% url 'crm:activity_detail' activity.pk %}" class="text-decoration-none">
+                                {{ activity.subject }}
+                            </a>
+                        </h6>
+                        <span class="activity-status status-{{ activity.status }}">{{ activity.get_status_display }}</span>
+                    </div>
+                    
+                    <div class="activity-meta mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                <i class="far fa-clock me-1"></i>
+                                {{ activity.scheduled_datetime|date:"M d, Y H:i" }}
+                            </a>
+                            </span>
+                            <span>
+                                {{ activity.duration_minutes }} mins
+                            </span>
+                        </div>
+                    </div>
+
+                    {% if activity.outcome %}
+                    <div class="mb-2">
+                        <small class="text-muted">Outcome:</small>
+                        <div class="small">{{ activity.outcome|truncatewords:30 }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if activity.next_steps %}
+                    <div class="mb-2">
+                        <small class="text-muted">Next Steps:</small>
+                        <div class="small">{{ activity.next_steps|truncatewords:30 }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Activity Details -->
+            <div class="mb-3">
+                <div class="activity-meta mb-1">Contact</div>
+                <div class="small">
+                    <a href="{% url 'crm:contact_detail' activity.contact.pk %}" class="text-decoration-none">
+                        {{ activity.contact.get_full_name }}
+                    </a>
+                </div>
+                {% if activity.lead and activity.lead.company %}
+                    <div class="small text-muted">{{ activity.lead.company.name }}</div>
+                {% endif %}
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="activity-meta mb-1">Scheduled Date</div>
+                    <div class="small {% if activity.scheduled_datetime < current_time %}text-danger{% endif %}">
+                        {{ activity.scheduled_datetime|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="activity-meta mb-1">Assigned To</div>
+                    <div class="small">{{ activity.assigned_to.get_full_name }}</div>
+                </div>
+            </div>
+            
+            <!-- Activity Description -->
+            {% if activity.description %}
+            <div class="mb-3">
+                <div class="activity-meta mb-1">Description</div>
+                <div class="small">{{ activity.description|truncatewords:15 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Related Opportunity -->
+            {% if activity.opportunity %}
+            <div class="mb-3">
+                <div class="activity-meta mb-1">Related Opportunity</div>
+                <div class="small">
+                    <a href="{% url 'crm:opportunity_detail' activity.opportunity.pk %}" class="text-decoration-none">
+                        {{ activity.opportunity.name }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'crm:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <a href="{% url 'crm:activity_update' activity.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% if activity.status != 'completed' %}
+                <button class="btn btn-outline-success btn-sm" onclick="markCompleted({{ activity.pk }})">
+                    <i class="fas fa-check me-1"></i>Done
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No activities found</h5>
+            <p class="text-muted">
+                {% if current_search or current_type or current_status or current_assigned_to or current_date_range %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by creating your first activity.
+                {% endif %}
+            </p>
+            <a href="{% url 'crm:activity_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Activity
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Timeline View -->
+<div id="timelineView" class="timeline-view" style="display: none;">
+    {% regroup activities by scheduled_datetime|date:"Y-m-d" as grouped_activities %}
+    
+    <div class="timeline-container">
+        {% for group in grouped_activities %}
+        <div class="timeline-date-group">
+            <div class="timeline-date">
+                <span class="date-badge">{{ group.grouper|date:"D" }}</span>
+                <span class="date-full">{{ group.grouper|date:"F d, Y" }}</span>
+            </div>
+            
+            {% for activity in group.list %}
+            <div class="timeline-item">
+                <div class="timeline-marker {{ activity.activity_type }}">
+                    {% if activity.activity_type == 'call' %}
+                        <i class="fas fa-phone"></i>
+                    {% elif activity.activity_type == 'email' %}
+                        <i class="fas fa-envelope"></i>
+                    {% elif activity.activity_type == 'meeting' %}
+                        <i class="fas fa-users"></i>
+                    {% elif activity.activity_type == 'task' %}
+                        <i class="fas fa-tasks"></i>
+                    {% elif activity.activity_type == 'note' %}
+                        <i class="fas fa-sticky-note"></i>
+                    {% else %}
+                        <i class="fas fa-arrow-right"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="timeline-content">
+                    <div class="timeline-card">
+                        <div class="timeline-header">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="mb-0">
+                                    <a href="{% url 'crm:activity_detail' activity.pk %}" class="text-decoration-none">
+                                        {{ activity.subject }}
+                                    </a>
+                                </h6>
+                                <span class="activity-status status-{{ activity.status }}">
+                                    {{ activity.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="timeline-meta">
+                                <span class="time">
+                                    <i class="far fa-clock me-1"></i>
+                                    {{ activity.scheduled_datetime|date:"H:i" }}
+                                </span>
+                                {% if activity.duration_minutes %}
+                                <span class="duration">
+                                    <i class="fas fa-hourglass-half me-1"></i>
+                                    {{ activity.duration_minutes }} mins
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="timeline-body">
+                            {% if activity.description %}
+                            <div class="description mb-2">
+                                {{ activity.description|truncatewords:30 }}
+                            </div>
+                            {% endif %}
+
+                            {% if activity.contact or activity.opportunity %}
+                            <div class="related-items">
+                                {% if activity.contact %}
+                                <div class="related-contact">
+                                    <i class="fas fa-user me-1"></i>
+                                    <a href="{% url 'crm:contact_detail' activity.contact.pk %}">
+                                        {{ activity.contact.get_full_name }}
+                                    </a>
+                                </div>
+                                {% endif %}
+
+                                {% if activity.opportunity %}
+                                <div class="related-opportunity">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    <a href="{% url 'crm:opportunity_detail' activity.opportunity.pk %}">
+                                        {{ activity.opportunity.name }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="timeline-footer">
+                            <div class="quick-actions">
+                                <a href="{% url 'crm:activity_detail' activity.pk %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                                <a href="{% url 'crm:activity_update' activity.pk %}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </a>
+                                {% if activity.status != 'completed' %}
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="markCompleted({{ activity.pk }})">
+                                    <i class="fas fa-check me-1"></i>Complete
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <div class="empty-state">
+                <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                <h5>No Activities Found</h5>
+                <p class="text-muted">Start by creating your first activity</p>
+                <a href="{% url 'crm:activity_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Activity
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Calendar View -->
+<div id="calendarView" style="display: none;">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">Activity Types</h6>
+                    <div class="activity-filters">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="call" id="filterCall" checked>
+                            <label class="form-check-label" for="filterCall">
+                                <i class="fas fa-phone text-success me-2"></i>Calls
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="email" id="filterEmail" checked>
+                            <label class="form-check-label" for="filterEmail">
+                                <i class="fas fa-envelope text-primary me-2"></i>Emails
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="meeting" id="filterMeeting" checked>
+                            <label class="form-check-label" for="filterMeeting">
+                                <i class="fas fa-users text-warning me-2"></i>Meetings
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="task" id="filterTask" checked>
+                            <label class="form-check-label" for="filterTask">
+                                <i class="fas fa-tasks text-danger me-2"></i>Tasks
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="follow-up" id="filterFollowUp" checked>
+                            <label class="form-check-label" for="filterFollowUp">
+                                <i class="fas fa-arrow-right text-info me-2"></i>Follow-ups
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <button class="btn btn-primary btn-sm w-100" onclick="createActivity()">
+                        <i class="fas fa-plus me-2"></i>New Activity
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize view switcher - disabled calendar for now due to CDN issues
+    window.switchView = function(viewType) {
+        document.querySelectorAll('.view-toggle .btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.classList.add('btn-outline-primary');
+            btn.classList.remove('btn-primary');
+        });
+
+        if (viewType === 'calendar') {
+            alert('Calendar view coming soon! Please use Grid or Timeline view for now.');
+            return;
+        }
+
+        if (viewType === 'timeline') {
+            document.getElementById('gridView').style.display = 'none';
+            document.getElementById('timelineView').style.display = 'block';
+            document.getElementById('timelineViewBtn').classList.add('active');
+        } else {
+            document.getElementById('gridView').style.display = 'block';
+            document.getElementById('timelineView').style.display = 'none';
+            document.getElementById('gridViewBtn').classList.add('active');
+        }
+    };
+});
+
+function createActivity() {
+    window.location.href = "{% url 'crm:activity_create' %}";
+}
+</script>
+{% endblock %}

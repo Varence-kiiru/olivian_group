@@ -1,0 +1,1097 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+{% load crm_extras %}  <!-- Add this line -->
+
+{% block title %}CRM Reports - {{ block.super }}{% endblock %}
+
+{% block page_title %}CRM Reports & Analytics{% endblock %}
+{% block page_subtitle %}Comprehensive sales and customer relationship insights{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Reports</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .report-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--primary-color), #4dabf7);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .metric-change {
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+
+    .change-positive { color: #28a745; }
+    .change-negative { color: #dc3545; }
+    .change-neutral { color: #6c757d; }
+
+    .chart-container {
+        max-height: 500px; /* Add max-height to prevent stretching */
+        height: 100%;
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .chart-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    .chart-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .chart-control {
+        padding: 0.25rem 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        background: white;
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+    }
+
+    .chart-control.active,
+    .chart-control:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .table-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, var(--primary-color), #4dabf7);
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .performance-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+
+    .performance-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .performance-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 1rem;
+        font-size: 1.1rem;
+    }
+
+    .performance-item .flex-grow-1 {
+        margin-right: 1rem;
+    }
+
+    .performance-item .text-end {
+        text-align: right;
+        min-width: 100px;
+    }
+
+    .performance-item .text-success {
+        font-weight: 600;
+    }
+
+    .report-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .pipeline-funnel {
+        max-height: 500px; /* Add max-height to match chart container */
+        height: 100%;
+        overflow-y: auto; /* Add scroll if content exceeds height */
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .funnel-stage {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .stage-row {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .reports-wrapper {
+    max-width: 100%;
+    overflow-x: hidden;
+    padding: 1rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.2;
+    font-size: 2rem;
+    color: white;
+}
+
+.stat-details {
+    text-align: center;
+}
+
+.stat-details h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.stat-details p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0;
+}
+
+.stat-change {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.stat-change.positive {
+    color: #28a745;
+}
+
+.stat-change.negative {
+    color: #dc3545;
+}
+
+/* New styles for report content */
+.report-content {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.report-section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.report-section h5 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.report-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.report-section li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.report-section li:last-child {
+    border-bottom: none;
+}
+
+.activity-breakdown, .monthly-breakdown {
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-wrapper">
+<!-- Date Range Filter -->
+<div class="filter-section mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label">Date Range</label>
+            <select name="date_range" class="form-select">
+                <option value="7" {% if current_filters.date_range == '7' %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if current_filters.date_range == '30' %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if current_filters.date_range == '90' %}selected{% endif %}>Last 90 days</option>
+                <option value="365" {% if current_filters.date_range == '365' %}selected{% endif %}>Last 12 months</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label">Sales Rep</label>
+            <select name="user" class="form-select">
+                <option value="">All Team</option>
+                {% for user in sales_team %}
+                <option value="{{ user.id }}" {% if current_filters.user == user.id %}selected{% endif %}>
+                    {{ user.get_full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label">Lead Source</label>
+            <select name="source" class="form-select">
+                <option value="">All Sources</option>
+                {% for source in lead_sources %}
+                <option value="{{ source.id }}" {% if current_filters.source == source.id %}selected{% endif %}>
+                    {{ source.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i>Apply
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="exportReport()">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Stats Section -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="stat-details">
+                <h3>{{ total_leads }}</h3>
+                <p>Total Leads</p>
+                <div class="stat-change {% if lead_growth > 0 %}positive{% elif lead_growth < 0 %}negative{% endif %}">
+                    {{ lead_growth|floatformat:1 }}% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-details">
+                <h3>{{ total_opportunities }}</h3>
+                <p>Opportunities</p>
+                <div class="stat-change {% if opportunity_growth > 0 %}positive{% elif opportunity_growth < 0 %}negative{% endif %}">
+                    {{ opportunity_growth|floatformat:1 }}% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-info">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-details">
+                <h3>{{ conversion_rate|floatformat:1|default:"0" }}%</h3>
+                <p>Conversion Rate</p>
+                <div class="stat-change change-neutral">
+                    <i class="fas fa-minus me-1"></i>No change
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stat-details">
+                <h3>KES {{ pipeline_value|floatformat:0|default:"0" }}</h3>
+                <p>Pipeline Value</p>
+                <div class="stat-change change-positive">
+                    <i class="fas fa-arrow-up me-1"></i>+25% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update the Charts Row -->
+<div class="row g-4 mb-4"> <!-- Add g-4 for gutters -->
+    <!-- Sales Funnel -->
+    <div class="col-lg-6">
+        <div class="pipeline-funnel h-100"> <!-- Add h-100 for equal height -->
+            <div class="chart-header">
+                <h5 class="chart-title">Sales Funnel</h5>
+                <div class="chart-controls">
+                    <a href="#" class="chart-control active">This Month</a>
+                    <a href="#" class="chart-control">Last Month</a>
+                    <a href="#" class="chart-control">Quarter</a>
+                </div>
+            </div>
+            
+            <div class="funnel-stage">
+                {% for stage in pipeline_stages %}
+                <div class="stage-row">
+                    <div class="funnel-number">{{ stage.count }}</div>
+                    <div class="funnel-details">
+                        <div class="funnel-label">{{ stage.name }}</div>
+                        <div class="funnel-value">{{ stage.value|floatformat:0 }} KES</div>
+                    </div>
+                    <div class="conversion-rate ms-auto">{{ stage.conversion_rate|floatformat:1 }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lead Sources Chart -->
+    <div class="col-lg-6">
+        <div class="chart-container h-100">
+            <div class="chart-header">
+                <h5 class="chart-title">Lead Sources</h5>
+                <div class="chart-controls">
+                    <a href="#" class="chart-control active">Count</a>
+                    <a href="#" class="chart-control">Value</a>
+                </div>
+            </div>
+            <canvas id="leadSourcesChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Update Performance Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Monthly Performance -->
+    <div class="col-lg-8">
+        <div class="chart-container h-100">
+            <div class="chart-header">
+                <h5 class="chart-title">Monthly Performance</h5>
+                <div class="chart-controls">
+                    <a href="#" class="chart-control active">Leads</a>
+                    <a href="#" class="chart-control">Revenue</a>
+                    <a href="#" class="chart-control">Both</a>
+                </div>
+            </div>
+            <canvas id="monthlyPerformanceChart" height="200"></canvas>
+        </div>
+    </div>
+    
+    <!-- Team Performance -->
+    <div class="col-lg-4">
+        <div class="table-card h-100">
+            <div class="table-header">
+                <i class="fas fa-trophy me-2"></i>Team Performance
+            </div>
+            {% for member in team_performance %}
+            <div class="performance-item">
+                <div class="performance-avatar" style="background-color: {{ member|get_avatar_color }}">
+                    {{ member.first_name.0 }}{{ member.last_name.0 }}
+                </div>
+                <div class="flex-grow-1">
+                    <strong>{{ member.first_name }} {{ member.last_name }}</strong>
+                    <div class="small text-muted">
+                        {{ member.user_role }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="small">{{ member.leads_count }} Leads</div>
+                    <div class="small text-success fw-bold">
+                        KES {{ member.opportunities_value|floatformat:0|intcomma|default:"0" }}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-4 text-center text-muted">
+                <i class="fas fa-users fa-2x mb-3"></i>
+                <p>No team performance data available</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Report Cards Grid -->
+<div class="report-grid">
+    <div class="report-card" onclick="window.open('{% url 'crm:sales_forecast' %}', '_blank')">
+        <div class="report-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <h6>Sales Forecast</h6>
+        <p class="text-muted mb-3">Predictive analysis of future sales performance based on current pipeline and historical data.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-success">Next 90 Days</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+    
+    <div class="report-card" onclick="window.open('{% url 'crm:lead_conversion' %}', '_blank')">
+        <div class="report-icon">
+            <i class="fas fa-exchange-alt"></i>
+        </div>
+        <h6>Lead Conversion Analysis</h6>
+        <p class="text-muted mb-3">Detailed breakdown of lead conversion rates by source, team member, and time period.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-info">Conversion Tracking</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+    
+    <div class="report-card" onclick="generateCustomReport('pipeline')">
+        <div class="report-icon">
+            <i class="fas fa-funnel-dollar"></i>
+        </div>
+        <h6>Pipeline Analysis</h6>
+        <p class="text-muted mb-3">Comprehensive view of your sales pipeline with stage-by-stage breakdown and projections.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-warning">Pipeline Health</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+    
+    <div class="report-card" onclick="generateCustomReport('activity')">
+        <div class="report-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <h6>Activity Reports</h6>
+        <p class="text-muted mb-3">Track team productivity and customer engagement through detailed activity analysis.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-primary">Team Activity</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+    
+    <div class="report-card" onclick="generateCustomReport('revenue')">
+        <div class="report-icon">
+            <i class="fas fa-dollar-sign"></i>
+        </div>
+        <h6>Revenue Analysis</h6>
+        <p class="text-muted mb-3">Revenue trends, forecasting, and performance metrics across different time periods.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-success">Revenue Trends</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+    
+    <div class="report-card" onclick="generateCustomReport('customer')">
+        <div class="report-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <h6>Customer Analysis</h6>
+        <p class="text-muted mb-3">Customer segmentation, lifetime value analysis, and relationship health metrics.</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-info">Customer Insights</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Replace the export section -->
+<div class="export-section mt-4">
+    <h6 class="mb-3"><i class="fas fa-download me-2"></i>Export Reports</h6>
+    <p class="text-muted mb-3">Download comprehensive reports in your preferred format.</p>
+    
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-danger" onclick="generateReport('all', 'pdf')">
+            <i class="fas fa-file-pdf me-2"></i>PDF Report
+        </button>
+        
+        <button class="btn btn-outline-success" onclick="generateReport('all', 'excel')">
+            <i class="fas fa-file-excel me-2"></i>Excel Data
+        </button>
+        
+        <button class="btn btn-outline-primary" onclick="generateReport('all', 'csv')">
+            <i class="fas fa-file-csv me-2"></i>CSV Data
+        </button>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chart.min.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Lead Sources Chart
+    const leadSourcesCtx = document.getElementById('leadSourcesChart').getContext('2d');
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false, // This is important
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    };
+    
+    const leadSourcesChart = new Chart(leadSourcesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Website', 'Social Media', 'Referrals', 'Cold Calls', 'Trade Shows', 'Others'],
+            datasets: [{
+                data: [35, 25, 20, 10, 7, 3],
+                backgroundColor: [
+                    '#38b6ff',
+                    '#28a745',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6f42c1',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            ...chartOptions,
+            // Any specific options for this chart
+        }
+    });
+    
+    // Monthly Performance Chart
+    const monthlyPerformanceCtx = document.getElementById('monthlyPerformanceChart').getContext('2d');
+    const monthlyPerformanceChart = new Chart(monthlyPerformanceCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Leads',
+                data: [65, 75, 85, 78, 92, 105],
+                borderColor: '#38b6ff',
+                backgroundColor: 'rgba(56, 182, 255, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y'
+            }, {
+                label: 'Revenue (KES 000s)',
+                data: [1200, 1400, 1800, 1600, 2100, 2400],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Number of Leads'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES 000s)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+});
+
+async function generateCustomReport(type) {
+    try {
+        // Show loading state
+        const loadingToast = Swal.fire({
+            title: 'Generating Report...',
+            text: 'Please wait while we prepare your report',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Get date range from filters
+        const dateRange = document.querySelector('select[name="date_range"]').value;
+        
+        // Make API request
+        const response = await fetch(`/crm/reports/generate/?type=${type}&date_range=${dateRange}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Close loading indicator
+        loadingToast.close();
+
+        if (data.success) {
+            // Show the report in a modal
+            showReportModal(type, data.data);
+        } else {
+            throw new Error(data.error || 'Failed to generate report');
+        }
+
+    } catch (error) {
+        console.error('Error generating report:', error);
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to generate report. Please try again.',
+            icon: 'error'
+        });
+    }
+}
+
+function showReportModal(type, data) {
+    let content = '';
+    
+    // Format content based on report type
+    switch (type) {
+        case 'activity':
+            content = formatActivityReport(data);
+            break;
+        case 'pipeline':
+            content = formatPipelineReport(data);
+            break;
+        case 'revenue':
+            content = formatRevenueReport(data);
+            break;
+        case 'customer':
+            content = formatCustomerReport(data);
+            break;
+    }
+
+    // Show modal with report content
+    Swal.fire({
+        title: `${type.charAt(0).toUpperCase() + type.slice(1)} Report`,
+        html: content,
+        width: '800px',
+        confirmButtonText: 'Close',
+        showCancelButton: true,
+        cancelButtonText: 'Export',
+        cancelButtonColor: '#3085d6'
+    }).then((result) => {
+        if (!result.isConfirmed) {
+            // Pass both type and format to export function
+            Swal.fire({
+                title: 'Select Export Format',
+                input: 'select',
+                inputOptions: {
+                    'csv': 'CSV',
+                    'excel': 'Excel',
+                    'pdf': 'PDF'
+                },
+                inputPlaceholder: 'Select a format',
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    return new Promise((resolve) => {
+                        if (value) {
+                            resolve();
+                        } else {
+                            resolve('You need to select a format');
+                        }
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    exportReport(type, result.value);
+                }
+            });
+        }
+    });
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Add number formatting helper
+function formatNumber(number) {
+    return new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(number);
+}
+
+// Add report formatters
+function formatActivityReport(data) {
+    return `
+        <div class="report-content">
+            <div class="report-section">
+                <h5>Activity Summary</h5>
+                <p>Total Activities: ${data.total_activities}</p>
+                <div class="activity-breakdown">
+                    <h6>By Type:</h6>
+                    <ul>
+                        ${data.by_type.map(type => `
+                            <li>${type.activity_type}: ${type.count} (${type.completion_rate.toFixed(1)}% complete)</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatPipelineReport(data) {
+    return `
+        <div class="report-content">
+            <div class="report-section">
+                <h5>Pipeline Overview</h5>
+                <p>Total Value: ${formatNumber(data.total_value)}</p>
+                <p>Average Deal Size: ${formatNumber(data.avg_deal_size)}</p>
+                <p>Conversion Rate: ${data.conversion_rate.toFixed(1)}%</p>
+            </div>
+        </div>
+    `;
+}
+
+function formatRevenueReport(data) {
+    return `
+        <div class="report-content">
+            <div class="report-section">
+                <h5>Revenue Summary</h5>
+                <p>Total Revenue: ${formatNumber(data.total_revenue)}</p>
+                <div class="monthly-breakdown">
+                    <h6>Monthly Revenue:</h6>
+                    <ul>
+                        ${data.by_month.map(month => `
+                            <li>${month.month}: ${formatNumber(month.revenue)} (${month.deals} deals)</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatCustomerReport(data) {
+    return `
+        <div class="report-content">
+            <div class="report-section">
+                <h5>Customer Overview</h5>
+                <p>Total Customers: ${data.total_customers}</p>
+                <p>New Customers: ${data.new_customers}</p>
+                <p>Retention Rate: ${data.retention_rate.toFixed(1)}%</p>
+                <p>Average Customer Lifetime Value: ${formatNumber(data.customer_lifetime_value)}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Update the exportReport function
+function exportReport(reportType = 'all', format = 'csv') {
+    const params = new URLSearchParams({
+        type: reportType,  // The report type (activity, pipeline, revenue, customer)
+        format: format || 'csv'
+    });
+    
+    // Get the date range from the filter
+    const dateRange = document.querySelector('select[name="date_range"]').value;
+    if (dateRange) {
+        params.append('date_range', dateRange);
+    }
+    
+    window.location.href = `/crm/reports/export/?${params}`;
+}
+
+// Schedule report function
+function scheduleReport() {
+    Swal.fire({
+        title: 'Schedule Report',
+        html: `
+            <form id="scheduleForm" class="text-start">
+                <div class="mb-3">
+                    <label class="form-label">Report Type</label>
+                    <select class="form-select" id="reportType">
+                        <option value="activity">Activity Report</option>
+                        <option value="pipeline">Pipeline Analysis</option>
+                        <option value="revenue">Revenue Analysis</option>
+                        <option value="customer">Customer Analysis</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Frequency</label>
+                    <select class="form-select" id="frequency">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Format</label>
+                    <select class="form-select" id="format">
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email Recipients</label>
+                    <input type="text" class="form-control" id="recipients" placeholder="Enter email addresses">
+                    <small class="text-muted">Separate multiple emails with commas</small>
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Schedule',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+            return {
+                reportType: document.getElementById('reportType').value,
+                frequency: document.getElementById('frequency').value,
+                format: document.getElementById('format').value,
+                recipients: document.getElementById('recipients').value
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show success message (in real implementation, this would send data to server)
+            Swal.fire({
+                icon: 'success',
+                title: 'Report Scheduled',
+                text: 'Your report has been scheduled successfully!'
+            });
+        }
+    });
+}
+
+// Add this to your JavaScript section in reports.html
+async function generateReport(reportType = 'all', format = 'csv') {
+    try {
+        // Show loading state
+        const loadingToast = Swal.fire({
+            title: 'Generating Report...',
+            text: 'Please wait while we prepare your report',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Get filters
+        const dateRange = document.querySelector('select[name="date_range"]').value;
+        const salesRep = document.querySelector('select[name="user"]').value;
+        const leadSource = document.querySelector('select[name="source"]').value;
+
+        // Create URL with parameters
+        const params = new URLSearchParams({
+            type: reportType,
+            format: format,
+            date_range: dateRange,
+            user: salesRep || '',
+            source: leadSource || ''
+        });
+
+        // Make request
+        const response = await fetch(`/crm/reports/export/?${params}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': format === 'pdf' ? 'application/pdf' : 
+                         format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 
+                         'text/csv'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Close loading indicator
+        loadingToast.close();
+
+        // Get the filename from Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename;
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+            filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+        } else {
+            // Generate default filename with proper extension
+            const extension = format === 'excel' ? 'xlsx' : format;
+            const date = new Date().toISOString().split('T')[0];
+            filename = `crm_report_${reportType}_${date}.${extension}`;
+        }
+
+        // Download the file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error('Error generating report:', error);
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to generate report. Please try again.',
+            icon: 'error'
+        });
+    }
+}
+</script>
+{% endblock %}

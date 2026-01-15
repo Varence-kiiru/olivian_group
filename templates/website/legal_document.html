@@ -1,0 +1,110 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ page_title }} - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">{{ document.title }}</li>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section hero-section-legal">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="hero-title">{{ document.title }}</h1>
+                {% if document.short_description %}
+                    <p class="hero-subtitle">{{ document.short_description }}</p>
+                {% endif %}
+
+                <!-- Document Info -->
+                {% if document.version or document.effective_date %}
+                <div class="mt-3">
+                    {% if document.version %}
+                        <small class="badge bg-primary me-2">Version {{ document.version }}</small>
+                    {% endif %}
+                    {% if document.effective_date %}
+                        <small class="text-muted">Effective: {{ document.effective_date|date:"F d, Y" }}</small>
+                    {% endif %}
+                    {% if document.last_updated %}
+                        <br><small class="text-muted">Last Updated: {{ document.last_updated|date:"F d, Y" }}</small>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Document Content -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                {% if not document.is_active %}
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Notice:</strong> This document is currently being prepared. Please check back later for the complete version.
+                    </div>
+                {% endif %}
+                
+                <div class="legal-content">
+                    {{ document.content|safe }}
+                </div>
+                
+                <!-- Document Footer -->
+                <div class="mt-5 pt-4 border-top">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Questions or Concerns?</h6>
+                            <p class="text-muted mb-0">
+                                If you have any questions about this {{ document.get_document_type_display|lower }}, 
+                                please <a href="{% url 'core:contact' %}">contact us</a>.
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <h6>Other Legal Documents</h6>
+                            <div class="legal-links">
+                                {% if document.document_type != 'privacy_policy' %}
+                                    <a href="{% url 'core:privacy_policy' %}" class="text-decoration-none me-3">Privacy Policy</a>
+                                {% endif %}
+                                {% if document.document_type != 'terms_of_service' %}
+                                    <a href="{% url 'core:terms_of_service' %}" class="text-decoration-none me-3">Terms of Service</a>
+                                {% endif %}
+                                {% if document.document_type != 'data_deletion' %}
+                                    <a href="{% url 'core:data_deletion' %}" class="text-decoration-none">Data Deletion</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact CTA -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h3>Need Assistance?</h3>
+                <p class="lead mb-4">
+                    Our team is here to help with any questions about our policies or services.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'core:contact' %}" class="btn btn-primary">
+                        <i class="fas fa-envelope me-2"></i>Contact Us
+                    </a>
+                    <a href="tel:{{ company.phone|default:'+254-700-000-000' }}" class="btn btn-outline-primary">
+                        <i class="fas fa-phone me-2"></i>Call Us
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

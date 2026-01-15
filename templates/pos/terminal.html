@@ -1,0 +1,1196 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}POS Terminal - {{ block.super }}{% endblock %}
+
+{% block page_title %}POS Terminal - {{ terminal.name }}{% endblock %}
+{% block page_subtitle %}Session: {{ session.session_number|default:"N/A" }} • {{ session.cashier.get_full_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS</a></li>
+<li class="breadcrumb-item active">Terminal</li>
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/pos.css' %}" rel="stylesheet">
+{% include "components/customer_modal_css.html" %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="pos-terminal">
+    <!-- Product Selection Area -->
+    <div class="product-grid">
+        <!-- Search and Barcode Input -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control search-input" placeholder="Search products..." id="productSearch">
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control barcode-input" placeholder="Scan or enter barcode" id="barcodeInput">
+            </div>
+        </div>
+        
+        <!-- Category Tabs -->
+        <div class="category-tabs">
+            <div class="category-tab active" data-category="all">All Products</div>
+            {% for category in categories %}
+            <div class="category-tab" data-category="{{ category.id }}">{{ category.name }}</div>
+            {% endfor %}
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="products-grid" id="productsGrid">
+            {% for product in products %}
+            <div class="product-card" data-product-id="{{ product.id }}" data-category="{{ product.category.id|default:'none' }}">
+                {% if product.images.first %}
+                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="product-image">
+                {% else %}
+                <div class="product-image bg-light d-flex align-items-center justify-content-center">
+                    <i class="fas fa-image text-muted"></i>
+                </div>
+                {% endif %}
+                
+                <div class="product-name">{{ product.name|truncatechars:25 }}</div>
+                <div class="product-price">KES {{ product.selling_price|floatformat:2 }}</div>
+                <div class="stock-level">
+                    {% if product.quantity_in_stock > 10 %}
+                        <span class="text-success">In Stock ({{ product.quantity_in_stock }})</span>
+                    {% elif product.quantity_in_stock > 0 %}
+                        <span class="text-warning">Low Stock ({{ product.quantity_in_stock }})</span>
+                    {% else %}
+                        <span class="text-danger">Out of Stock</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Products Available</h5>
+                <p class="text-muted">Please contact administrator to add products.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Cart Panel -->
+    <div class="cart-panel">
+        <!-- Cart Header -->
+        <div class="cart-header">
+            <h5 class="mb-2">
+                <i class="fas fa-shopping-cart me-2"></i>Current Sale
+            </h5>
+            <div class="d-flex justify-content-between text-muted small">
+                <span>Terminal: {{ terminal.name }}</span>
+                <span>{{ session.start_time|date:"H:i" }}</span>
+            </div>
+        </div>
+        
+        <!-- Cart Items -->
+        <div class="cart-items" id="cartItems">
+            <!-- Cart items will be populated by JavaScript -->
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                <div>Cart is empty</div>
+                <small>Scan or select products to add</small>
+            </div>
+        </div>
+        
+        <!-- Cart Totals -->
+        <div class="cart-totals">
+            <div class="total-line">
+                <span>Subtotal (Ex-VAT):</span>
+                <span id="subtotal">KES 0.00</span>
+            </div>
+            <div class="total-line">
+                <span>Tax (16%):</span>
+                <span id="tax">KES 0.00</span>
+            </div>
+            <div class="total-line">
+                <span>Discount:</span>
+                <span id="discount">KES 0.00</span>
+            </div>
+            <div class="total-line grand-total">
+                <span>Total:</span>
+                <span id="grandTotal">KES 0.00</span>
+            </div>
+        </div>
+        
+        <!-- Customer Selection -->
+        <div class="mb-3">
+            <label class="form-label small">Customer (Optional)</label>
+            <div class="input-group">
+                <select class="form-select form-select-sm" id="customerSelect">
+                    <option value="">Walk-in Customer</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">{{ customer.name|default:"Customer" }}{% if customer.phone %} - {{ customer.phone }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-outline-primary btn-sm" type="button" onclick="openPOSTerminalCustomerModal()" title="Add New Customer">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2">
+            <button class="btn btn-success" id="processPayment" disabled>
+                <i class="fas fa-credit-card me-2"></i>Process Payment
+            </button>
+            
+            <div class="payment-buttons">
+                <button class="btn btn-outline-primary" id="holdSale">
+                    <i class="fas fa-pause me-1"></i>Hold
+                </button>
+                <button class="btn btn-outline-danger" id="clearCart">
+                    <i class="fas fa-trash me-1"></i>Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Process Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select class="form-select" id="paymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="mpesa">M-Pesa</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                
+                <!-- M-Pesa Phone Number -->
+                <div class="mb-3" id="mpesaPhoneDiv" style="display: none;">
+                    <label class="form-label">M-Pesa Phone Number</label>
+                    <input type="tel" class="form-control" id="mpesaPhone" placeholder="254xxxxxxxxx">
+                </div>
+                
+                <!-- Reference Number for Card/Bank Transfer -->
+                <div class="mb-3" id="referenceNumberDiv" style="display: none;">
+                    <label class="form-label">Reference Number <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="referenceNumber" placeholder="Enter transaction reference number">
+                    <small class="form-text text-muted">Required for card and bank transfer payments</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Amount Paid</label>
+                    <input type="number" class="form-control" id="amountPaid" step="0.01">
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Total Due:</strong>
+                        <div class="h4 text-primary" id="modalTotal">KES 0.00</div>
+                    </div>
+                    <div class="col-6">
+                        <strong>Change:</strong>
+                        <div class="h4 text-success" id="changeAmount">KES 0.00</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="completeSale">Complete Sale</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- M-Pesa Payment Modal -->
+<div class="modal fade" id="mpesaPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-mobile-alt text-success me-2"></i>M-Pesa Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="mpesa-processing">
+                    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    <h6>Payment Request Sent</h6>
+                    <p class="text-muted">Customer should check phone (<span id="mpesa-phone-display">0</span>) for M-Pesa payment request</p>
+                    <p><strong>Amount: KES <span id="mpesa-amount-display">0</span></strong></p>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        <strong>Instructions for Customer:</strong>
+                        <ol class="text-start mt-2 mb-0">
+                            <li>Check your phone for M-Pesa notification</li>
+                            <li>Enter your M-Pesa PIN when prompted</li>
+                            <li>Wait for confirmation SMS</li>
+                        </ol>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Customer has up to 10 minutes to complete payment
+                    </small>
+                </div>
+                
+                <div id="mpesa-success" style="display: none;">
+                    <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-success">Payment Successful!</h6>
+                    <p class="text-muted">Your M-Pesa payment has been confirmed</p>
+                    <div class="alert alert-success">
+                        <strong>M-Pesa Receipt:</strong> <span id="mpesa-transaction-id"></span>
+                    </div>
+                </div>
+                
+                <div id="mpesa-error" style="display: none;">
+                    <i class="fas fa-times-circle text-danger" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-danger">Payment Failed</h6>
+                    <p class="text-muted" id="mpesa-error-message">The payment was not completed. Please try again.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="pos.checkMpesaPaymentStatus()">
+                    <i class="fas fa-sync me-1"></i>Check Status
+                </button>
+                <button type="button" class="btn btn-success" id="mpesa-success-btn" style="display: none;" onclick="completeMpesaSale()">
+                    <i class="fas fa-check me-1"></i>Complete Sale
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include "components/customer_modal_js.html" %}
+<script>
+class POSTerminal {
+    constructor() {
+        this.cart = [];
+        this.customers = [];
+        this.products = [];
+        
+        this.initializeEventListeners();
+        this.loadProducts();
+        this.updateCartDisplay();
+    }
+    
+    initializeEventListeners() {
+        // Product selection
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.product-card')) {
+                const productCard = e.target.closest('.product-card');
+                const productId = productCard.dataset.productId;
+                this.addToCart(productId);
+            }
+        });
+        
+        // Category filtering
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                this.filterByCategory(e.target.dataset.category);
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
+        // Search functionality
+        document.getElementById('productSearch').addEventListener('input', (e) => {
+            this.searchProducts(e.target.value);
+        });
+        
+        // Barcode input
+        document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.addByBarcode(e.target.value);
+                e.target.value = '';
+            }
+        });
+        
+        // Cart actions
+        document.getElementById('processPayment').addEventListener('click', () => {
+            this.showPaymentModal();
+        });
+        
+        document.getElementById('clearCart').addEventListener('click', () => {
+            this.clearCart();
+        });
+        
+        // Payment modal
+        document.getElementById('paymentMethod').addEventListener('change', () => {
+            this.togglePaymentFields();
+        });
+        
+        document.getElementById('amountPaid').addEventListener('input', () => {
+            this.calculateChange();
+        });
+        
+        document.getElementById('completeSale').addEventListener('click', () => {
+            this.completeSale();
+        });
+    }
+    
+    loadProducts() {
+        // Load products from the page
+        document.querySelectorAll('.product-card').forEach(card => {
+            const priceText = card.querySelector('.product-price').textContent.replace('KES ', '').trim();
+            this.products.push({
+                id: card.dataset.productId,
+                name: card.querySelector('.product-name').textContent.trim(),
+                price: parseFloat(priceText) || 0,
+                category: card.dataset.category
+            });
+        });
+        console.log('Loaded products:', this.products);
+    }
+    
+    addToCart(productId) {
+        const product = this.products.find(p => p.id === productId);
+        if (!product) return;
+        
+        const existingItem = this.cart.find(item => item.id === productId);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            this.cart.push({
+                id: productId,
+                name: product.name,
+                price: product.price,
+                quantity: 1
+            });
+        }
+        
+        this.updateCartDisplay();
+    }
+    
+    addByBarcode(barcode) {
+        // In a real implementation, this would look up the product by barcode
+        // For now, we'll just search by product name/ID
+        console.log('Searching for barcode:', barcode);
+    }
+    
+    removeFromCart(productId) {
+        this.cart = this.cart.filter(item => item.id !== productId);
+        this.updateCartDisplay();
+    }
+    
+    updateQuantity(productId, quantity) {
+        const item = this.cart.find(item => item.id === productId);
+        if (item) {
+            item.quantity = Math.max(0, quantity);
+            if (item.quantity === 0) {
+                this.removeFromCart(productId);
+            }
+        }
+        this.updateCartDisplay();
+    }
+    
+    updateCartDisplay() {
+        const cartItems = document.getElementById('cartItems');
+        
+        if (this.cart.length === 0) {
+            cartItems.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                    <div>Cart is empty</div>
+                    <small>Scan or select products to add</small>
+                </div>
+            `;
+            document.getElementById('processPayment').disabled = true;
+        } else {
+            cartItems.innerHTML = this.cart.map(item => `
+                <div class="cart-item">
+                    <div>
+                        <div class="fw-bold">${item.name}</div>
+                        <div class="small text-muted">KES ${item.price.toFixed(2)} each</div>
+                    </div>
+                    <div class="item-controls">
+                        <button class="qty-control" onclick="pos.updateQuantity('${item.id}', ${item.quantity - 1})">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" class="qty-input" value="${item.quantity}" 
+                               onchange="pos.updateQuantity('${item.id}', this.value)">
+                        <button class="qty-control" onclick="pos.updateQuantity('${item.id}', ${item.quantity + 1})">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger ms-2" onclick="pos.removeFromCart('${item.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('processPayment').disabled = false;
+        }
+        
+        this.updateTotals();
+    }
+    
+    updateTotals() {
+        // Calculate VAT-inclusive subtotal (prices include VAT)
+        const vatInclusiveSubtotal = this.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        
+        // Calculate VAT backwards from inclusive prices (same as ecommerce)
+        const vatRate = 16.0; // 16% VAT rate
+        const vatMultiplier = 1 + (vatRate / 100); // 1.16
+        
+        // Extract VAT amount and ex-VAT subtotal
+        const subtotalExVat = vatInclusiveSubtotal / vatMultiplier;
+        const vatAmount = vatInclusiveSubtotal - subtotalExVat;
+        const discount = 0; // Implement discount logic
+        const grandTotal = vatInclusiveSubtotal - discount; // Total is VAT-inclusive amount
+        
+        // Display the breakdown
+        document.getElementById('subtotal').textContent = `KES ${subtotalExVat.toFixed(2)}`;
+        document.getElementById('tax').textContent = `KES ${vatAmount.toFixed(2)}`;
+        document.getElementById('discount').textContent = `KES ${discount.toFixed(2)}`;
+        document.getElementById('grandTotal').textContent = `KES ${grandTotal.toFixed(2)}`;
+    }
+    
+    filterByCategory(categoryId) {
+        const products = document.querySelectorAll('.product-card');
+        products.forEach(product => {
+            if (categoryId === 'all' || product.dataset.category === categoryId) {
+                product.style.display = 'block';
+            } else {
+                product.style.display = 'none';
+            }
+        });
+    }
+    
+    searchProducts(query) {
+        const products = document.querySelectorAll('.product-card');
+        products.forEach(product => {
+            const name = product.querySelector('.product-name').textContent.toLowerCase();
+            if (name.includes(query.toLowerCase())) {
+                product.style.display = 'block';
+            } else {
+                product.style.display = 'none';
+            }
+        });
+    }
+    
+    clearCart() {
+        if (confirm('Are you sure you want to clear the cart?')) {
+            this.cart = [];
+            this.updateCartDisplay();
+        }
+    }
+    
+    showPaymentModal() {
+        // Calculate VAT-inclusive total (prices already include VAT)
+        const grandTotal = this.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        document.getElementById('modalTotal').textContent = `KES ${grandTotal.toFixed(2)}`;
+        document.getElementById('amountPaid').value = grandTotal.toFixed(2);
+        this.calculateChange();
+        
+        // Reset payment method to cash by default
+        document.getElementById('paymentMethod').value = 'cash';
+        this.togglePaymentFields();
+        
+        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        modal.show();
+    }
+    
+    togglePaymentFields() {
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        console.log('Toggle payment fields for method:', paymentMethod);
+        
+        const mpesaPhoneDiv = document.getElementById('mpesaPhoneDiv');
+        const mpesaPhoneInput = document.getElementById('mpesaPhone');
+        const referenceNumberDiv = document.getElementById('referenceNumberDiv');
+        const referenceNumberInput = document.getElementById('referenceNumber');
+        
+        console.log('M-Pesa phone div found:', !!mpesaPhoneDiv);
+        console.log('M-Pesa phone input found:', !!mpesaPhoneInput);
+        
+        // Show/hide M-Pesa phone field
+        if (paymentMethod === 'mpesa') {
+            mpesaPhoneDiv.style.display = 'block';
+            referenceNumberDiv.style.display = 'none';
+            
+            // Auto-populate M-Pesa phone number if customer is selected
+            const customerSelect = document.getElementById('customerSelect');
+            if (customerSelect && customerSelect.value) {
+                // Get customer phone from the customers data
+                const selectedCustomerId = customerSelect.value;
+                const customerPhone = this.getCustomerPhone(selectedCustomerId);
+                
+                if (customerPhone && mpesaPhoneInput) {
+                    // Format phone number for M-Pesa (ensure it starts with 254)
+                    const formattedPhone = this.formatPhoneForMpesa(customerPhone);
+                    mpesaPhoneInput.value = formattedPhone;
+                }
+            }
+        } else if (paymentMethod === 'card' || paymentMethod === 'bank_transfer') {
+            // Show reference number field for card and bank transfer
+            mpesaPhoneDiv.style.display = 'none';
+            referenceNumberDiv.style.display = 'block';
+            if (referenceNumberInput) {
+                referenceNumberInput.value = ''; // Clear previous value
+            }
+        } else {
+            // Hide both for cash payments
+            mpesaPhoneDiv.style.display = 'none';
+            referenceNumberDiv.style.display = 'none';
+        }
+        
+        // For bank transfer and other methods, set amount to total
+        const total = parseFloat(document.getElementById('modalTotal').textContent.replace('KES ', ''));
+        if (paymentMethod === 'bank_transfer' || paymentMethod === 'mpesa' || paymentMethod === 'card') {
+            document.getElementById('amountPaid').value = total.toFixed(2);
+        }
+        
+        this.calculateChange();
+    }
+    
+    getCustomerPhone(customerId) {
+        // Get customer phone from the dropdown option text
+        const customerSelect = document.getElementById('customerSelect');
+        if (customerSelect) {
+            const selectedOption = customerSelect.querySelector(`option[value="${customerId}"]`);
+            if (selectedOption) {
+                const optionText = selectedOption.textContent;
+                // Extract phone number from format "Customer Name - 0712345678"
+                const phoneMatch = optionText.match(/- (\+?[\d\s-]+)$/);
+                if (phoneMatch) {
+                    return phoneMatch[1].trim();
+                }
+            }
+        }
+        return null;
+    }
+    
+    formatPhoneForMpesa(phone) {
+        // Remove all non-digit characters
+        let cleanPhone = phone.replace(/\D/g, '');
+        
+        // Handle different phone number formats
+        if (cleanPhone.startsWith('254')) {
+            // Already in correct format
+            return cleanPhone;
+        } else if (cleanPhone.startsWith('0')) {
+            // Convert 07xxxxxxxx to 2547xxxxxxxx
+            return '254' + cleanPhone.substring(1);
+        } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
+            // Convert 7xxxxxxxx to 2547xxxxxxxx
+            return '254' + cleanPhone;
+        } else if (cleanPhone.length === 9) {
+            // Assume it's missing the leading 7
+            return '2547' + cleanPhone;
+        }
+        
+        // Return as is if we can't determine the format
+        return cleanPhone;
+    }
+    
+    calculateChange() {
+        const total = parseFloat(document.getElementById('modalTotal').textContent.replace('KES ', ''));
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        const change = Math.max(0, paid - total);
+        
+        document.getElementById('changeAmount').textContent = `KES ${change.toFixed(2)}`;
+    }
+    
+    completeSale() {
+        console.log('Complete Sale button clicked');
+        
+        // Helper function to safely get element value
+        const getElementValue = (id, defaultValue = '') => {
+            const element = document.getElementById(id);
+            return element ? element.value : defaultValue;
+        };
+        
+        const getElementText = (id, defaultValue = '0') => {
+            const element = document.getElementById(id);
+            return element ? element.textContent : defaultValue;
+        };
+        
+        const paymentMethodElement = document.getElementById('paymentMethod');
+        if (!paymentMethodElement) {
+            alert('Payment method selection not found!');
+            return;
+        }
+        const paymentMethod = paymentMethodElement.value;
+        console.log('Payment method selected:', paymentMethod);
+        
+        const amountPaidElement = document.getElementById('amountPaid');
+        if (!amountPaidElement) {
+            alert('Amount paid field not found!');
+            return;
+        }
+        const amountPaid = parseFloat(amountPaidElement.value || '0');
+        
+        const totalElement = document.getElementById('modalTotal');
+        if (!totalElement) {
+            alert('Total amount not found!');
+            return;
+        }
+        const total = parseFloat(totalElement.textContent.replace('KES ', '') || '0');
+        
+        // Validate payment amount for cash
+        if (paymentMethod === 'cash' && amountPaid < total) {
+            alert('Insufficient payment amount!');
+            return;
+        }
+        
+        // Validate reference number for card and bank transfer payments
+        const referenceNumber = getElementValue('referenceNumber');
+        if ((paymentMethod === 'card' || paymentMethod === 'bank_transfer') && !referenceNumber.trim()) {
+            alert('Please enter the transaction reference number!');
+            return;
+        }
+        
+        // Prepare sale data (needed for both M-Pesa and other payments)
+        const saleData = {
+            items: this.cart,
+            customer: getElementValue('customerSelect'),
+            payment_method: paymentMethod,
+            amount_paid: amountPaid,
+            mpesa_phone: getElementValue('mpesaPhone'),
+            reference_number: referenceNumber,
+            terminal_id: '{{ terminal.id }}',
+            session_id: '{{ session.id }}'
+        };
+        
+        // Handle M-Pesa payment with special modal
+        if (paymentMethod === 'mpesa') {
+            const phone = getElementValue('mpesaPhone');
+            console.log('M-Pesa phone number:', phone);
+            
+            if (!phone) {
+                alert('Please enter M-Pesa phone number!');
+                // Ensure the M-Pesa phone field is visible
+                const mpesaPhoneDiv = document.getElementById('mpesaPhoneDiv');
+                if (mpesaPhoneDiv) {
+                    mpesaPhoneDiv.style.display = 'block';
+                }
+                return;
+            }
+            
+            // Show M-Pesa modal and process payment
+            this.showMpesaPaymentModal(total, phone, saleData);
+            return;
+        }
+        
+        console.log('Completing sale:', saleData);
+        
+        // Disable button and show processing
+        const completeSaleBtn = document.getElementById('completeSale');
+        if (!completeSaleBtn) {
+            alert('Complete sale button not found!');
+            return;
+        }
+        
+        const originalText = completeSaleBtn.innerHTML;
+        completeSaleBtn.disabled = true;
+        completeSaleBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+        
+        // Get CSRF token safely
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfElement) {
+            alert('CSRF token not found!');
+            completeSaleBtn.disabled = false;
+            completeSaleBtn.innerHTML = originalText;
+            return;
+        }
+        
+        fetch("{% url 'pos:api_process_payment' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfElement.value
+            },
+            body: JSON.stringify(saleData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Sale completed successfully!');
+                this.cart = [];
+                this.updateCartDisplay();
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                
+                // Print receipt if needed
+                if (confirm('Print receipt?')) {
+                    this.printReceipt(data.sale_id);
+                }
+            } else {
+                alert('Sale failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing sale. Please try again.');
+        })
+        .finally(() => {
+            // Re-enable button
+            completeSaleBtn.disabled = false;
+            completeSaleBtn.innerHTML = originalText;
+        });
+    }
+    
+    showMpesaPaymentModal(amount, phone, saleData) {
+        // Update modal display
+        document.getElementById('mpesa-amount-display').textContent = amount.toFixed(2);
+        document.getElementById('mpesa-phone-display').textContent = phone;
+        
+        // Reset modal states
+        document.getElementById('mpesa-processing').style.display = 'block';
+        document.getElementById('mpesa-success').style.display = 'none';
+        document.getElementById('mpesa-error').style.display = 'none';
+        document.getElementById('mpesa-success-btn').style.display = 'none';
+        document.getElementById('mpesa-retry-btn').style.display = 'none';
+        
+        // Close payment modal and show M-Pesa modal
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        if (paymentModal) {
+            paymentModal.hide();
+        }
+        
+        const mpesaModal = new bootstrap.Modal(document.getElementById('mpesaPaymentModal'));
+        mpesaModal.show();
+        
+        // Store sale data for later use
+        this.currentMpesaSale = saleData;
+        
+        // Process the M-Pesa payment
+        this.processMpesaPayment(saleData);
+    }
+    
+    processMpesaPayment(saleData) {
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfElement) {
+            this.showMpesaError('CSRF token not found');
+            return;
+        }
+        
+        console.log('Processing M-Pesa payment with data:', saleData);
+        
+        fetch('/pos/api/payment/process/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfElement.value
+            },
+            body: JSON.stringify(saleData)
+        })
+        .then(response => {
+            console.log('M-Pesa response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('M-Pesa response data:', data);
+            
+            if (data.success) {
+                // Payment initiated successfully
+                const checkoutRequestId = data.checkout_request_id;
+                console.log('Received checkout_request_id:', checkoutRequestId);
+                
+                if (checkoutRequestId) {
+                    // Store the checkout request ID for polling
+                    this.mpesaCheckoutRequestId = checkoutRequestId;
+                    console.log('Stored checkout request ID:', this.mpesaCheckoutRequestId);
+                    
+                    // Start polling for payment status (like ecommerce)
+                    this.pollMpesaPaymentStatus();
+                } else {
+                    console.error('No checkout_request_id in successful response');
+                    this.showMpesaError('No checkout request ID received from server');
+                }
+                
+            } else {
+                console.error('M-Pesa payment failed:', data.error);
+                this.showMpesaError(data.error || 'Payment failed');
+            }
+        })
+        .catch(error => {
+            console.error('M-Pesa payment error:', error);
+            this.showMpesaError('Network error occurred');
+        });
+    }
+    
+    pollMpesaPaymentStatus() {
+        if (!this.mpesaCheckoutRequestId) {
+            this.showMpesaError('No checkout request ID found');
+            return;
+        }
+        
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfElement) {
+            this.showMpesaError('CSRF token not found');
+            return;
+        }
+        
+        // Poll every 5 seconds for up to 10 minutes (120 attempts)
+        // This gives customers adequate time to receive STK push, enter PIN, and complete payment
+        let pollAttempts = 0;
+        const maxAttempts = 120;
+        
+        const pollInterval = setInterval(() => {
+            pollAttempts++;
+            
+            fetch('/pos/api/mpesa/status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfElement.value
+                },
+                body: JSON.stringify({
+                    checkout_request_id: this.mpesaCheckoutRequestId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'completed') {
+                    // Payment successful - we have the reference number
+                    clearInterval(pollInterval);
+                    
+                    // Update the sale data with the M-Pesa reference number
+                    this.currentMpesaSale.reference_number = data.mpesa_receipt_number;
+                    
+                    // Show success with the actual reference number
+                    document.getElementById('mpesa-transaction-id').textContent = data.mpesa_receipt_number;
+                    this.showMpesaSuccess(data);
+                    
+                } else if (data.status === 'failed') {
+                    // Payment failed
+                    clearInterval(pollInterval);
+                    this.showMpesaError(data.error || 'Payment was cancelled or failed');
+                    
+                } else if (data.status === 'pending') {
+                    // Still waiting - continue polling
+                    if (pollAttempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        this.showMpesaError('Payment timeout. Please try again or use another payment method.');
+                    }
+                    // Continue polling
+                    
+                } else {
+                    // Unknown status
+                    if (pollAttempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        this.showMpesaError('Payment status unknown. Please verify payment and try again.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('M-Pesa status polling error:', error);
+                if (pollAttempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    this.showMpesaError('Unable to verify payment status. Please check manually.');
+                }
+            });
+            
+            }, 5000); // Poll every 5 seconds
+    }
+    
+    showMpesaSuccess(data) {
+        document.getElementById('mpesa-processing').style.display = 'none';
+        document.getElementById('mpesa-success').style.display = 'block';
+        document.getElementById('mpesa-success-btn').style.display = 'inline-block';
+        
+        // Store transaction data
+        this.mpesaTransactionData = data;
+        
+        // Automatically complete the sale (like ecommerce checkout)
+        setTimeout(() => {
+            this.autoCompleteMpesaSale(data);
+        }, 2000); // Give user 2 seconds to see the success message
+    }
+    
+    showMpesaError(message) {
+        document.getElementById('mpesa-processing').style.display = 'none';
+        document.getElementById('mpesa-error').style.display = 'block';
+        document.getElementById('mpesa-error-message').textContent = message;
+    }
+    
+    autoCompleteMpesaSale(data) {
+        // Automatically complete the sale (like ecommerce checkout)
+        console.log('Auto-completing M-Pesa sale with data:', data);
+
+        if (!this.currentMpesaSale) {
+            console.error('No current M-Pesa sale data found');
+            return;
+        }
+
+        // Set the reference number to the actual M-Pesa receipt number
+        this.currentMpesaSale.reference_number = data.mpesa_receipt_number; // <-- Add this line
+
+        // Hide the success button since we're auto-completing
+        document.getElementById('mpesa-success-btn').style.display = 'none';
+
+        // Show completion message
+        const successDiv = document.getElementById('mpesa-success');
+        if (successDiv) {
+            successDiv.innerHTML = `
+                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-success">Payment Successful!</h4>
+                <p class="text-muted">Completing sale automatically...</p>
+                <div class="alert alert-success">
+                    <strong>Transaction ID:</strong> <span>${data.mpesa_receipt_number || 'Processing...'}</span>
+                </div>
+                <div class="spinner-border spinner-border-sm text-success mt-2" role="status">
+                    <span class="visually-hidden">Completing...</span>
+                </div>
+            `;
+        }
+
+        // Get CSRF token
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfElement) {
+            console.error('CSRF token not found for auto-completion');
+            this.showMpesaError('Unable to complete sale automatically. Please try manual completion.');
+            return;
+        }
+
+        // Complete the sale with the correct reference number
+        fetch("{% url 'pos:api_process_payment' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfElement.value
+            },
+            body: JSON.stringify(this.currentMpesaSale)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // ...existing code...
+        });
+    }
+    
+    printReceiptByMpesaId(mpesaReceiptNumber) {
+        // In a real implementation, we would need an endpoint to find the sale by M-Pesa receipt
+        // For now, we'll just show a message
+        console.log('Would print receipt for M-Pesa transaction:', mpesaReceiptNumber);
+        showToast('Receipt printing feature will be available in the next update.', 'info');
+    }
+    
+    checkMpesaPaymentStatus() {
+        // Manual status check button (like ecommerce)
+        if (!this.mpesaCheckoutRequestId) {
+            alert('No payment request to check');
+            return;
+        }
+        
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfElement) {
+            alert('Unable to check status - CSRF token missing');
+            return;
+        }
+        
+        fetch('/pos/api/mpesa/status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfElement.value
+            },
+            body: JSON.stringify({
+                checkout_request_id: this.mpesaCheckoutRequestId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                // Update success message and auto-complete
+                document.getElementById('mpesa-transaction-id').textContent = data.mpesa_receipt_number;
+                this.showMpesaSuccess(data);
+            } else if (data.status === 'failed') {
+                this.showMpesaError(data.error || 'Payment failed');
+            } else {
+                alert('Payment is still pending. Customer should complete M-Pesa payment on their phone.');
+            }
+        })
+        .catch(error => {
+            console.error('Status check error:', error);
+            alert('Unable to check payment status');
+        });
+    }
+    
+    printReceipt(saleId) {
+        // Open receipt in new window for printing
+        window.open(`/pos/sale/${saleId}/receipt/`, '_blank');
+    }
+}
+
+// Initialize POS Terminal
+const pos = new POSTerminal();
+
+// Check for pre-selected customer from sessionStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const selectedCustomer = sessionStorage.getItem('selectedCustomer');
+    if (selectedCustomer) {
+        try {
+            const customerData = JSON.parse(selectedCustomer);
+            const customerSelect = document.getElementById('customerSelect');
+            
+            if (customerSelect && customerData.id) {
+                // Find and select the customer option
+                const customerOption = customerSelect.querySelector(`option[value="${customerData.id}"]`);
+                if (customerOption) {
+                    customerSelect.value = customerData.id;
+                    
+                    // Show success message
+                    showToast(`Customer "${customerData.name}" selected for this sale`, 'success');
+                } else {
+                    // Customer not found in dropdown, show warning
+                    showToast(`Customer "${customerData.name}" not found in customer list`, 'warning');
+                }
+            }
+            
+            // Clear the sessionStorage after using it
+            sessionStorage.removeItem('selectedCustomer');
+        } catch (error) {
+            console.error('Error parsing selected customer data:', error);
+            sessionStorage.removeItem('selectedCustomer');
+        }
+    }
+});
+
+// Helper function to show toast notifications
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'primary'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Add toast to container
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Show toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Remove toast element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+    
+    return toast;
+}
+
+// Global functions for M-Pesa modal buttons
+function completeMpesaSale() {
+    // Now that we have the M-Pesa reference number, complete the actual sale
+    if (!pos.currentMpesaSale) {
+        alert('Sale data not found. Please try again.');
+        return;
+    }
+    
+    // Disable the button to prevent double submission
+    const completeSaleBtn = document.getElementById('mpesa-success-btn');
+    if (completeSaleBtn) {
+        completeSaleBtn.disabled = true;
+        completeSaleBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Completing...';
+    }
+    
+    // Get CSRF token
+    const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfElement) {
+        alert('CSRF token not found!');
+        if (completeSaleBtn) {
+            completeSaleBtn.disabled = false;
+            completeSaleBtn.innerHTML = '<i class="fas fa-check me-1"></i>Complete Sale';
+        }
+        return;
+    }
+    
+    // Complete the sale with the captured reference number
+    fetch("{% url 'pos:api_process_payment' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfElement.value
+        },
+        body: JSON.stringify(pos.currentMpesaSale)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close M-Pesa modal
+            const mpesaModal = bootstrap.Modal.getInstance(document.getElementById('mpesaPaymentModal'));
+            if (mpesaModal) {
+                mpesaModal.hide();
+            }
+            
+            // Clear cart and refresh
+            pos.cart = [];
+            pos.updateCartDisplay();
+            pos.updateTotals();
+            
+            alert(data.message || 'Sale completed successfully!');
+            
+            // Print receipt if needed
+            if (confirm('Print receipt?')) {
+                pos.printReceipt(data.sale_id);
+            }
+        } else {
+            alert('Sale completion failed: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error completing M-Pesa sale:', error);
+        alert('Error completing sale. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable button
+        if (completeSaleBtn) {
+            completeSaleBtn.disabled = false;
+            completeSaleBtn.innerHTML = '<i class="fas fa-check me-1"></i>Complete Sale';
+        }
+    });
+}
+
+function retryMpesaPayment() {
+    if (pos.currentMpesaSale) {
+        // Reset modal to processing state and retry
+        document.getElementById('mpesa-processing').style.display = 'block';
+        document.getElementById('mpesa-error').style.display = 'none';
+        document.getElementById('mpesa-retry-btn').style.display = 'none';
+        
+        pos.processMpesaPayment(pos.currentMpesaSale);
+    }
+}
+
+// POS Terminal Customer Modal
+function openPOSTerminalCustomerModal() {
+    openCustomerModal({
+        targetSelectId: 'customerSelect',
+        includeBusinessFields: true,
+        includeSolarFields: false,
+        onCustomerCreated: function(customer) {
+            // Customer will be automatically added to dropdown via targetSelectId
+            showNotification('success', 'Customer Added', 'Customer "' + customer.display_name + '" has been added successfully.');
+        }
+    });
+}
+</script>
+{% endblock %}
+
+<!-- Universal Customer Modal -->
+{% include "components/customer_modal.html" %}

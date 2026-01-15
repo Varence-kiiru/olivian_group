@@ -1,0 +1,9 @@
+{% load auth_tags %}
+
+{% comment %}
+Dynamic auth base template - automatically selects staff or customer base
+This template should be used for forms that need to adapt based on user role
+{% endcomment %}
+
+{% get_user_base_template as base_template %}
+{% include base_template %}

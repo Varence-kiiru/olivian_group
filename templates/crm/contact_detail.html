@@ -1,0 +1,761 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ contact.get_full_name }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ contact.get_full_name }}{% endblock %}
+{% block page_subtitle %}Contact details and relationship history{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:contact_list' %}">Contacts</a></li>
+<li class="breadcrumb-item active">{{ contact.get_full_name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-header {
+        background: linear-gradient(135deg, var(--primary-color), #4dabf7);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .contact-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+
+    .contact-avatar {
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: bold;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        margin-bottom: 1rem;
+    }
+
+    .contact-status {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .info-card h6 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f1f3f4;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .info-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1rem;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        color: #6c757d;
+        margin: 0;
+    }
+    
+    .activity-item {
+        border-left: 3px solid var(--primary-color);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+    
+    .activity-type {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action {
+        flex: 1;
+        min-width: 200px;
+        padding: 1rem;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+    
+    .quick-action:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 6px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .company-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.2s ease;
+        margin-top: 0.5rem;
+    }
+    
+    .company-link:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .badge-custom {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        margin: 0.25rem;
+    }
+    
+    .badge-lead { background: #e3f2fd; color: #1976d2; }
+    .badge-opportunity { background: #f3e5f5; color: #7b1fa2; }
+    .badge-activity { background: #fff3e0; color: #f57c00; }
+    .badge-note { background: #e8f5e8; color: #2e7d32; }
+    
+    .communication-item {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .communication-type {
+        position: absolute;
+        top: -8px;
+        right: 1rem;
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .contact-notes {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        font-style: italic;
+        color: #6c757d;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Contact Header -->
+<div class="contact-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <div class="contact-avatar">
+                    {{ contact.first_name.0|upper }}{{ contact.last_name.0|upper }}
+                </div>
+                <div class="ms-4">
+                    <h2 class="mb-2">{{ contact.get_full_name }}</h2>
+                    {% if contact.position %}
+                        <h5 class="mb-2 opacity-75">{{ contact.position }}</h5>
+                    {% endif %}
+                    {% if contact.companies.first %}
+                        <h6 class="mb-3 opacity-75">{{ contact.companies.first.name }}</h6>
+                    {% endif %}
+                    <span class="contact-status">Active Customer</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="d-flex flex-column align-items-end gap-2">
+                <small class="opacity-75">Member since {{ contact.created_at|date:"M Y" }}</small>
+                <small class="opacity-75">Last updated {{ contact.updated_at|date:"M d, Y" }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid">
+    <div class="stat-item">
+        <div class="stat-number">{{ contact.leads.count }}</div>
+        <div class="stat-label">Leads</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ contact.activities.count }}</div>
+        <div class="stat-label">Activities</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ opportunities_count|default:"0" }}</div>
+        <div class="stat-label">Opportunities</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">KES {{ total_value|floatformat:0|default:"0" }}</div>
+        <div class="stat-label">Total Value</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions mb-4">
+    <a href="mailto:{{ contact.email }}" class="quick-action">
+        <i class="fas fa-envelope"></i>
+        <strong>Send Email</strong>
+        <div class="small text-muted">{{ contact.email }}</div>
+    </a>
+    
+    {% if contact.phone %}
+    <a href="tel:{{ contact.phone }}" class="quick-action">
+        <i class="fas fa-phone"></i>
+        <strong>Call</strong>
+        <div class="small text-muted">{{ contact.phone }}</div>
+    </a>
+    {% endif %}
+    
+    <a href="{% url 'crm:activity_create' %}?contact={{ contact.pk }}" class="quick-action">
+        <i class="fas fa-calendar-plus"></i>
+        <strong>Schedule Meeting</strong>
+        <div class="small text-muted">Create activity</div>
+    </a>
+    
+    <a href="{% url 'crm:lead_create' %}?contact={{ contact.pk }}" class="quick-action">
+        <i class="fas fa-user-plus"></i>
+        <strong>Create Lead</strong>
+        <div class="small text-muted">New opportunity</div>
+    </a>
+    
+    <a href="{% url 'crm:contact_update' contact.pk %}" class="quick-action">
+        <i class="fas fa-edit"></i>
+        <strong>Edit Contact</strong>
+        <div class="small text-muted">Update information</div>
+    </a>
+</div>
+
+<div class="row">
+    <!-- Left Column - Contact Information -->
+    <div class="col-lg-8">
+        <!-- Contact Information -->
+        <div class="info-card">
+            <h6><i class="fas fa-info-circle me-2"></i>Contact Information</h6>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Full Name</div>
+                            <p class="info-value">
+                                {{ contact.get_title_display }} {{ contact.get_full_name }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Email</div>
+                            <p class="info-value">
+                                <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Phone</div>
+                            <p class="info-value">
+                                {{ contact.phone|default:"Not provided" }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if contact.mobile %}
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Mobile</div>
+                            <p class="info-value">
+                                {{ contact.mobile }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Position</div>
+                            <p class="info-value">
+                                {{ contact.position|default:"Not specified" }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Address</div>
+                            <p class="info-value">
+                                {% if contact.address_line_1 %}
+                                    {{ contact.address_line_1 }}<br>
+                                    {% if contact.address_line_2 %}{{ contact.address_line_2 }}<br>{% endif %}
+                                    {{ contact.city }}{% if contact.county %}, {{ contact.county }}{% endif %}
+                                    {% if contact.postal_code %}<br>{{ contact.postal_code }}{% endif %}
+                                {% else %}
+                                    No address provided
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if contact.linkedin_url %}
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fab fa-linkedin"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">LinkedIn</div>
+                            <p class="info-value">
+                                <a href="{{ contact.linkedin_url }}" target="_blank">View Profile</a>
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="info-label">Status</div>
+                            <p class="info-value">
+                                <span class="badge bg-{{ contact.status|yesno:'success,danger' }}">
+                                    {{ contact.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Company Information -->
+        {% if contact.companies.exists %}
+        <div class="info-card">
+            <h6><i class="fas fa-building me-2"></i>Company Associations</h6>
+            {% for company in contact.companies.all %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <strong>{{ company.name }}</strong>
+                    <div class="small text-muted">{{ company.get_company_type_display }}</div>
+                </div>
+                <a href="{% url 'crm:company_detail' company.pk %}" class="company-link">
+                    <i class="fas fa-external-link-alt me-2"></i>View Company
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Notes -->
+        {% if contact.notes %}
+        <div class="info-card">
+            <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+            <div class="contact-notes">
+                {{ contact.notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Recent Activity Timeline -->
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activities</h6>
+                <a href="{% url 'crm:activity_create' %}?contact={{ contact.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Activity
+                </a>
+            </div>
+            
+            {% if recent_activities %}
+            <div class="timeline">
+                {% for activity in recent_activities %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="activity-type">{{ activity.get_activity_type_display }}</span>
+                            <strong class="ms-2">{{ activity.subject }}</strong>
+                        </div>
+                        <small class="text-muted">{{ activity.scheduled_datetime|date:"M d, Y H:i" }}</small>
+                    </div>
+                    
+                    {% if activity.description %}
+                    <p class="mb-2 text-muted">{{ activity.description|truncatewords:20 }}</p>
+                    {% endif %}
+                    
+                    {% if activity.outcome %}
+                    <div class="bg-light p-2 rounded mt-2">
+                        <strong>Outcome:</strong> {{ activity.outcome|truncatewords:15 }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <small class="text-muted">
+                            Assigned to: {{ activity.assigned_to.get_full_name }}
+                        </small>
+                        <a href="{% url 'crm:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if contact.activities.count > 5 %}
+            <div class="text-center mt-3">
+                <a href="{% url 'crm:activity_list' %}?contact={{ contact.pk }}" class="btn btn-outline-primary">
+                    View All Activities ({{ contact.activities.count }})
+                </a>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No activities recorded</h6>
+                <p class="text-muted">Start tracking your interactions with this contact.</p>
+                <a href="{% url 'crm:activity_create' %}?contact={{ contact.pk }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add First Activity
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Right Column - Sidebar Information -->
+    <div class="col-lg-4">
+        <!-- Lead Summary -->
+        {% if contact.leads.exists %}
+        <div class="info-card">
+            <h6><i class="fas fa-user-plus me-2"></i>Leads & Opportunities</h6>
+            
+            {% for lead in contact.leads.all|slice:":3" %}
+            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                <div>
+                    <strong>{{ lead.title|truncatechars:30 }}</strong>
+                    <div class="small text-muted">{{ lead.get_status_display }}</div>
+                    {% if lead.estimated_value %}
+                        <div class="small text-success">KES {{ lead.estimated_value|floatformat:0 }}</div>
+                    {% endif %}
+                </div>
+                <a href="{% url 'crm:lead_detail' lead.pk %}" class="btn btn-outline-primary btn-sm">
+                    View
+                </a>
+            </div>
+            {% endfor %}
+            
+            {% if contact.leads.count > 3 %}
+            <div class="text-center">
+                <a href="{% url 'crm:lead_list' %}?contact={{ contact.pk }}" class="btn btn-outline-primary btn-sm">
+                    View All ({{ contact.leads.count }})
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Quick Stats -->
+        <div class="info-card">
+            <h6><i class="fas fa-chart-bar me-2"></i>Relationship Summary</h6>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Total Leads:</span>
+                    <strong>{{ contact.leads.count }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Active Leads:</span>
+                    <strong>{{ active_leads_count|default:"0" }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Activities:</span>
+                    <strong>{{ contact.activities.count }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Last Contact:</span>
+                    <strong>
+                        {% if contact.activities.first %}
+                            {{ contact.activities.first.scheduled_datetime|date:"M d" }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="text-center">
+                <div class="badge-custom badge-lead">Lead Source: {{ contact.lead_source|default:"Unknown" }}</div>
+            </div>
+        </div>
+        
+        <!-- Related Records -->
+        <div class="info-card">
+            <h6><i class="fas fa-link me-2"></i>Related Records</h6>
+            
+            <div class="d-grid gap-2">
+                {% if contact.leads.exists %}
+                <a href="{% url 'crm:lead_list' %}?contact={{ contact.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-user-plus me-2"></i>Leads ({{ contact.leads.count }})
+                </a>
+                {% endif %}
+                
+                {% if contact.activities.exists %}
+                <a href="{% url 'crm:activity_list' %}?contact={{ contact.pk }}" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-calendar me-2"></i>Activities ({{ contact.activities.count }})
+                </a>
+                {% endif %}
+                
+                {% if contact.companies.exists %}
+                <a href="{% url 'crm:company_list' %}?contact={{ contact.pk }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-building me-2"></i>Companies ({{ contact.companies.count }})
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="info-card">
+            <h6><i class="fas fa-cogs me-2"></i>Actions</h6>
+            
+            <div class="d-grid gap-2">
+                <a href="{% url 'crm:contact_update' contact.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Contact
+                </a>
+                
+                <a href="{% url 'crm:lead_create' %}?contact={{ contact.pk }}" class="btn btn-success">
+                    <i class="fas fa-user-plus me-2"></i>Create Lead
+                </a>
+                
+                <a href="{% url 'crm:activity_create' %}?contact={{ contact.pk }}" class="btn btn-info">
+                    <i class="fas fa-calendar-plus me-2"></i>Log Activity
+                </a>
+                
+                <button class="btn btn-warning" onclick="exportContact()">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </button>
+                
+                <button class="btn btn-outline-danger" onclick="deleteContact()">
+                    <i class="fas fa-trash me-2"></i>Delete Contact
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportContact() {
+    alert('Export functionality coming soon!');
+}
+
+function deleteContact() {
+    if (confirm('Are you sure you want to delete this contact? This action cannot be undone and will also remove all associated leads and activities.')) {
+        fetch(`{% url 'crm:contact_delete' contact.pk %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '{% url "crm:contact_list" %}';
+            } else {
+                alert('Error deleting contact. Please try again.');
+            }
+        })
+        .catch(error => {
+            alert('Error deleting contact. Please try again.');
+        });
+    }
+}
+
+// Auto-refresh activity timeline every 5 minutes
+setInterval(function() {
+    // You could implement AJAX refresh here
+    console.log('Auto-refresh activities');
+}, 300000);
+</script>
+{% endblock %}

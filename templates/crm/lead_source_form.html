@@ -1,0 +1,58 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Lead Source{% else %}New Lead Source{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Lead Source{% else %}New Lead Source{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    {% if object %}Update lead source details{% else %}Create a new lead acquisition channel{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:lead_source_list' %}">Lead Sources</a></li>
+<li class="breadcrumb-item active">{% if object %}Edit{% else %}New{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        {{ form.name|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.is_active|as_crispy_field }}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'crm:lead_source_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update{% else %}Create{% endif %} Lead Source
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

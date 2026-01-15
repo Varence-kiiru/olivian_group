@@ -1,0 +1,195 @@
+{% comment %}
+CSS for Universal Customer Modal Component
+Include this in your template's extra_css block
+{% endcomment %}
+
+<style>
+/* Universal Customer Modal Styles */
+#universalCustomerModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#universalCustomerModal .form-control,
+#universalCustomerModal .form-select {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+#universalCustomerModal .form-control:focus,
+#universalCustomerModal .form-select:focus {
+    border-color: #38b6ff;
+    box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+}
+
+#universalCustomerModal .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+#universalCustomerModal .text-danger {
+    color: #dc3545 !important;
+}
+
+#universalCustomerModal .text-muted {
+    color: #6c757d !important;
+}
+
+#universalCustomerModal .border-bottom {
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+#universalCustomerModal .invalid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+#universalCustomerModal .form-control.is-invalid,
+#universalCustomerModal .form-select.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+#universalCustomerModal .form-control.is-invalid ~ .invalid-feedback,
+#universalCustomerModal .form-select.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+#universalCustomerModal .btn {
+    border-radius: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+#universalCustomerModal .btn-primary {
+    background-color: #38b6ff;
+    border-color: #38b6ff;
+}
+
+#universalCustomerModal .btn-primary:hover {
+    background-color: #2a9fd9;
+    border-color: #2a9fd9;
+}
+
+#universalCustomerModal .btn-primary:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    opacity: 0.65;
+}
+
+/* Loading Overlay */
+.customer-modal-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1060;
+    color: white;
+    font-weight: 500;
+}
+
+.customer-modal-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    #universalCustomerModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    #universalCustomerModal .modal-body {
+        max-height: 60vh;
+        padding: 1rem;
+    }
+    
+    #universalCustomerModal .row > div {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animation for showing/hiding sections */
+#business-info-section,
+#solar-info-section {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Form validation styles */
+.was-validated .form-control:valid,
+.was-validated .form-select:valid {
+    border-color: #28a745;
+}
+
+.was-validated .form-control:valid:focus,
+.was-validated .form-select:valid:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Custom checkbox styling */
+#universalCustomerModal .form-check-input {
+    border-radius: 4px;
+}
+
+#universalCustomerModal .form-check-input:checked {
+    background-color: #38b6ff;
+    border-color: #38b6ff;
+}
+
+#universalCustomerModal .form-check-input:focus {
+    border-color: #38b6ff;
+    box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+}
+
+/* Section headers */
+#universalCustomerModal h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+
+#universalCustomerModal h6 i {
+    color: #38b6ff;
+}
+
+/* Help text */
+#universalCustomerModal .form-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Modal header */
+#universalCustomerModal .modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#universalCustomerModal .modal-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+#universalCustomerModal .modal-title i {
+    color: #38b6ff;
+}
+
+/* Modal footer */
+#universalCustomerModal .modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+</style>

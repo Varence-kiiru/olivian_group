@@ -1,0 +1,50 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Welcome to {{ company_name }}{% endblock %}
+
+{% block content %}
+<h2>Welcome to {{ company_name }}!</h2>
+
+<p>Dear {{ user_name }},</p>
+
+<p>Welcome to the Olivian Group family! We're excited to have you on board as part of our mission to provide professional solar solutions across Kenya.</p>
+
+<div class="highlight-box">
+    <h3>Your Account Details:</h3>
+    <p><strong>Email:</strong> {{ user_email }}</p>
+    <p><strong>Role:</strong> {{ role|title }}</p>
+    <p><strong>Registration Date:</strong> {{ "now"|date:"F d, Y" }}</p>
+</div>
+
+<p>As a {{ role|title }}, you now have access to our comprehensive solar solutions platform where you can:</p>
+
+<ul>
+    <li>Browse our extensive catalog of premium solar products</li>
+    <li>Request detailed quotations for your projects</li>
+    <li>Track your orders and project progress</li>
+    <li>Access technical support and documentation</li>
+    <li>Manage your account preferences</li>
+</ul>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ company_website }}" class="button">Explore Our Platform</a>
+</div>
+
+<h3>Next Steps:</h3>
+<ol>
+    <li>Complete your profile information for better service</li>
+    <li>Browse our product catalog to see what's available</li>
+    <li>Contact our sales team for any immediate requirements</li>
+    <li>Follow our project updates and solar technology insights</li>
+</ol>
+
+<p>Our team is here to support you every step of the way. Whether you're planning a residential installation or a large commercial project, we have the expertise and products to meet your needs.</p>
+
+<p>If you have any questions or need assistance getting started, don't hesitate to reach out to our support team.</p>
+
+<p>Thank you for choosing {{ company_name }} - your trusted partner in sustainable energy solutions!</p>
+
+<p>Best regards,<br>
+<strong>The Olivian Group Team</strong><br>
+Customer Success Department</p>
+{% endblock %}

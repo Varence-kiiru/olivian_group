@@ -1,0 +1,325 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Bank Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Bank Management{% endblock %}
+{% block page_subtitle %}Manage banking institutions and their details{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Banks</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .bank-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .bank-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .bank-card.active { border-left-color: #28a745; }
+    .bank-card.inactive { border-left-color: #dc3545; }
+    
+    .bank-logo {
+        width: 60px;
+        height: 60px;
+        background: var(--primary-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .bank-code {
+        background: #f8f9fa;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        border: 1px solid #e9ecef;
+    }
+    
+    .bank-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active { background: #d4edda; color: #155724; }
+    .status-inactive { background: #f8d7da; color: #721c24; }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid var(--primary-color);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .account-count {
+        background: rgba(56, 182, 255, 0.1);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-university me-2"></i>Bank Management
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'financial:bank_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Bank
+        </a>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_banks }}</div>
+        <div class="stat-label">Total Banks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ active_banks }}</div>
+        <div class="stat-label">Active Banks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_accounts }}</div>
+        <div class="stat-label">Total Accounts</div>
+    </div>
+    <div class="stat-card">
+<div class="stat-number">{{ inactive_banks|default:"0" }}</div>
+        <div class="stat-label">Inactive Banks</div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-6">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ request.GET.search }}" placeholder="Bank name, code, or SWIFT code...">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Banks Grid -->
+<div class="row">
+    {% for bank in banks %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="bank-card {% if bank.is_active %}active{% else %}inactive{% endif %}">
+            <!-- Bank Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="flex-grow-1">
+                    <div class="bank-logo">
+                        {{ bank.code|slice:":2"|upper }}
+                    </div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'financial:bank_detail' bank.pk %}" class="text-decoration-none">
+                            {{ bank.name }}
+                        </a>
+                    </h6>
+                    <div class="bank-code">{{ bank.code }}</div>
+                </div>
+                <div class="text-end">
+                    {% if bank.is_active %}
+                        <span class="bank-status status-active">Active</span>
+                    {% else %}
+                        <span class="bank-status status-inactive">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Bank Details -->
+            {% if bank.swift_code %}
+            <div class="mb-2">
+                <div class="small text-muted mb-1">SWIFT Code</div>
+                <div class="small font-monospace">{{ bank.swift_code }}</div>
+            </div>
+            {% endif %}
+            
+            {% if bank.central_bank_code %}
+            <div class="mb-2">
+                <div class="small text-muted mb-1">CBK Code</div>
+                <div class="small font-monospace">{{ bank.central_bank_code }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Account Statistics -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small text-muted">Bank Accounts</span>
+                    <span class="account-count">{{ bank.accounts.count }} account{{ bank.accounts.count|pluralize }}</span>
+                </div>
+                
+                {% if bank.accounts.count > 0 %}
+                <div class="mt-2">
+                    <div class="small text-muted">
+                        Active: {{ bank.accounts.filter:is_active }}{{ bank.accounts.count }} | 
+                        Total Balance: KES {{ bank.accounts.aggregate.total__sum|default:"0.00"|floatformat:2 }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Contact Information Preview -->
+            {% if bank.contact_info %}
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Contact Info</div>
+                <div class="small">{{ bank.contact_info|truncatechars:50 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Creation Date -->
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Added</div>
+                <div class="small">{{ bank.created_at|date:"M d, Y" }}</div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="d-flex gap-2">
+                <a href="{% url 'financial:bank_detail' bank.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <a href="{% url 'financial:bank_update' bank.pk %}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% if bank.accounts.count == 0 %}
+                <a href="{% url 'financial:bank_delete' bank.pk %}" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Delete
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-university fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No banks found</h5>
+            <p class="text-muted">
+                {% if request.GET.search or request.GET.status %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by adding your first bank.
+                {% endif %}
+            </p>
+            <a href="{% url 'financial:bank_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Bank
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Bank pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

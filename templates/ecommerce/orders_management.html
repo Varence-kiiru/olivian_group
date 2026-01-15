@@ -1,0 +1,728 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Customer Orders - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-history-entry {
+        border-left: 3px solid var(--primary-color);
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #f8f9fa;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .status-history-entry:last-child {
+        margin-bottom: 0;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        margin-right: 2px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Customer Orders{% endblock %}
+
+{% block page_subtitle %}Manage all customer orders{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<!-- Management Orders Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">Customer Orders Management</h2>
+                <p class="text-muted">Monitor and manage all customer orders</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'ecommerce:track_order' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-search me-1"></i>Track Order
+                </a>
+                <a href="{% url 'ecommerce:orders' %}?export=csv" class="btn btn-outline-primary">
+                    <i class="fas fa-download me-1"></i>Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Orders</h3>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Filter by Status</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="received">Order Received</option>
+                            <option value="pending_payment">Pending Payment</option>
+                            <option value="pay_on_delivery">Pay on Delivery</option>
+                            <option value="paid">Payment Confirmed</option>
+                            <option value="processing">Processing</option>
+                            <option value="packed_ready">Packed & Ready</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="out_for_delivery">Out for Delivery</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="returned">Returned</option>
+                            <option value="refunded">Refunded</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date-filter" class="form-label">Filter by Date</label>
+                        <select class="form-select" id="date-filter">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search-orders" class="form-label">Search Orders</label>
+                        <input type="text" class="form-control" id="search-orders" placeholder="Search by order number, customer email...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-primary w-100" onclick="clearFilters()">
+                            <i class="fas fa-refresh me-2"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orders List -->
+        <div id="orders-container">
+            <!-- Orders will be loaded here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-orders" class="text-center py-5" style="display: none;">
+            <i class="fas fa-shopping-bag text-muted" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">No orders found</h4>
+            <p class="text-muted">No customer orders found</p>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Orders pagination" id="orders-pagination" style="display: none;">
+            <ul class="pagination justify-content-center">
+                <!-- Pagination will be generated here -->
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dynamic company settings
+const CURRENCY = '{{ company.default_currency|default:"KES" }}';
+const VAT_RATE = {{ company.vat_rate|default:16 }};
+
+let currentPage = 1;
+let totalPages = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrders();
+    setupFilters();
+});
+
+function setupFilters() {
+    document.getElementById('status-filter').addEventListener('change', loadOrders);
+    document.getElementById('date-filter').addEventListener('change', loadOrders);
+    document.getElementById('search-orders').addEventListener('input', debounce(loadOrders, 500));
+}
+
+function clearFilters() {
+    document.getElementById('status-filter').value = '';
+    document.getElementById('date-filter').value = '';
+    document.getElementById('search-orders').value = '';
+    currentPage = 1;
+    loadOrders();
+}
+
+function loadOrders() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const dateFilter = document.getElementById('date-filter').value;
+    const searchQuery = document.getElementById('search-orders').value;
+    
+    const params = new URLSearchParams({
+        page: currentPage,
+        status: statusFilter,
+        date_range: dateFilter,
+        search: searchQuery
+    });
+    
+    // Remove empty parameters
+    for (let [key, value] of params.entries()) {
+        if (!value) params.delete(key);
+    }
+    
+    const ordersContainer = document.getElementById('orders-container');
+    const emptyState = document.getElementById('empty-orders');
+    const pagination = document.getElementById('orders-pagination');
+    
+    // Show loading state
+    ordersContainer.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading orders...</p>
+        </div>
+    `;
+    
+    fetch(`/shop/api/orders/?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.orders && data.orders.length > 0) {
+                renderOrders(data.orders);
+                renderPagination(data.pagination);
+                emptyState.style.display = 'none';
+                pagination.style.display = 'block';
+            } else {
+                ordersContainer.innerHTML = '';
+                emptyState.style.display = 'block';
+                pagination.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading orders:', error);
+            ordersContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading orders. Please try again.
+                </div>
+            `;
+        });
+}
+
+function renderOrders(orders) {
+    const container = document.getElementById('orders-container');
+    
+    container.innerHTML = `
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orders.map(order => `
+                            <tr>
+                                <td>
+                                    <strong>${order.order_number}</strong>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>${order.customer_name || 'N/A'}</strong>
+                                        <br>
+                                        <small class="text-muted">${order.customer_email || 'N/A'}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        ${formatDate(order.created_at)}
+                                        <br>
+                                        <small class="text-muted">${formatTime(order.created_at)}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-${getStatusColor(order.status)}">${formatStatus(order.status)}</span>
+                                </td>
+                                <td>
+                                    <strong>${CURRENCY} ${formatCurrency(order.total_amount)}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-${getPaymentStatusColor(order.payment_status)}">${formatPaymentStatus(order.payment_status)}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/shop/orders/${order.order_number}/" class="btn btn-outline-primary btn-sm" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-outline-info btn-sm" onclick="showStatusHistory('${order.order_number}')" title="Status History">
+                                            <i class="fas fa-history"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="showStatusUpdateModal('${order.order_number}', '${order.status}', '${order.status_display}')" title="Update Status">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="More Actions">
+                                            <i class="fas fa-ellipsis-h"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="/shop/orders/${order.order_number}/receipt/">
+                                                <i class="fas fa-receipt me-2"></i>Receipt
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            ${order.next_status_options && order.next_status_options.length > 0 ? 
+                                                order.next_status_options.map(status => `
+                                                    <li><a class="dropdown-item" href="#" onclick="quickUpdateStatus('${order.order_number}', '${status}')">
+                                                        <i class="fas fa-arrow-right me-2"></i>Move to ${formatStatus(status)}
+                                                    </a></li>
+                                                `).join('') : 
+                                                '<li><span class="dropdown-item-text text-muted">No status changes available</span></li>'
+                                            }
+                                            ${order.can_be_cancelled ? `
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="quickUpdateStatus('${order.order_number}', 'cancelled')">
+                                                    <i class="fas fa-times me-2"></i>Cancel Order
+                                                </a></li>
+                                            ` : ''}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function renderPagination(pagination) {
+    const container = document.getElementById('orders-pagination');
+    const ul = container.querySelector('ul');
+    
+    totalPages = pagination.total_pages;
+    currentPage = pagination.current_page;
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    if (currentPage > 1) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+            </li>
+        `;
+    }
+    
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // Next button
+    if (currentPage < totalPages) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+            </li>
+        `;
+    }
+    
+    ul.innerHTML = paginationHTML;
+}
+
+function changePage(page) {
+    currentPage = page;
+    loadOrders();
+}
+
+async function quickUpdateStatus(orderNumber, status) {
+    const statusDisplayNames = {
+        'received': 'Order Received',
+        'pending_payment': 'Pending Payment',
+        'pay_on_delivery': 'Pay on Delivery',
+        'paid': 'Payment Confirmed',
+        'processing': 'Processing',
+        'packed_ready': 'Packed & Ready',
+        'shipped': 'Shipped',
+        'out_for_delivery': 'Out for Delivery',
+        'delivered': 'Delivered',
+        'completed': 'Completed',
+        'cancelled': 'Cancelled',
+        'returned': 'Returned',
+        'refunded': 'Refunded'
+    };
+
+    const result = await Swal.fire({
+        title: 'Confirm Status Update',
+        text: `Are you sure you want to update this order status to "${statusDisplayNames[status] || status}"?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Update Status',
+        cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+        updateOrderStatus(orderNumber, status);
+    }
+}
+
+function updateOrderStatus(orderNumber, status, notes = '') {
+    fetch(`/shop/api/orders/${orderNumber}/status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ status: status, notes: notes })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            loadOrders(); // Reload orders to show updated status
+            showAlert('success', data.message || 'Order status updated successfully');
+            
+            // Close modal if open
+            const modal = document.getElementById('statusUpdateModal');
+            if (modal) {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+            }
+        } else {
+            showAlert('error', data.message || 'Error updating order status');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating order status:', error);
+        showAlert('error', `Error updating order status: ${error.message || 'Unknown error'}`);
+    });
+}
+
+function showStatusUpdateModal(orderNumber, currentStatus, currentStatusDisplay) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('statusUpdateModal');
+    if (!modal) {
+        modal = createStatusUpdateModal();
+        document.body.appendChild(modal);
+    }
+    
+    // Populate modal
+    document.getElementById('modalOrderNumber').textContent = orderNumber;
+    document.getElementById('modalCurrentStatus').textContent = currentStatusDisplay;
+    document.getElementById('statusUpdateForm').dataset.orderNumber = orderNumber;
+    document.getElementById('statusNotes').value = '';
+    
+    // Populate status options
+    populateStatusOptions(currentStatus);
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+function createStatusUpdateModal() {
+    const modalHTML = `
+        <div class="modal fade" id="statusUpdateModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Update Order Status</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Order:</strong> <span id="modalOrderNumber"></span></p>
+                        <p><strong>Current Status:</strong> <span id="modalCurrentStatus"></span></p>
+                        
+                        <form id="statusUpdateForm">
+                            <div class="mb-3">
+                                <label for="newStatus" class="form-label">New Status</label>
+                                <select class="form-select" id="newStatus" required>
+                                    <option value="">Select new status...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="statusNotes" class="form-label">Notes (Optional)</label>
+                                <textarea class="form-control" id="statusNotes" rows="3" placeholder="Add notes about this status change..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="submitStatusUpdate()">Update Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = modalHTML;
+    return tempDiv.firstElementChild;
+}
+
+function populateStatusOptions(currentStatus) {
+    const statusOptions = {
+        'received': [
+            {value: 'pending_payment', text: 'Pending Payment'},
+            {value: 'paid', text: 'Payment Confirmed'},
+            {value: 'cancelled', text: 'Cancelled'}
+        ],
+        'pending_payment': [
+            {value: 'paid', text: 'Payment Confirmed'},
+            {value: 'cancelled', text: 'Cancelled'}
+        ],
+        'paid': [
+            {value: 'processing', text: 'Processing'},
+            {value: 'cancelled', text: 'Cancelled'}
+        ],
+        'processing': [
+            {value: 'packed_ready', text: 'Packed & Ready'},
+            {value: 'cancelled', text: 'Cancelled'}
+        ],
+        'packed_ready': [
+            {value: 'shipped', text: 'Shipped'}
+        ],
+        'shipped': [
+            {value: 'out_for_delivery', text: 'Out for Delivery'},
+            {value: 'delivered', text: 'Delivered'}
+        ],
+        'out_for_delivery': [
+            {value: 'delivered', text: 'Delivered'},
+            {value: 'returned', text: 'Returned'}
+        ],
+        'delivered': [
+            {value: 'completed', text: 'Completed'},
+            {value: 'returned', text: 'Returned'}
+        ],
+        'completed': [
+            {value: 'returned', text: 'Returned'}
+        ],
+        'returned': [
+            {value: 'refunded', text: 'Refunded'}
+        ]
+    };
+    
+    const select = document.getElementById('newStatus');
+    select.innerHTML = '<option value="">Select new status...</option>';
+    
+    const options = statusOptions[currentStatus] || [];
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.text;
+        select.appendChild(optionElement);
+    });
+}
+
+function submitStatusUpdate() {
+    const form = document.getElementById('statusUpdateForm');
+    const orderNumber = form.dataset.orderNumber;
+    const newStatus = document.getElementById('newStatus').value;
+    const notes = document.getElementById('statusNotes').value;
+    
+    if (!newStatus) {
+        showAlert('error', 'Please select a new status');
+        return;
+    }
+    
+    updateOrderStatus(orderNumber, newStatus, notes);
+}
+
+function showStatusHistory(orderNumber) {
+    fetch(`/shop/api/orders/${orderNumber}/history/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showStatusHistoryModal(orderNumber, data.history);
+            } else {
+                showAlert('error', data.message || 'Error loading status history');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading status history:', error);
+            showAlert('error', 'Error loading status history');
+        });
+}
+
+function showStatusHistoryModal(orderNumber, history) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('statusHistoryModal');
+    if (!modal) {
+        modal = createStatusHistoryModal();
+        document.body.appendChild(modal);
+    }
+    
+    // Populate modal
+    document.getElementById('historyOrderNumber').textContent = orderNumber;
+    
+    const historyContainer = document.getElementById('statusHistoryContainer');
+    if (history.length === 0) {
+        historyContainer.innerHTML = '<div class="text-center py-3 text-muted">No status history available</div>';
+    } else {
+        historyContainer.innerHTML = history.map(entry => `
+            <div class="status-history-entry">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${entry.new_status_display}</strong>
+                        ${entry.previous_status ? `<small class="text-muted">(from ${entry.previous_status_display})</small>` : ''}
+                        <br>
+                        <small class="text-muted">by ${entry.changed_by}</small>
+                    </div>
+                    <small class="text-muted">${formatDateTime(entry.created_at)}</small>
+                </div>
+                ${entry.notes ? `<div class="mt-2"><small>${entry.notes}</small></div>` : ''}
+            </div>
+        `).join('');
+    }
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+function createStatusHistoryModal() {
+    const modalHTML = `
+        <div class="modal fade" id="statusHistoryModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Order Status History</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Order:</strong> <span id="historyOrderNumber"></span></p>
+                        <div id="statusHistoryContainer">
+                            <!-- History entries will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = modalHTML;
+    return tempDiv.firstElementChild;
+}
+
+function formatDateTime(dateTimeString) {
+    return new Date(dateTimeString).toLocaleString();
+}
+
+// Utility functions
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString();
+}
+
+function formatTime(dateString) {
+    return new Date(dateString).toLocaleTimeString();
+}
+
+function formatCurrency(amount) {
+    return parseFloat(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatStatus(status) {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatPaymentStatus(status) {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'received': 'info',
+        'pending_payment': 'warning',
+        'pay_on_delivery': 'warning',
+        'paid': 'success',
+        'processing': 'primary',
+        'packed_ready': 'info',
+        'shipped': 'info',
+        'out_for_delivery': 'primary',
+        'delivered': 'success',
+        'completed': 'success',
+        'cancelled': 'danger',
+        'returned': 'warning',
+        'refunded': 'secondary'
+    };
+    return colors[status] || 'secondary';
+}
+
+function getPaymentStatusColor(status) {
+    const colors = {
+        'pending': 'warning',
+        'paid': 'success',
+        'failed': 'danger',
+        'refunded': 'info'
+    };
+    return colors[status] || 'secondary';
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+function showAlert(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const alertHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Add to top of content area
+    const contentArea = document.querySelector('.content-area');
+    contentArea.insertAdjacentHTML('afterbegin', alertHTML);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const alert = contentArea.querySelector('.alert');
+        if (alert) alert.remove();
+    }, 5000);
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

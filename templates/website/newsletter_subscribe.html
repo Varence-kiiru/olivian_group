@@ -1,0 +1,82 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Newsletter Subscription - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Newsletter</li>
+{% endblock %}
+
+{% block content %}
+<main class="main">
+    <!-- Page Title -->
+    <div class="page-title dark-background page-title-newsletter" data-aos="fade">
+        <div class="container position-relative">
+            <h1>Newsletter Subscription</h1>
+        </div>
+    </div><!-- End Page Title -->
+
+    <!-- Newsletter Section -->
+    <section id="newsletter" class="newsletter section">
+        <div class="container" data-aos="fade-up">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="section-title text-center">
+                        <h2>Stay Updated</h2>
+                        <p>Subscribe to our newsletter to receive the latest updates on solar energy solutions, project showcases, and industry insights.</p>
+                    </div>
+
+                    <div class="newsletter-form">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post" action="{% url 'core:newsletter_subscribe' %}" class="php-email-form">
+                            {% csrf_token %}
+                            <div class="row gy-4">
+                                <div class="col-md-6">
+                                    <input type="text" name="first_name" class="form-control" placeholder="First Name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="last_name" class="form-control" placeholder="Last Name" required>
+                                </div>
+                                <div class="col-12">
+                                    <input type="email" name="email" class="form-control" placeholder="Your Email" required>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="consent" id="consent" required>
+                                        <label class="form-check-label" for="consent">
+                                            I agree to receive marketing emails and understand I can unsubscribe at any time. *
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary">Subscribe to Newsletter</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="newsletter-benefits mt-5">
+                        <h4>What you'll get:</h4>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-primary"></i> Latest solar energy trends and insights</li>
+                            <li><i class="bi bi-check-circle text-primary"></i> Project showcases and case studies</li>
+                            <li><i class="bi bi-check-circle text-primary"></i> Special offers and promotions</li>
+                            <li><i class="bi bi-check-circle text-primary"></i> Industry news and updates</li>
+                        </ul>
+                        <p class="text-muted small">We respect your privacy and will never share your information with third parties.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section><!-- End Newsletter Section -->
+</main>
+{% endblock %}

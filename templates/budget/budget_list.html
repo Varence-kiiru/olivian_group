@@ -1,0 +1,291 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Budget Management{% endblock %}
+{% block page_subtitle %}Monitor and control financial resources{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Budget Management</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .budget-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .budget-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .budget-card.status-draft { border-left-color: #6c757d; }
+    .budget-card.status-submitted { border-left-color: #17a2b8; }
+    .budget-card.status-under_review { border-left-color: #ffc107; }
+    .budget-card.status-approved { border-left-color: #28a745; }
+    .budget-card.status-rejected { border-left-color: #dc3545; }
+    .budget-card.status-active { border-left-color: var(--primary-color); }
+    .budget-card.status-closed { border-left-color: #6c757d; }
+    
+    .progress-bar-custom {
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .amount-display {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .variance-positive { color: var(--success-color); }
+    .variance-negative { color: var(--danger-color); }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value text-primary">{{ budgets.count }}</div>
+        <div class="text-muted">Total Budgets</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-success">₹{% widthratio budgets.aggregate.total_amount.sum 1 1 %}</div>
+        <div class="text-muted">Total Allocated</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-warning">{{ budgets.filter.status.active.count }}</div>
+        <div class="text-muted">Active Budgets</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-info">{{ budgets.filter.status.under_review.count }}</div>
+        <div class="text-muted">Pending Approval</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Search</label>
+            <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" 
+                   placeholder="Search budgets...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="submitted" {% if request.GET.status == 'submitted' %}selected{% endif %}>Submitted</option>
+                <option value="under_review" {% if request.GET.status == 'under_review' %}selected{% endif %}>Under Review</option>
+                <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Budget Type</label>
+            <select class="form-select" name="budget_type">
+                <option value="">All Types</option>
+                <option value="project" {% if request.GET.budget_type == 'project' %}selected{% endif %}>Project</option>
+                <option value="department" {% if request.GET.budget_type == 'department' %}selected{% endif %}>Department</option>
+                <option value="annual" {% if request.GET.budget_type == 'annual' %}selected{% endif %}>Annual</option>
+                <option value="quarterly" {% if request.GET.budget_type == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                <option value="monthly" {% if request.GET.budget_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                <option value="operational" {% if request.GET.budget_type == 'operational' %}selected{% endif %}>Operational</option>
+                <option value="capital" {% if request.GET.budget_type == 'capital' %}selected{% endif %}>Capital</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Budget List</h5>
+    <div class="btn-group">
+        <a href="{% url 'budget:create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Budget
+        </a>
+        <a href="{% url 'budget:category_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-tags"></i> Categories
+        </a>
+        <a href="{% url 'budget:report_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-chart-bar"></i> Reports
+        </a>
+    </div>
+</div>
+
+<!-- Budget Cards -->
+<div class="row">
+    {% for budget in budgets %}
+    <div class="col-12">
+        <div class="budget-card status-{{ budget.status }}">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-1">
+                            <a href="{% url 'budget:detail' budget.pk %}" class="text-decoration-none">
+                                {{ budget.name }}
+                            </a>
+                        </h5>
+                        <span class="badge bg-{{ budget.status|yesno:'primary,warning,secondary' }} ms-2">
+                            {{ budget.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <p class="text-muted mb-2">{{ budget.description|truncatewords:20 }}</p>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="fas fa-calendar"></i> {{ budget.period_start }} - {{ budget.period_end }}</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="fas fa-tag"></i> {{ budget.get_budget_type_display }}</small>
+                        </div>
+                        {% if budget.department %}
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="fas fa-building"></i> {{ budget.department }}</small>
+                        </div>
+                        {% endif %}
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="fas fa-user"></i> {{ budget.owner.get_full_name }}</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Budget Progress -->
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Budget Utilization</span>
+                            <span>{{ budget.utilization_percentage|floatformat:1 }}%</span>
+                        </div>
+                        <div class="progress progress-bar-custom" style="height: 6px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ budget.utilization_percentage }}%"
+                                 aria-valuenow="{{ budget.utilization_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-end">
+                        <div class="amount-display mb-2">KES {{ budget.total_amount|floatformat:0 }}</div>
+                        
+                        <div class="row g-1 small text-muted mb-3">
+                            <div class="col-6 text-start">Allocated:</div>
+                            <div class="col-6">KES {{ budget.allocated_amount|floatformat:0 }}</div>
+                            <div class="col-6 text-start">Spent:</div>
+                            <div class="col-6">KES {{ budget.spent_amount|floatformat:0 }}</div>
+                            <div class="col-6 text-start">Available:</div>
+                            <div class="col-6">KES {{ budget.available_amount|floatformat:0 }}</div>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <a href="{% url 'budget:detail' budget.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'budget:edit' budget.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if budget.status == 'draft' %}
+                            <a href="{% url 'budget:delete' budget.pk %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No budgets found</h5>
+            <p class="text-muted">Create your first budget to get started with financial planning.</p>
+            <a href="{% url 'budget:create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Budget
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Budget pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.budget_type %}&budget_type={{ request.GET.budget_type }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.budget_type %}&budget_type={{ request.GET.budget_type }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.budget_type %}&budget_type={{ request.GET.budget_type }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.budget_type %}&budget_type={{ request.GET.budget_type }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

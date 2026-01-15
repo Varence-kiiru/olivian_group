@@ -1,0 +1,468 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Stock Adjustments - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item active">Stock Adjustments</li>
+{% endblock %}
+
+{% block page_name %}Stock Adjustments{% endblock %}
+{% block page_title %}Stock Adjustments{% endblock %}
+{% block page_subtitle %}Manage inventory adjustments and corrections{% endblock %}
+
+{% block extra_css %}
+<style>
+    .adjustments-header {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .adjustment-card {
+        border-left: 4px solid;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .adjustment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .adjustment-pending { border-left-color: #ffc107; }
+    .adjustment-approved { border-left-color: #28a745; }
+    .adjustment-rejected { border-left-color: #dc3545; }
+    
+    .adjustment-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .type-increase { background-color: #d4edda; color: #155724; }
+    .type-decrease { background-color: #f8d7da; color: #721c24; }
+    .type-damage { background-color: #fff3cd; color: #856404; }
+    .type-loss { background-color: #fce4ec; color: #880e4f; }
+    .type-found { background-color: #e3f2fd; color: #0d47a1; }
+    .type-recount { background-color: #f3e5f5; color: #4a148c; }
+    
+    .adjustment-status {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+    }
+    
+    .status-pending { background-color: #fff3cd; color: #856404; }
+    .status-approved { background-color: #d4edda; color: #155724; }
+    .status-rejected { background-color: #f8d7da; color: #721c24; }
+    
+    .adjustment-value {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .value-positive { color: #28a745; }
+    .value-negative { color: #dc3545; }
+    .value-neutral { color: #6c757d; }
+    
+    .filters-card {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        margin-bottom: 1.5rem;
+    }
+    
+    .warehouse-badge {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .approval-section {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .user-avatar {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .adjustment-items-preview {
+        max-height: 100px;
+        overflow-y: auto;
+        font-size: 0.875rem;
+    }
+    
+    .action-dropdown {
+        min-width: 160px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Header -->
+<div class="adjustments-header">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <span class="stat-number">{{ adjustments.count }}</span>
+                <small>Total Adjustments</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <span class="stat-number">{{ pending_count|default:0 }}</span>
+                <small>Pending Approval</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <span class="stat-number">{{ approved_count|default:0 }}</span>
+                <small>Approved</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <span class="stat-number">{{ company.default_currency|default:"KES" }} {{ total_value|default:0|floatformat:0 }}</span>
+                <small>Total Value Impact</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="card filters-card">
+    <div class="card-body">
+        <form method="get" id="filtersForm" class="row align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Adjustment number, reason..." 
+                       value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Warehouse</label>
+                <select name="warehouse" class="form-select">
+                    <option value="">All Warehouses</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.pk }}" {% if request.GET.warehouse == warehouse.pk|stringformat:'s' %}selected{% endif %}>
+                        {{ warehouse.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'inventory:adjustment_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-warning">
+                        <i class="fas fa-plus me-1"></i>New Adjustment
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Adjustments List -->
+<div class="row">
+    {% if adjustments %}
+        {% for adjustment in adjustments %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card adjustment-card h-100 {% if adjustment.approved %}adjustment-approved{% else %}adjustment-pending{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        <a href="{% url 'inventory:adjustment_detail' adjustment.pk %}" class="text-decoration-none">
+                            {{ adjustment.adjustment_number }}
+                        </a>
+                    </h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu action-dropdown">
+                            <li><a class="dropdown-item" href="{% url 'inventory:adjustment_detail' adjustment.pk %}">
+                                <i class="fas fa-eye me-2"></i>View Details
+                            </a></li>
+                            {% if not adjustment.approved %}
+                            <li><a class="dropdown-item" href="{% url 'inventory:adjustment_update' adjustment.pk %}">
+                                <i class="fas fa-edit me-2"></i>Edit
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="approveAdjustment({{ adjustment.pk }})">
+                                <i class="fas fa-check me-2"></i>Approve
+                            </a></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="rejectAdjustment({{ adjustment.pk }})">
+                                <i class="fas fa-times me-2"></i>Reject
+                            </a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="#" onclick="downloadAdjustment({{ adjustment.pk }})">
+                                <i class="fas fa-download me-2"></i>Download PDF
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Adjustment Type and Status -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="adjustment-type-badge type-{{ adjustment.adjustment_type }}">
+                            {{ adjustment.get_adjustment_type_display }}
+                        </span>
+                        <span class="adjustment-status {% if adjustment.approved %}status-approved{% else %}status-pending{% endif %}">
+                            {% if adjustment.approved %}Approved{% else %}Pending{% endif %}
+                        </span>
+                    </div>
+                    
+                    <!-- Warehouse and Date -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="warehouse-badge">{{ adjustment.warehouse.name }}</span>
+                            <small class="text-muted">{{ adjustment.adjustment_date|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Reason -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Reason</label>
+                        <div class="text-truncate" title="{{ adjustment.reason }}">
+                            {{ adjustment.reason|truncatechars:50 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Items Preview -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Items ({{ adjustment.items.count }})</label>
+                        <div class="adjustment-items-preview">
+                            {% for item in adjustment.items.all|slice:":3" %}
+                            <div class="d-flex justify-content-between small">
+                                <span>{{ item.inventory_item.product.name|truncatechars:20 }}</span>
+                                <span class="adjustment-value {% if item.adjustment_quantity > 0 %}value-positive{% elif item.adjustment_quantity < 0 %}value-negative{% else %}value-neutral{% endif %}">
+                                    {% if item.adjustment_quantity > 0 %}+{% endif %}{{ item.adjustment_quantity }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                            {% if adjustment.items.count > 3 %}
+                            <small class="text-muted">... and {{ adjustment.items.count|add:"-3" }} more</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Value Impact -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Value Impact</label>
+                        <div class="adjustment-value {% if adjustment.total_value_impact > 0 %}value-positive{% elif adjustment.total_value_impact < 0 %}value-negative{% else %}value-neutral{% endif %}">
+                            {% if adjustment.total_value_impact > 0 %}+{% endif %}{{ company.default_currency|default:"KES" }} {{ adjustment.total_value_impact|floatformat:2 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Performed By -->
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="small fw-bold">{{ adjustment.performed_by.get_full_name|default:adjustment.performed_by.username }}</div>
+                            <small class="text-muted">{{ adjustment.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Approval Section -->
+                    {% if adjustment.approved and adjustment.approved_by %}
+                    <div class="approval-section">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar">
+                                <i class="fas fa-check text-success"></i>
+                            </div>
+                            <div>
+                                <div class="small fw-bold">Approved by {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}</div>
+                                <small class="text-muted">{{ adjustment.approved_date|timesince }} ago</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid">
+                        <a href="{% url 'inventory:adjustment_detail' adjustment.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-2"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-edit fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No stock adjustments found.</p>
+                {% if request.GET.search or request.GET.status or request.GET.warehouse %}
+                <p class="text-muted">Try adjusting your filters or search terms.</p>
+                <a href="{% url 'inventory:adjustment_list' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-times me-2"></i>Clear Filters
+                </a>
+                {% endif %}
+                <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-warning">
+                    <i class="fas fa-plus me-2"></i>Create First Adjustment
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Adjustments pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}">First</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}">Next</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}">Last</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit filters
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSelects = document.querySelectorAll('select[name="status"], select[name="warehouse"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filtersForm').submit();
+        });
+    });
+});
+
+// Approval actions
+function approveAdjustment(adjustmentId) {
+    if (confirm('Are you sure you want to approve this adjustment? This will update inventory levels.')) {
+        fetch(`/inventory/adjustments/${adjustmentId}/approve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error approving adjustment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error approving adjustment');
+        });
+    }
+}
+
+function rejectAdjustment(adjustmentId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+        fetch(`/inventory/adjustments/${adjustmentId}/reject/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reason: reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error rejecting adjustment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error rejecting adjustment');
+        });
+    }
+}
+
+function downloadAdjustment(adjustmentId) {
+    window.open(`/inventory/adjustments/${adjustmentId}/pdf/`, '_blank');
+}
+
+// Add CSRF token to all forms
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfToken);
+    }
+});
+</script>
+{% endblock %}

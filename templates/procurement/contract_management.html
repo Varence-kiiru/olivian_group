@@ -1,0 +1,821 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Contract Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Contract Management{% endblock %}
+{% block page_subtitle %}Vendor contracts, agreements and compliance tracking{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Contracts</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contract-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .contract-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .contract-status {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .status-active { background: #e8f5e8; color: #2e7d32; }
+    .status-expired { background: #ffebee; color: #d32f2f; }
+    .status-expiring { background: #fff3e0; color: #f57c00; }
+    .status-draft { background: #f8f9fa; color: #6c757d; }
+    .status-renewed { background: #e3f2fd; color: #1976d2; }
+    
+    .contract-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    }
+    
+    .contract-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .vendor-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .vendor-avatar {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .contract-timeline {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin: 1rem 0;
+    }
+    
+    .timeline-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .progress-ring {
+        width: 60px;
+        height: 60px;
+        position: relative;
+    }
+    
+    .progress-ring svg {
+        transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+        fill: transparent;
+        stroke: #e0e0e0;
+        stroke-width: 4;
+    }
+    
+    .progress-ring-progress {
+        fill: transparent;
+        stroke: var(--primary-color);
+        stroke-width: 4;
+        stroke-linecap: round;
+        transition: stroke-dasharray 0.5s ease;
+    }
+    
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .alert-banner {
+        background: linear-gradient(90deg, #ffebee, #fff3e0);
+        border: 1px solid #f44336;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contract-metrics {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-total { color: var(--primary-color); }
+    .metric-active { color: var(--success-color); }
+    .metric-expiring { color: var(--warning-color); }
+    .metric-expired { color: var(--danger-color); }
+    
+    .filter-bar {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .renewal-alert {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .compliance-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+    
+    .compliance-good { background: #e8f5e8; color: #2e7d32; }
+    .compliance-warning { background: #fff3e0; color: #f57c00; }
+    .compliance-critical { background: #ffebee; color: #d32f2f; }
+    
+    .contract-actions {
+        position: sticky;
+        top: calc(var(--topbar-height) + 1rem);
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Alert Banner for Expiring Contracts -->
+<div class="alert-banner">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle text-danger me-3 fa-2x"></i>
+        <div>
+            <h6 class="mb-1 text-danger">Urgent: Contracts Requiring Attention</h6>
+            <p class="mb-0">
+                <strong>3 contracts</strong> are expiring within 30 days and 
+                <strong>2 contracts</strong> have expired. Review and take action immediately.
+            </p>
+        </div>
+        <a href="#expiring-contracts" class="btn btn-danger ms-auto">
+            <i class="fas fa-eye me-2"></i>Review Now
+        </a>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="row align-items-center">
+        <div class="col-md-2">
+            <label class="form-label small">Status</label>
+            <select class="form-select form-select-sm" id="statusFilter">
+                <option value="">All Contracts</option>
+                <option value="active">Active</option>
+                <option value="expiring">Expiring Soon</option>
+                <option value="expired">Expired</option>
+                <option value="draft">Draft</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Contract Type</label>
+            <select class="form-select form-select-sm" id="typeFilter">
+                <option value="">All Types</option>
+                <option value="supply">Supply Agreement</option>
+                <option value="service">Service Contract</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="framework">Framework Agreement</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Vendor</label>
+            <select class="form-select form-select-sm" id="vendorFilter">
+                <option value="">All Vendors</option>
+                <option value="solar-africa">Solar Africa Ltd</option>
+                <option value="techelectro">TechElectro Systems</option>
+                <option value="kenya-cables">Kenya Cables Ltd</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Value Range</label>
+            <select class="form-select form-select-sm" id="valueFilter">
+                <option value="">Any Value</option>
+                <option value="0-100000">Under KES 100K</option>
+                <option value="100000-1000000">KES 100K - 1M</option>
+                <option value="1000000+">Over KES 1M</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">&nbsp;</label>
+            <div>
+                <button class="btn btn-primary btn-sm me-2" onclick="applyFilters()">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                    Clear
+                </button>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">&nbsp;</label>
+            <div>
+                <button class="btn btn-success btn-sm" onclick="createContract()">
+                    <i class="fas fa-plus me-1"></i>New Contract
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Contract Metrics Overview -->
+        <div class="contract-metrics">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Contract Portfolio Overview
+            </h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-item">
+                        <div class="metric-value metric-total">24</div>
+                        <div class="small text-muted">Total Contracts</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-item">
+                        <div class="metric-value metric-active">18</div>
+                        <div class="small text-muted">Active</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-item">
+                        <div class="metric-value metric-expiring">3</div>
+                        <div class="small text-muted">Expiring Soon</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-item">
+                        <div class="metric-value metric-expired">2</div>
+                        <div class="small text-muted">Expired</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-center">
+                <small class="text-muted">
+                    Total Portfolio Value: <strong>KES 45.2M</strong> | 
+                    Annual Spend: <strong>KES 18.7M</strong>
+                </small>
+            </div>
+        </div>
+
+        <!-- Expiring Contracts Alert -->
+        <div id="expiring-contracts" class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Contracts Requiring Immediate Attention
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Expiring Contract 1 -->
+                    <div class="col-md-6">
+                        <div class="renewal-alert">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-danger">Solar Panel Supply Agreement</h6>
+                                    <p class="mb-2">
+                                        <strong>Solar Africa Ltd</strong><br>
+                                        <small class="text-muted">Contract #: SA-2023-001</small>
+                                    </p>
+                                    <div class="mb-2">
+                                        <span class="compliance-indicator compliance-critical">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Expires in 15 days
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">Value: KES 8.2M | Auto-renewal: No</small>
+                                </div>
+                                <div class="progress-ring">
+                                    <svg width="60" height="60">
+                                        <circle class="progress-ring-circle" cx="30" cy="30" r="26"></circle>
+                                        <circle class="progress-ring-progress" cx="30" cy="30" r="26" 
+                                                style="stroke-dasharray: 20 144; stroke: #f44336;"></circle>
+                                    </svg>
+                                    <div class="progress-text text-danger">15d</div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-danger btn-sm me-2" onclick="renewContract('SA-2023-001')">
+                                    <i class="fas fa-redo me-1"></i>Renew
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewContract('SA-2023-001')">
+                                    <i class="fas fa-eye me-1"></i>Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expiring Contract 2 -->
+                    <div class="col-md-6">
+                        <div class="renewal-alert">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-warning">Installation Services Agreement</h6>
+                                    <p class="mb-2">
+                                        <strong>Installation Services Co</strong><br>
+                                        <small class="text-muted">Contract #: IS-2023-003</small>
+                                    </p>
+                                    <div class="mb-2">
+                                        <span class="compliance-indicator compliance-warning">
+                                            <i class="fas fa-clock me-1"></i>Expires in 28 days
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">Value: KES 3.2M | Auto-renewal: Yes</small>
+                                </div>
+                                <div class="progress-ring">
+                                    <svg width="60" height="60">
+                                        <circle class="progress-ring-circle" cx="30" cy="30" r="26"></circle>
+                                        <circle class="progress-ring-progress" cx="30" cy="30" r="26" 
+                                                style="stroke-dasharray: 45 144; stroke: #ff9800;"></circle>
+                                    </svg>
+                                    <div class="progress-text text-warning">28d</div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-warning btn-sm me-2" onclick="reviewRenewal('IS-2023-003')">
+                                    <i class="fas fa-check me-1"></i>Approve Auto-renewal
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewContract('IS-2023-003')">
+                                    <i class="fas fa-eye me-1"></i>Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Contracts -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-contract me-2"></i>Active Contracts
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Contract 1 -->
+                <div class="contract-card">
+                    <div class="contract-status status-active">Active</div>
+                    <div class="contract-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="mb-2">Electronics Supply Framework</h5>
+                                <p class="mb-1 opacity-75">TechElectro Systems</p>
+                                <small class="opacity-75">Contract #: TE-2023-002 | Type: Framework Agreement</small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="contract-value">KES 6.1M</div>
+                                <small class="opacity-75">Annual Value</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="vendor-info">
+                        <div class="vendor-avatar">TE</div>
+                        <div>
+                            <h6 class="mb-1">TechElectro Systems</h6>
+                            <small class="text-muted">Electronics Supplier | Rating: 4.6/5.0</small>
+                        </div>
+                    </div>
+                    
+                    <div class="contract-timeline">
+                        <div class="timeline-item">
+                            <span class="small text-muted">Start Date:</span>
+                            <strong>Jan 15, 2023</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">End Date:</span>
+                            <strong>Jan 14, 2025</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">Time Remaining:</span>
+                            <strong class="text-success">8 months</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">Utilization:</span>
+                            <strong class="text-primary">68%</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="small mb-2">
+                                <strong>Key Terms:</strong>
+                            </div>
+                            <ul class="small text-muted mb-0">
+                                <li>Net 30 payment terms</li>
+                                <li>Quarterly volume discounts</li>
+                                <li>24/7 technical support</li>
+                                <li>SLA: 48hr delivery</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small mb-2">
+                                <strong>Performance Indicators:</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Delivery Performance</span>
+                                <span class="compliance-indicator compliance-good">96%</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Quality Rating</span>
+                                <span class="compliance-indicator compliance-good">4.7/5</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="small">Compliance Score</span>
+                                <span class="compliance-indicator compliance-good">Excellent</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="viewContract('TE-2023-002')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-outline-success btn-sm me-2" onclick="createAmendment('TE-2023-002')">
+                            <i class="fas fa-edit me-1"></i>Amend
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="createPOFromContract('TE-2023-002')">
+                            <i class="fas fa-plus me-1"></i>Create PO
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Contract 2 -->
+                <div class="contract-card">
+                    <div class="contract-status status-active">Active</div>
+                    <div class="contract-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="mb-2">Cable Supply Agreement</h5>
+                                <p class="mb-1 opacity-75">Kenya Cables Ltd</p>
+                                <small class="opacity-75">Contract #: KC-2023-001 | Type: Supply Agreement</small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="contract-value">KES 4.8M</div>
+                                <small class="opacity-75">Annual Value</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="vendor-info">
+                        <div class="vendor-avatar">KC</div>
+                        <div>
+                            <h6 class="mb-1">Kenya Cables Ltd</h6>
+                            <small class="text-muted">Cable Manufacturer | Rating: 4.3/5.0</small>
+                        </div>
+                    </div>
+                    
+                    <div class="contract-timeline">
+                        <div class="timeline-item">
+                            <span class="small text-muted">Start Date:</span>
+                            <strong>Mar 1, 2023</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">End Date:</span>
+                            <strong>Feb 29, 2024</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">Time Remaining:</span>
+                            <strong class="text-warning">4 months</strong>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="small text-muted">Utilization:</span>
+                            <strong class="text-primary">82%</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="small mb-2">
+                                <strong>Key Terms:</strong>
+                            </div>
+                            <ul class="small text-muted mb-0">
+                                <li>Net 45 payment terms</li>
+                                <li>Price review: Semi-annual</li>
+                                <li>Minimum order: KES 50K</li>
+                                <li>Delivery: Ex-works</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small mb-2">
+                                <strong>Performance Indicators:</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Delivery Performance</span>
+                                <span class="compliance-indicator compliance-warning">87%</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Quality Rating</span>
+                                <span class="compliance-indicator compliance-good">4.5/5</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="small">Compliance Score</span>
+                                <span class="compliance-indicator compliance-warning">Good</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="viewContract('KC-2023-001')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm me-2" onclick="reviewPerformance('KC-2023-001')">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Performance Review
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="createPOFromContract('KC-2023-001')">
+                            <i class="fas fa-plus me-1"></i>Create PO
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="contract-actions">
+            <h6 class="mb-3">Quick Actions</h6>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="createContract()">
+                    <i class="fas fa-plus me-2"></i>New Contract
+                </button>
+                <button class="btn btn-success" onclick="bulkRenewal()">
+                    <i class="fas fa-redo me-2"></i>Bulk Renewal
+                </button>
+                <button class="btn btn-info" onclick="complianceReport()">
+                    <i class="fas fa-clipboard-check me-2"></i>Compliance Report
+                </button>
+                <button class="btn btn-warning" onclick="performanceReview()">
+                    <i class="fas fa-chart-line me-2"></i>Performance Review
+                </button>
+                <button class="btn btn-outline-primary" onclick="exportContracts()">
+                    <i class="fas fa-download me-2"></i>Export Contracts
+                </button>
+                <button class="btn btn-outline-secondary" onclick="contractTemplates()">
+                    <i class="fas fa-file-alt me-2"></i>Templates
+                </button>
+            </div>
+
+            <!-- Upcoming Renewals -->
+            <div class="mt-4">
+                <h6 class="mb-3">Upcoming Renewals</h6>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold small">Solar Africa Ltd</div>
+                                <small class="text-muted">Supply Agreement</small>
+                            </div>
+                            <span class="badge bg-danger">15 days</span>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold small">Installation Services Co</div>
+                                <small class="text-muted">Service Contract</small>
+                            </div>
+                            <span class="badge bg-warning">28 days</span>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold small">Kenya Cables Ltd</div>
+                                <small class="text-muted">Supply Agreement</small>
+                            </div>
+                            <span class="badge bg-info">4 months</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contract Value Distribution -->
+            <div class="mt-4">
+                <h6 class="mb-3">Portfolio Distribution</h6>
+                <div class="card">
+                    <div class="card-body">
+                        <canvas id="contractValueChart" width="200" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="mt-4">
+                <h6 class="mb-3">Recent Activity</h6>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong>Contract Amended</strong><br>
+                            TechElectro Systems - Price update
+                        </div>
+                        <small class="text-muted">2 hours ago</small>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong>Performance Review</strong><br>
+                            Kenya Cables Ltd - Q1 review completed
+                        </div>
+                        <small class="text-muted">1 day ago</small>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong>Contract Renewed</strong><br>
+                            Maintenance Plus - 2 year extension
+                        </div>
+                        <small class="text-muted">3 days ago</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Contract Value Distribution Chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('contractValueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Supply Agreements', 'Service Contracts', 'Framework Agreements', 'Maintenance'],
+            datasets: [{
+                data: [18.5, 12.3, 8.7, 5.7],
+                backgroundColor: [
+                    '#38b6ff',
+                    '#4caf50',
+                    '#ff9800',
+                    '#f44336'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+
+function applyFilters() {
+    const status = document.getElementById('statusFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const vendor = document.getElementById('vendorFilter').value;
+    const value = document.getElementById('valueFilter').value;
+    
+    // Apply filters to contract list
+    console.log('Applying filters:', { status, type, vendor, value });
+    // In real implementation, this would filter the contracts
+}
+
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('vendorFilter').value = '';
+    document.getElementById('valueFilter').value = '';
+    applyFilters();
+}
+
+function createContract() {
+    window.location.href = '/procurement/contracts/create/';
+}
+
+function viewContract(contractId) {
+    window.location.href = `/procurement/contracts/${contractId}/`;
+}
+
+function renewContract(contractId) {
+    if (confirm('Start the renewal process for this contract?')) {
+        window.location.href = `/procurement/contracts/${contractId}/renew/`;
+    }
+}
+
+function reviewRenewal(contractId) {
+    if (confirm('Approve the auto-renewal for this contract?')) {
+        // AJAX call to approve auto-renewal
+        alert('Auto-renewal approved successfully!');
+    }
+}
+
+function createAmendment(contractId) {
+    window.location.href = `/procurement/contracts/${contractId}/amend/`;
+}
+
+function createPOFromContract(contractId) {
+    window.location.href = `/procurement/purchase-orders/create/?contract=${contractId}`;
+}
+
+function bulkRenewal() {
+    window.location.href = '/procurement/contracts/bulk-renewal/';
+}
+
+function complianceReport() {
+    window.location.href = '/procurement/contracts/compliance-report/';
+}
+
+function performanceReview() {
+    window.location.href = '/procurement/contracts/performance-review/';
+}
+
+function exportContracts() {
+    // Export contracts to Excel/PDF
+    alert('Contract export feature coming soon!');
+}
+
+function contractTemplates() {
+    window.location.href = '/procurement/contracts/templates/';
+}
+
+function reviewPerformance(contractId) {
+    window.location.href = `/procurement/contracts/${contractId}/performance/`;
+}
+</script>
+{% endblock %}

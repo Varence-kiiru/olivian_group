@@ -1,0 +1,82 @@
+/* Olivian Group - Dashboard CSS */
+:root {
+    --primary-color: #38b6ff;
+    --primary-dark: #2c8fd6;
+    --primary-light: #5cc3ff;
+    --secondary-color: #ffffff;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --dark-color: #2c3e50;
+    --light-color: #f8f9fa;
+    --sidebar-width: 280px;
+    --topbar-height: 70px;
+    --border-radius: 10px;
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s ease;
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: #f5f6fa;
+    color: #333;
+    font-size: 14px;
+}
+
+/* Dashboard specific styles */
+.sidebar {
+    width: var(--sidebar-width);
+    background: linear-gradient(145deg, var(--primary-color), var(--primary-dark));
+    transition: var(--transition);
+}
+
+.main-content {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    transition: var(--transition);
+}
+
+.topbar {
+    height: var(--topbar-height);
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid #e3e6f0;
+    box-shadow: var(--shadow);
+}
+
+/* Card styles */
+.dashboard-card {
+    background: var(--secondary-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: none;
+    transition: var(--transition);
+}
+
+.dashboard-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .sidebar.show {
+        margin-left: 0;
+    }
+}

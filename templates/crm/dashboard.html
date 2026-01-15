@@ -1,0 +1,1472 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}CRM Dashboard - Analytics & Pipeline - {{ block.super }}{% endblock %}
+
+{% block page_title %}CRM Dashboard{% endblock %}
+{% block page_subtitle %}Real-time analytics and sales pipeline management{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">CRM</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js Library - Load after base template JS -->
+
+<style>
+    /* Modern Dashboard Styles */
+    :root {
+        --crm-primary: #6366f1;
+        --crm-success: #10b981;
+        --crm-warning: #f59e0b;
+        --crm-danger: #ef4444;
+        --crm-info: #3b82f6;
+        --crm-secondary: #64748b;
+        --crm-light: #f8fafc;
+        --border-radius: 12px;
+        --shadow-l: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    /* Enhanced Metric Cards */
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-l);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--crm-primary);
+        transition: width 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        z-index: 2;
+    }
+
+    .metric-card.sales::before { background: var(--crm-success); }
+    .metric-card.pipeline::before { background: var(--crm-warning); }
+    .metric-card.conversion::before { background: var(--crm-info); }
+    .metric-card.revenue::before { background: var(--crm-danger); }
+
+    .metric-card .metric-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-card .metric-label {
+        color: #64748b;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-card .metric-change {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .metric-change.positive { color: #10b981; }
+    .metric-change.negative { color: #ef4444; }
+
+    /* Modern Chart Cards */
+    .chart-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-l);
+        border: 1px solid #e2e8f0;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-top: 1rem;
+    }
+
+    /* Enhanced Pipeline Visualization */
+    .pipeline-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+    }
+
+    .pipeline-stage {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        min-width: 280px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+
+    .pipeline-stage:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .pipeline-stage.active {
+        border-color: var(--crm-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .pipeline-stage-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: calc(var(--border-radius) - 2px);
+        margin: -1.5rem -1.5rem 1rem -1.5rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .stage-metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .opportunity-card {
+        background: white;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .opportunity-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-color: var(--crm-primary);
+    }
+
+    .opportunity-value {
+        font-weight: 700;
+        color: var(--crm-primary);
+        font-size: 1.125rem;
+    }
+
+    .opportunity-probability {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: var(--crm-success);
+        color: white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Activity Timeline */
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 16px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #e2e8f0 0%, transparent 100%);
+    }
+
+    .timeline-item {
+        position: relative;
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -22px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--crm-primary);
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px var(--crm-primary);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: #374151;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--shadow-l);
+    }
+
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--crm-primary);
+        color: var(--crm-primary);
+    }
+
+    .action-card i {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+        color: var(--crm-primary);
+    }
+
+    /* Notification System */
+    .notification-badge {
+        position: relative;
+        display: inline-block;
+    }
+
+    .badge-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: var(--crm-danger);
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    /* Loading States */
+    .loading-shimmer {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Enhanced Status Badges */
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .status-new { background: #e0f2fe; color: #0369a1; }
+    .status-contacted { background: #fef3c7; color: #d97706; }
+    .status-qualified { background: #dcfce7; color: #166534; }
+    .status-proposal { background: #fed7d7; color: #dc2626; }
+    .status-negotiation { background: #e0e7ff; color: #3730a3; }
+    .status-won { background: #d1fae5; color: #047857; }
+    .status-lost { background: #fee2e2; color: #dc2626; }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .pipeline-container {
+            flex-direction: column;
+        }
+        .metric-card .metric-number {
+            font-size: 2rem;
+        }
+        .quick-actions {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+    }
+
+    /* Dark Mode Support */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --crm-primary: #8b5cf6;
+            --crm-light: #1e293b;
+        }
+        .metric-card, .chart-card {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+        .pipeline-stage {
+            background: #334155;
+        }
+    }
+
+    /* Performance Indicators */
+    .performance-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .performance-excellent { color: #10b981; }
+    .performance-good { color: #3b82f6; }
+    .performance-average { color: #f59e0b; }
+    .performance-poor { color: #ef4444; }
+
+    /* Animated Elements */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+    /* Glass Morphism Effect */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Real-time Updates -->
+    <div class="d-flex justify-content-between align-items-start mb-4 animate-fade-in" style="position: relative;">
+        <div class="flex-grow-1">
+            <h4 class="mb-1">
+                <i class="fas fa-tachometer-alt me-2" style="color: var(--crm-primary);"></i>
+                CRM Analytics Dashboard
+            </h4>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="text-muted small">
+                    <i class="fas fa-clock me-1"></i>Last updated: <span id="lastUpdate">Just now</span>
+                </span>
+                <span class="badge bg-success"><i class="fas fa-circle me-1"></i>Live</span>
+            </div>
+        </div>
+
+        <!-- Header Actions - Moved to its own row to prevent collision -->
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-cog me-1"></i>Settings
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="toggleAutoRefresh()"><i class="fas fa-clock me-2"></i>Auto-refresh</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportDashboard()"><i class="fas fa-download me-2"></i>Export Data</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="customizeDashboard()"><i class="fas fa-palette me-2"></i>Customize</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Performance Metrics -->
+    <div class="row animate-fade-in">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card animate-delay-1">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="metric-number">{{ total_leads|default:"0" }}</div>
+                        <div class="metric-label">Total Leads</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up me-1"></i>12% vs last month
+                        </div>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-user-plus fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card sales animate-delay-2">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="metric-number">{{ total_opportunities|default:"0" }}</div>
+                        <div class="metric-label">Open Opportunities</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up me-1"></i>18% growth
+                        </div>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-chart-line fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card pipeline animate-delay-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="metric-number">KES {{ pipeline_value|floatformat:0|default:"0" }}</div>
+                        <div class="metric-label">Pipeline Value</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up me-1"></i>8% improvement
+                        </div>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-dollar-sign fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card conversion">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="metric-number">{{ conversion_rate|floatformat:1|default:"0" }}%</div>
+                        <div class="metric-label">Conversion Rate</div>
+                        <div class="performance-indicator performance-excellent">
+                            <i class="fas fa-star me-1"></i>Excellent performance
+                        </div>
+                    </div>
+                    <div class="bg-info bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-percentage fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row animate-fade-in animate-delay-2">
+        <div class="col-lg-8 mb-4">
+            <div class="chart-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="fas fa-chart-area me-2" style="color: var(--crm-primary);"></i>
+                            Sales Performance Trend
+                        </h5>
+                        <p class="text-muted small mb-0">Monthly revenue and lead generation analytics</p>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Last 12 Months
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="changeChartPeriod('month')">Last 30 Days</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeChartPeriod('quarter')">Last 3 Months</a></li>
+                            <li><a class="dropdown-item active" href="#" onclick="changeChartPeriod('year')">Last 12 Months</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="chart-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="fas fa-chart-pie me-2" style="color: var(--crm-primary);"></i>
+                            Lead Sources
+                        </h5>
+                        <p class="text-muted small mb-0">Distribution by acquisition channel</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sourcesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Alerts Row -->
+    <div class="row animate-fade-in animate-delay-3">
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-1">
+                        <i class="fas fa-rocket me-2" style="color: var(--crm-primary);"></i>
+                        Quick Actions
+                    </h5>
+                    <span class="badge bg-primary">4 available</span>
+                </div>
+                <div class="quick-actions">
+                    <a href="{% url 'crm:lead_create' %}" class="action-card">
+                        <i class="fas fa-user-plus"></i>
+                        <strong>Add New Lead</strong>
+                        <span class="small text-muted">Create opportunity</span>
+                    </a>
+                    <a href="{% url 'crm:opportunity_create' %}" class="action-card">
+                        <i class="fas fa-handshake"></i>
+                        <strong>New Opportunity</strong>
+                        <span class="small text-muted">Convert lead to opportunity</span>
+                    </a>
+                    <a href="{% url 'crm:contact_create' %}" class="action-card">
+                        <i class="fas fa-address-book"></i>
+                        <strong>Create Contact</strong>
+                        <span class="small text-muted">Add business relationship</span>
+                    </a>
+                    <a href="{% url 'crm:activity_create' %}" class="action-card">
+                        <i class="fas fa-calendar-plus"></i>
+                        <strong>Log Activity</strong>
+                        <span class="small text-muted">Record customer interaction</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-1">
+                        <i class="fas fa-bell me-2" style="color: var(--crm-warning);"></i>
+                        Priority Alerts
+                    </h5>
+                    <span class="badge bg-warning notification-badge">
+                        {{ overdue_activities_count|default:"0" }}
+                        <div class="badge-count">{{ overdue_activities_count|default:"0" }}</div>
+                    </span>
+                </div>
+
+                {% if overdue_leads %}
+                <div class="alert alert-danger alert-dismissible">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Overdue Follow-ups
+                    </h6>
+                    <p class="mb-2">You have {{ overdue_leads_count|default:"0" }} leads that need immediate follow-up.</p>
+                    <a href="#" class="alert-link">View overdue items</a>
+                </div>
+                {% endif %}
+
+                <div class="activity-timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>Schedule follow-up with John Doe</strong>
+                                <div class="text-muted small">ABC Company • 2 days ago</div>
+                            </div>
+                            <span class="status-badge status-overdue">Overdue</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>Send proposal to XYZ Corp</strong>
+                                <div class="text-muted small">Widget Solutions • Today</div>
+                            </div>
+                            <span class="status-badge status-pending">Due Today</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>Call back meeting confirmed</strong>
+                                <div class="text-muted small">Tech Innovations • Tomorrow</div>
+                            </div>
+                            <span class="status-badge status-scheduled">Scheduled</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Pipeline Visualization -->
+    <div class="chart-card animate-fade-in">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">
+                    <i class="fas fa-funnel-dollar me-3" style="color: var(--crm-primary);"></i>
+                    Sales Pipeline Overview
+                </h4>
+                <p class="text-muted mb-0">Track opportunities through the sales process</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="addOpportunity()">
+                    <i class="fas fa-plus me-2"></i>Add Opportunity
+                </button>
+                <a href="{% url 'crm:opportunity_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-external-link-alt me-2"></i>View All
+                </a>
+            </div>
+        </div>
+
+        <div class="pipeline-container">
+            <div class="pipeline-stage {% if opportunity_stage_counts.prospecting > 0 %}active{% endif %}">
+                <div class="pipeline-stage-header">
+                    <h6 class="mb-0">Prospecting</h6>
+                    <span class="badge bg-primary">{{ opportunity_stage_counts.prospecting|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span>KES {{ opportunity_stage_values.prospecting|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">{{ opportunity_stage_values.prospecting|default:0 }}%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.prospecting|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability">{{ opp.probability }}%</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">{{ opp.created_at|timesince }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No opportunities</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pipeline-stage {% if opportunity_stage_counts.qualification > 0 %}active{% endif %}">
+                <div class="pipeline-stage-header">
+                    <h6 class="mb-0">Qualification</h6>
+                    <span class="badge bg-primary">{{ opportunity_stage_counts.qualification|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span>KES {{ opportunity_stage_values.qualification|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">{{ opportunity_stage_probabilities.qualification|default:30 }}%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.qualification|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability">{{ opp.probability }}%</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">{{ opp.created_at|timesince }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No opportunities</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pipeline-stage {% if opportunity_stage_counts.proposal > 0 %}active{% endif %}">
+                <div class="pipeline-stage-header">
+                    <h6 class="mb-0">Proposal</h6>
+                    <span class="badge bg-primary">{{ opportunity_stage_counts.proposal|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span>KES {{ opportunity_stage_values.proposal|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">{{ opportunity_stage_probabilities.proposal|default:50 }}%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.proposal|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability">{{ opp.probability }}%</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">{{ opp.created_at|timesince }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No opportunities</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pipeline-stage {% if opportunity_stage_counts.negotiation > 0 %}active{% endif %}">
+                <div class="pipeline-stage-header">
+                    <h6 class="mb-0">Negotiation</h6>
+                    <span class="badge bg-primary">{{ opportunity_stage_counts.negotiation|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span>KES {{ opportunity_stage_values.negotiation|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">{{ opportunity_stage_probabilities.negotiation|default:70 }}%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.negotiation|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability">{{ opp.probability }}%</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">{{ opp.created_at|timesince }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No opportunities</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pipeline-stage">
+                <div class="pipeline-stage-header" style="background: var(--gradient-success);">
+                    <h6 class="mb-0">Closed Won</h6>
+                    <span class="badge bg-white text-success">{{ opportunity_stage_counts.closed_won|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span class="text-success">KES {{ opportunity_stage_values.closed_won|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">100%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.closed_won|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability bg-success">✓</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value text-success">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">
+                            {% if opp.actual_close_date %}
+                                {{ opp.actual_close_date|date:"M d" }}
+                            {% else %}
+                                Not closed
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No closed deals</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pipeline-stage">
+                <div class="pipeline-stage-header" style="background: linear-gradient(135deg, #dc3545, #b02a37);">
+                    <h6 class="mb-0">Closed Lost</h6>
+                    <span class="badge bg-white text-danger">{{ opportunity_stage_counts.closed_lost|default:"0" }}</span>
+                </div>
+                <div class="stage-metric">
+                    <span class="text-danger">KES {{ opportunity_stage_values.closed_lost|floatformat:0|default:"0" }}</span>
+                    <span class="text-muted">0%</span>
+                </div>
+
+                {% for opp in opportunities_by_stage.closed_lost|slice:":3" %}
+                <div class="opportunity-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-truncate" title="{{ opp.name }}">{{ opp.name }}</div>
+                            <div class="small text-muted">{{ opp.company.name }}</div>
+                        </div>
+                        <div class="opportunity-probability bg-danger">✗</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="opportunity-value text-danger">KES {{ opp.value|floatformat:0 }}</span>
+                        <small class="text-muted">
+                            {% if opp.actual_close_date %}
+                                {{ opp.actual_close_date|date:"M d" }}
+                            {% else %}
+                                Not closed
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <div class="text-muted small">No lost deals</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Timeline -->
+    <div class="row">
+        <div class="col-12 animate-fade-in">
+            <div class="chart-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-1">
+                        <i class="fas fa-history me-2" style="color: var(--crm-primary);"></i>
+                        Recent Activity Timeline
+                    </h4>
+                    <a href="{% url 'crm:activity_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt me-2"></i>View All Activities
+                    </a>
+                </div>
+
+                {% if recent_activities %}
+                <div class="activity-timeline">
+                    {% for activity in recent_activities|slice:":10" %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-start gap-3">
+                                    <img src="https://via.placeholder.com/40x40/6366f1/ffffff?text={{ activity.assigned_to.first_name.0|upper }}" alt="Avatar" class="rounded-circle" width="40" height="40">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ activity.subject }}</h6>
+                                        <p class="text-muted mb-1">{{ activity.description|truncatechars:100 }}</p>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <span class="badge bg-secondary">{{ activity.get_activity_type_display }}</span>
+                                            <span class="small text-muted">{{ activity.contact.get_full_name }}</span>
+                                        </div>
+                                        <div class="small text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ activity.due_date|date:"M d, Y H:i" }}
+                                            {% if activity.completed_datetime %}
+                                            <span class="text-success ms-2">
+                                                <i class="fas fa-check me-1"></i>Completed {{ activity.completed_datetime|date:"H:i" }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="status-badge status-{{ activity.status }}">{{ activity.get_status_display }}</span>
+                                <div class="small text-muted mt-1">{{ activity.assigned_to.get_full_name }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Recent Activities</h5>
+                    <p class="text-muted">Start tracking your customer interactions by logging activities.</p>
+                    <a href="{% url 'crm:activity_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Log First Activity
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <div class="mt-2">Refreshing data...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js Library (loaded after base template JS) -->
+<script src="{% static 'js/chart.min.js' %}"></script>
+
+<!-- CRM Dashboard JavaScript - Isolated in IIFE -->
+<script>
+(function() {
+        let performanceChart = null;
+        let sourcesChart = null;
+        let autoRefreshInterval = null;
+        let autoRefreshEnabled = false;
+
+        // Initialize dashboard when both DOM and scripts are ready
+        function initializeDashboard() {
+            if (typeof Chart !== 'undefined') {
+                initializeCharts();
+                updateLastRefresh();
+                setupEventListeners();
+                console.log('🎉 CRM Analytics Dashboard loaded successfully!');
+            } else {
+                // Retry after a short delay if Chart.js not loaded yet
+                setTimeout(initializeDashboard, 100);
+            }
+        }
+
+        // Wait for everything to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeDashboard);
+        } else {
+            // DOM already loaded
+            initializeDashboard();
+        }
+
+    // Initialize Charts
+    function initializeCharts() {
+        // Performance Chart
+        const ctx1 = document.getElementById('performanceChart')?.getContext('2d');
+        if (ctx1) {
+            performanceChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Revenue (KES)',
+                        data: [12000, 19000, 3000, 5000, 2000, 3000, 15000, 22000, 8000, 14000, 18000, 25000],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Leads',
+                        data: [65, 59, 80, 81, 56, 55, 40, 85, 65, 75, 90, 95],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Sales Performance Overview'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Revenue (KES)'
+                            }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Number of Leads'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+
+        // Sources Pie Chart
+        const ctx2 = document.getElementById('sourcesChart')?.getContext('2d');
+        if (ctx2) {
+            sourcesChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Website', 'Referrals', 'Social Media', 'Advertising', 'Trade Shows'],
+                    datasets: [{
+                        data: [35, 25, 20, 12, 8],
+                        backgroundColor: [
+                            '#6366f1',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444',
+                            '#3b82f6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: 'white'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Lead Source Distribution'
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutBounce'
+                    }
+                }
+            });
+        }
+    }
+
+    // Event Listeners
+    function setupEventListeners() {
+        // Auto-refresh toggle
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[onclick="toggleAutoRefresh()"]')) {
+                toggleAutoRefresh();
+            }
+        });
+
+        // Pipeline stage interactions
+        document.querySelectorAll('.opportunity-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const opportunityId = this.dataset.opportunityId || this.querySelector('.fw-bold')?.textContent || 'demo';
+                showOpportunityDetails(opportunityId);
+            });
+        });
+    }
+
+    // Auto-refresh functionality
+    function toggleAutoRefresh() {
+        autoRefreshEnabled = !autoRefreshEnabled;
+        const button = document.querySelector('[onclick="toggleAutoRefresh()"]');
+
+        if (autoRefreshEnabled) {
+            button.innerHTML = '<i class="fas fa-pause me-2"></i>Pause Auto-refresh';
+            autoRefreshInterval = setInterval(refreshData, 30000); // 30 seconds
+            showToast('Auto-refresh enabled (30s intervals)', 'success');
+        } else {
+            button.innerHTML = '<i class="fas fa-play me-2"></i>Enable Auto-refresh';
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            showToast('Auto-refresh paused', 'info');
+        }
+    }
+
+    // Data refresh functionality
+    function refreshData() {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        // Simulate API calls for real-time data
+        setTimeout(() => {
+            // Update metrics with new data
+            updateMetrics();
+            updateCharts();
+            updateLastRefresh();
+
+            // Hide loading
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+
+            showToast('Dashboard refreshed successfully', 'success');
+        }, 1500); // Simulated delay
+    }
+
+    // Update metrics dynamically
+    function updateMetrics() {
+        // Simulate updated metrics
+        const metrics = document.querySelectorAll('.metric-number');
+        metrics.forEach(metric => {
+            const currentValue = parseInt(metric.textContent.replace(/[^0-9]/g, '')) || 0;
+            const newValue = Math.floor(currentValue * (0.95 + Math.random() * 0.1)); // ±5% change
+            metric.textContent = newValue.toLocaleString();
+        });
+    }
+
+    // Update charts with fresh data
+    function updateCharts() {
+        if (performanceChart) {
+            // Update performance chart data
+            performanceChart.data.datasets[0].data = generateRandomData(performanceChart.data.labels.length, 10000, 30000);
+            performanceChart.update('active');
+        }
+
+        if (sourcesChart) {
+            // Update sources chart data (keep sum consistent)
+            sourcesChart.data.datasets[0].data = [35 + random(-5, 5), 25 + random(-3, 3), 20 + random(-2, 4), 12 + random(-2, 3), 8 + random(-1, 2)];
+            sourcesChart.update('active');
+        }
+    }
+
+    // Generate random data for charts
+    function generateRandomData(count, min, max) {
+        const data = [];
+        for (let i = 0; i < count; i++) {
+            data.push(Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+        return data;
+    }
+
+    function random(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Update last refresh timestamp
+    function updateLastRefresh() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        const lastUpdateElement = document.getElementById('lastUpdate');
+        if (lastUpdateElement) {
+            lastUpdateElement.textContent = timeString;
+        }
+    }
+
+    // Show opportunity details (modal or redirect)
+    function showOpportunityDetails(id) {
+        // For demo, show alert. In real app, redirect or show modal
+        showToast(`Viewing opportunity: ${id}`, 'info');
+    }
+
+    // Add new opportunity
+    function addOpportunity() {
+        window.location.href = "{% url 'crm:opportunity_create' %}";
+    }
+
+    // Change chart period
+    function changeChartPeriod(period) {
+        let newData;
+        let newLabels;
+
+        switch(period) {
+            case 'month':
+                newLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+                newData = generateRandomData(4, 1000, 5000);
+                break;
+            case 'quarter':
+                newLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+                newData = generateRandomData(4, 15000, 45000);
+                break;
+            case 'year':
+            default:
+                newLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                newData = generateRandomData(12, 10000, 30000);
+        }
+
+        if (performanceChart) {
+            performanceChart.data.labels = newLabels;
+            performanceChart.data.datasets[0].data = newData;
+            performanceChart.update('active');
+        }
+
+        showToast(`Chart updated to show ${period} data`, 'info');
+    }
+
+    // Export dashboard
+    function exportDashboard() {
+        showToast('Export functionality coming soon!', 'warning');
+    }
+
+    // Customize dashboard
+    function customizeDashboard() {
+        showToast('Dashboard customization coming soon!', 'info');
+    }
+
+    // Toast notification system
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-info-circle me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        // Add toast container if not exists
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '11';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+
+        // Initialize and show toast
+        const bsToast = new bootstrap.Toast(toast, {
+            delay: 4000
+        });
+        bsToast.show();
+
+        // Remove from DOM after hide
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // Pipeline drag & drop functionality (if needed in future)
+    function enableDragDrop() {
+        document.querySelectorAll('.opportunity-card').forEach(card => {
+            card.draggable = true;
+            card.addEventListener('dragstart', handleDragStart);
+        });
+
+        document.querySelectorAll('.pipeline-stage').forEach(stage => {
+            stage.addEventListener('dragover', handleDragOver);
+            stage.addEventListener('drop', handleDrop);
+        });
+    }
+
+    function handleDragStart(e) {
+        e.dataTransfer.setData('text/html', e.target.outerHTML);
+        e.dataTransfer.effectAllowed = 'move';
+        e.target.classList.add('opacity-50');
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const cardHTML = e.dataTransfer.getData('text/html');
+        const card = document.createElement('div');
+        card.innerHTML = cardHTML;
+        e.target.appendChild(card.firstChild);
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + R for refresh
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            refreshData();
+        }
+
+        // Ctrl/Cmd + N for new opportunity
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            addOpportunity();
+        }
+    });
+
+    // Responsive adjustments
+    window.addEventListener('resize', function() {
+        // Re-render charts on resize for responsiveness
+        if (performanceChart) {
+            performanceChart.resize();
+        }
+        if (sourcesChart) {
+            sourcesChart.resize();
+        }
+    });
+
+    // Page visibility API for smart refreshing
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && autoRefreshEnabled) {
+            // User returned to page, refresh data
+            refreshData();
+        }
+    });
+
+    // Service worker for offline capability (future enhancement)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered');
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed');
+            });
+    }
+
+    // Expose functions globally (wrapped in IIFE namespace)
+    window.CrmDashboard = {
+        refreshData: refreshData,
+        toggleAutoRefresh: toggleAutoRefresh,
+        addOpportunity: addOpportunity,
+        showToast: showToast
+    };
+
+    })();
+</script>
+
+<style>
+    /* Loading overlay styles */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .loading-spinner {
+        text-align: center;
+        color: var(--crm-primary);
+    }
+
+    /* Toast position */
+    .toast-container {
+        z-index: 9999;
+    }
+
+    /* Dropdown positioning fix */
+    .dropdown-menu {
+        z-index: 9998 !important;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+    }
+
+    .dropdown {
+        position: relative;
+    }
+
+    .dropdown.show .dropdown-menu {
+        display: block;
+    }
+
+    /* Ensure chart canvas renders properly */
+    #sourcesChart {
+        max-width: 100%;
+    }
+
+    /* Smooth transitions */
+    .btn, .card, .alert {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Pipeline interaction states */
+    .pipeline-stage.drag-over {
+        background: rgba(99, 102, 241, 0.05) !important;
+        border-color: var(--crm-primary) !important;
+    }
+
+    .opportunity-card:hover {
+        box-shadow: var(--shadow-xl) !important;
+    }
+
+    /* Responsive metric cards */
+    @media (max-width: 576px) {
+        .metric-card .metric-number {
+            font-size: 1.5rem !important;
+        }
+
+        .metric-card .metric-change {
+            font-size: 0.75rem !important;
+        }
+    }
+
+    /* Dark mode adjustments */
+    @media (prefers-color-scheme: dark) {
+        .loading-overlay {
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .toast {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+    }
+</style>
+{% endblock %}

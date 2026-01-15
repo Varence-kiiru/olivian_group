@@ -1,0 +1,234 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Solar Energy Guide Kenya - Tips, News & Solutions{% endblock %}
+
+{% block meta_description %}Solar energy tips, Kenya solar news, installation guides, and renewable energy insights. Expert advice on solar panels, system design, and sustainable energy solutions for households and businesses.{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Blog</li>
+{% endblock %}
+
+{% block extra_head %}
+<!-- Ad Blocking Recovery -->
+<script async src="https://fundingchoicesmessages.google.com/i/pub-2938588057724075?ers=1"></script>
+<script>(function() {function signalGooglefcPresent() {if (!window.frames['googlefcPresent']) {if (document.body) {const iframe = document.createElement('iframe'); iframe.style = 'width: 0; height: 0; border: none; z-index: -1000; left: -1000px; top: -1000px;'; iframe.style.display = 'none'; iframe.name = 'googlefcPresent'; document.body.appendChild(iframe);} else {setTimeout(signalGooglefcPresent, 0);}}}signalGooglefcPresent();})();</script>
+
+<!-- AdSense Script -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2938588057724075"
+     crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/blog.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Blog Hero Section -->
+<section class="hero-section-blog" style="padding: 120px 0 80px; min-height: 60vh;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title">{{ banner.title|default:"Our Blog" }}</h1>
+                <p class="hero-subtitle">{{ banner.subtitle|default:"Insights, news, and updates from our solar energy solutions and industry expertise. Learn about <a href='{% url 'products:list' %}' class='text-primary'>solar products</a>, <a href='{% url 'core:services' %}' class='text-primary'>installation services</a>, and <a href='{% url 'core:contact' %}' class='text-primary'>expert consultations</a>." }}</p>
+            </div>
+            <div class="col-lg-6 text-center">
+                {% if banner and banner.background_image %}
+                <img src="{{ banner.background_image.url }}" 
+                     alt="{{ banner.title }}" class="img-fluid rounded shadow-lg">
+                {% else %}
+                <img src="https://images.unsplash.com/photo-1486312338219-ce68e2c4725e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" 
+                     alt="Blog and News" class="img-fluid rounded shadow-lg">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Blog Content -->
+<section class="blog-content py-5">
+    <div class="container">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Search Form -->
+                <div class="blog-search mb-4">
+                    <form method="get" action="{% url 'blog:blog' %}">
+                        <div class="input-group">
+                            <input type="text" name="q" class="form-control" placeholder="Search posts..." value="{{ request.GET.q|default:'' }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                {% if query %}
+                <div class="search-results-header mb-4">
+                    <h2>Search Results for "{{ query }}"</h2>
+                    <p>{{ posts.paginator.count }} result{{ posts.paginator.count|pluralize }} found</p>
+                </div>
+                {% endif %}
+                
+                <!-- Featured Posts (only on first page) -->
+                {% if not query and not page_obj.has_previous %}
+                {% if featured_posts %}
+                <div class="featured-posts mb-5">
+                    <h2 class="section-title mb-4">Featured Posts</h2>
+                    <div class="row">
+                        {% for post in featured_posts %}
+                        <div class="col-md-4 mb-4">
+                            <div class="featured-post-card h-100">
+                                <div class="featured-post-image">
+                                    <a href="{% url 'blog:post_detail' post.slug %}">
+                                        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="img-fluid">
+                                        <div class="featured-badge">
+                                            <i class="fas fa-star"></i> Featured
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="featured-post-content">
+                                    <div class="post-meta">
+                                        <span class="post-category">
+                                            <a href="{% url 'blog:category_posts' post.category.slug %}">{{ post.category.name }}</a>
+                                        </span>
+                                        <span class="post-date">{{ post.created_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    <h3><a href="{% url 'blog:post_detail' post.slug %}">{{ post.title }}</a></h3>
+                                    <p>{{ post.excerpt|truncatewords:15 }}</p>
+                                    <div class="post-footer">
+                                        <a href="{% url 'blog:post_detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+                
+                <!-- Blog Posts -->
+                <div class="blog-posts">
+                    <h2 class="section-title mb-4">Latest Articles</h2>
+                    
+                    {% if posts %}
+                    <div class="row">
+                        {% for post in posts %}
+                        <div class="col-md-6 mb-4">
+                            <div class="blog-card h-100">
+                                <div class="blog-image">
+                                    <a href="{% url 'blog:post_detail' post.slug %}">
+                                        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="img-fluid">
+                                    </a>
+                                </div>
+                                <div class="blog-content">
+                                    <div class="post-meta">
+                                        <span class="post-category">
+                                            <a href="{% url 'blog:category_posts' post.category.slug %}">{{ post.category.name }}</a>
+                                        </span>
+                                        <span class="post-date">{{ post.created_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    <h3><a href="{% url 'blog:post_detail' post.slug %}">{{ post.title }}</a></h3>
+                                    <p>{{ post.excerpt|truncatewords:20 }}</p>
+                                    <div class="post-footer">
+                                        <div class="post-author">
+                                            <span>By {{ post.author.get_full_name|default:post.author.username }}</span>
+                                        </div>
+                                        <a href="{% url 'blog:post_detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if posts.has_other_pages %}
+                    <div class="pagination-container mt-4">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if posts.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ posts.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Previous">
+                                        <span aria-hidden="true">«</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">«</span>
+                                </li>
+                                {% endif %}
+                                
+                                {% for i in posts.paginator.page_range %}
+                                    {% if posts.number == i %}
+                                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                    {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if posts.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ posts.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Next">
+                                        <span aria-hidden="true">»</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">»</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="no-posts-found text-center py-5">
+                        <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                        <h3>No Posts Found</h3>
+                        <p class="text-muted">We couldn't find any posts matching your criteria.</p>
+                        <a href="{% url 'blog:blog' %}" class="btn btn-primary mt-3">View All Posts</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="blog-sidebar">
+                    <!-- Categories Widget -->
+                    <div class="sidebar-widget categories-widget">
+                        <h3 class="widget-title">Categories</h3>
+                        <ul class="categories-list">
+                            {% for category in categories %}
+                            <li>
+                                <a href="{% url 'blog:category_posts' category.slug %}">
+                                    {{ category.name }}
+                                    <span class="post-count">{{ category.post_set.count }}</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Tags Widget -->
+                    <div class="sidebar-widget tags-widget">
+                        <h3 class="widget-title">Tags</h3>
+                        <div class="tags-cloud">
+                            {% for tag in tags %}
+                            <a href="{% url 'blog:tag_posts' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,407 @@
+{% extends 'website/base.html' %}
+{% load core_extras %}
+
+{% block title %}Solar Panels Kenya - Inverters Batteries Accessories{% endblock %}
+
+{% block meta_description %}Premium solar panels, inverters, batteries, and accessories from leading manufacturers. Shop high-quality solar products with expert support and installation services across Kenya.{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Products</li>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section hero-section-products">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="hero-title products-hero-responsive">Premium Solar Products</h1>
+                <p class="hero-subtitle products-hero-responsive">Discover our comprehensive range of high-quality solar panels, inverters, batteries, and accessories from world-leading manufacturers.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Product Categories -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-solar-panel"></i>
+                        </div>
+                        <h5 class="card-title">Solar Panels</h5>
+                        <p class="card-text">High-efficiency monocrystalline and polycrystalline solar panels with 25-year warranties. <a href="{% url 'core:services' %}#system-design" class="text-primary small">Installation services →</a></p>
+                        <a href="{% url 'products:category' 'solar-panels' %}" class="btn btn-primary">View Panels</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <h5 class="card-title">Inverters</h5>
+                        <p class="card-text">String inverters, power optimizers, and hybrid systems for maximum energy conversion.</p>
+                        <a href="{% url 'products:category' 'inverters' %}" class="btn btn-primary">View Inverters</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-battery-full"></i>
+                        </div>
+                        <h5 class="card-title">Batteries</h5>
+                        <p class="card-text">Lithium-ion and gel batteries for reliable energy storage and backup power.</p>
+                        <a href="{% url 'products:category' 'batteries' %}" class="btn btn-primary">View Batteries</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-wrench"></i>
+                        </div>
+                        <h5 class="card-title">Mounting & Racking</h5>
+                        <p class="card-text">Professional mounting systems, rails, and racking solutions for secure panel installation.</p>
+                        <a href="{% url 'products:category' 'mounting-racking' %}" class="btn btn-primary">View Mounting</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Second row for accessories -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card product-card">
+                    <div class="card-body text-center p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <div class="feature-icon mb-3 mb-md-0">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h5 class="card-title mb-2">Solar Accessories & Components</h5>
+                                <p class="card-text mb-0">Complete range of cables, connectors, charge controllers, monitoring equipment, and safety devices for your solar installation.</p>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="{% url 'products:category' 'accessories' %}" class="btn btn-primary">View All Accessories</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Customer Products -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Our Products</h2>
+            <p class="section-subtitle">High-quality solar products for your energy needs</p>
+        </div>
+
+        <!-- Product Search and Filters -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <form method="get" class="d-flex">
+                    <input type="text" class="form-control me-2" name="search" placeholder="Search products..." value="{{ request.GET.search }}">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" onchange="window.location.href='?type=' + this.value + '{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}'">
+                    <option value="">All Types</option>
+                    {% for value, label in product_types %}
+                        <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="row" id="products-grid">
+            {% include 'website/partials/product_cards.html' %}
+            {% if not products %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h4>No Products Available</h4>
+                    <p class="text-muted">No products are currently available for customers or match your search criteria.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Traditional Pagination -->
+        {% if is_paginated %}
+        <div class="row">
+            <div class="col-12 d-flex justify-content-center">
+                <nav aria-label="Product pagination">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Why Choose Our Products -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Why Choose Our Products?</h2>
+            <p class="section-subtitle">Quality, performance, and reliability you can trust</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <h5>Premium Quality</h5>
+                    <p>Tier-1 manufacturers with international certifications and proven track records.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h5>Extended Warranties</h5>
+                    <p>Comprehensive warranties covering performance, product defects, and workmanship.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5>High Performance</h5>
+                    <p>Maximum efficiency ratings and proven performance in Kenya's climate conditions.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h5>Expert Support</h5>
+                    <p>Technical support, installation guidance, and maintenance services included.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Product Specifications -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Product Specifications</h2>
+            <p class="section-subtitle">Technical specifications from our actual product inventory</p>
+        </div>
+        
+        <div class="row">
+            {% for spec in category_specs %}
+                {% if spec.has_products %}
+                <div class="col-lg-6 col-md-12 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ spec.category.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Models Available:</strong></td>
+                                        <td>{{ spec.products_count }} different models</td>
+                                    </tr>
+                                    {% if spec.sample_product.brand %}
+                                    <tr>
+                                        <td><strong>Sample Brand:</strong></td>
+                                        <td>{{ spec.sample_product.brand }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if spec.sample_product.power_rating %}
+                                    <tr>
+                                        <td><strong>Power Rating:</strong></td>
+                                        <td>{{ spec.sample_product.power_rating }}W (and more options)</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if spec.sample_product.efficiency %}
+                                    <tr>
+                                        <td><strong>Efficiency:</strong></td>
+                                        <td>Up to {{ spec.sample_product.efficiency }}%</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if spec.sample_product.warranty_years %}
+                                    <tr>
+                                        <td><strong>Warranty:</strong></td>
+                                        <td>Up to {{ spec.sample_product.warranty_years }} years</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if spec.category.description %}
+                                    <tr>
+                                        <td><strong>Description:</strong></td>
+                                        <td>{{ spec.category.description|truncatewords:15 }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                            <div class="mt-3">
+                                <a href="{% url 'products:category' spec.category.slug %}" class="btn btn-sm btn-primary">
+                                    View All {{ spec.category.name }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% empty %}
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <h5 class="text-muted">No product categories available</h5>
+                            <p class="text-muted">Please contact us for product information</p>
+                            <a href="{% url 'core:contact' %}" class="btn btn-primary">Contact Us</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2>Need Help Choosing Products?</h2>
+                <p class="lead mb-4">Our solar experts can help you select the right products for your specific needs and budget.</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'quotations:calculator' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-calculator me-2"></i>Get Custom Quote
+                    </a>
+                    <a href="{% url 'core:contact' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-comments me-2"></i>Speak to Expert
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{% if is_paginated and page_obj.has_next %}
+<script>
+// Initialize infinite scroll functionality for products
+document.addEventListener('DOMContentLoaded', function() {
+    var hasNext = true;
+    var isLoading = false;
+    var currentPage = {{ page_obj.number }};
+    const productsGrid = document.getElementById('products-grid');
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Create a scroll trigger element
+    const scrollTrigger = document.createElement('div');
+    scrollTrigger.id = 'scroll-trigger';
+    scrollTrigger.style.cssText = 'height: 20px;';
+    document.querySelector('.container').appendChild(scrollTrigger);
+
+    // Intersection Observer for detecting when user scrolls near bottom
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting && !isLoading && hasNext) {
+                loadMoreProducts();
+            }
+        });
+    }, {
+        rootMargin: '100px'
+    });
+
+    observer.observe(scrollTrigger);
+
+    function loadMoreProducts() {
+        if (isLoading || !hasNext) return;
+
+        isLoading = true;
+
+        // Prepare the URL for next page
+        urlParams.set('page', currentPage + 1);
+        const nextUrl = window.location.pathname + '?' + urlParams.toString();
+
+        fetch(nextUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.html) {
+                // Create a temporary div to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.html;
+
+                // Find all product items and add them to the grid
+                const newProducts = tempDiv.querySelectorAll('.product-item');
+                newProducts.forEach(function(product) {
+                    productsGrid.appendChild(product);
+                });
+
+                // Update pagination state
+                currentPage++;
+                hasNext = data.has_next;
+            } else {
+                // No more products
+                hasNext = false;
+            }
+        })
+        .catch(function(error) {
+            console.error('Error loading more products:', error);
+        })
+        .finally(function() {
+            isLoading = false;
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Newsletter Unsubscribe{% endblock %}
+
+{% block meta_description %}Unsubscribe from Olivian Group newsletter and manage your email preferences.{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Unsubscribe</li>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body text-center p-5">
+                    {% if success %}
+                        <div class="mb-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h2 class="card-title text-success mb-3">Unsubscribed Successfully</h2>
+                        <p class="card-text text-muted mb-4">
+                            You have been successfully unsubscribed from our newsletter.
+                        </p>
+                        <p class="text-sm text-muted">
+                            If you change your mind, you can always subscribe again through our website.
+                        </p>
+                    {% else %}
+                        <div class="mb-4">
+                            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                        </div>
+                        <h2 class="card-title text-warning mb-3">Unsubscribe Failed</h2>
+                        <p class="card-text text-muted mb-4">
+                            {{ error|default:"There was an error processing your unsubscribe request." }}
+                        </p>
+                        <p class="text-sm text-muted">
+                            Please try again or contact us directly if the problem persists.
+                        </p>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{% url 'core:home' %}" class="btn btn-primary">
+                            <i class="fas fa-home mr-2"></i>Return to Homepage
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+.btn-primary {
+    background: linear-gradient(45deg, #38b6ff, #4facfe);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(56, 182, 255, 0.3);
+}
+</style>
+{% endblock %}

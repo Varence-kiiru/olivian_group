@@ -1,0 +1,108 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{% if action == 'Edit' %}Edit{% else %}Create{% endif %} Category - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if action == 'Edit' %}Edit{% else %}Create{% endif %} Category{% endblock %}
+{% block page_subtitle %}{% if action == 'Edit' %}Update category information{% else %}Add a new blog category{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas {% if action == 'Edit' %}fa-edit{% else %}fa-plus{% endif %} me-2"></i>
+                    {{ action }} Category
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.name.label_tag }}
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small">{{ form.name.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.slug.label_tag }}
+                                {{ form.slug }}
+                                <small class="text-muted">Leave blank to auto-generate from name</small>
+                                {% if form.slug.errors %}
+                                    <div class="text-danger small">{{ form.slug.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.description.label_tag }}
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'blog:category_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if action == 'Edit' %}Update{% else %}Create{% endif %} Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Slug auto-generation function
+    function slugify(text) {
+        return text
+            .toString()
+            .toLowerCase()
+            .trim()
+            // Replace spaces with dashes
+            .replace(/\s+/g, '-')
+            // Remove special characters
+            .replace(/[^\w\-]+/g, '')
+            // Replace multiple dashes with single dash
+            .replace(/\-\-+/g, '-')
+            // Remove leading/trailing dashes
+            .replace(/^-+/, '')
+            .replace(/-+$/, '');
+    }
+
+    // Auto-generate slug from name
+    function autoGenerateSlug() {
+        const nameField = document.querySelector('#{{ form.name.id_for_label }}');
+        const slugField = document.querySelector('#{{ form.slug.id_for_label }}');
+
+        if (nameField && slugField) {
+            nameField.addEventListener('input', function() {
+                const nameValue = nameField.value;
+                if (nameValue) {
+                    slugField.value = slugify(nameValue);
+                }
+            });
+        }
+    }
+
+    // Initialize slug auto-generation
+    document.addEventListener('DOMContentLoaded', function() {
+        autoGenerateSlug();
+    });
+</script>
+{% endblock %}

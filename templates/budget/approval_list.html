@@ -1,0 +1,423 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget Approvals - {{ block.super }}{% endblock %}
+
+{% block page_title %}Budget Approvals{% endblock %}
+{% block page_subtitle %}Review and approve budget requests{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item active">Approvals</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .approval-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .approval-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .approval-card.status-pending { border-left-color: #ffc107; }
+    .approval-card.status-approved { border-left-color: #28a745; }
+    .approval-card.status-rejected { border-left-color: #dc3545; }
+    .approval-card.status-escalated { border-left-color: #17a2b8; }
+    
+    .approval-level {
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .approval-flow {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .approval-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
+    
+    .approval-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -50%;
+        top: 20px;
+        width: 100%;
+        height: 2px;
+        background: #e9ecef;
+    }
+    
+    .approval-step.completed::after {
+        background: #28a745;
+    }
+    
+    .approval-step.current::after {
+        background: linear-gradient(to right, #28a745 50%, #e9ecef 50%);
+    }
+    
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-circle.completed {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-circle.current {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .step-circle.pending {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    
+    .budget-summary {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .urgency-high {
+        background: #fff5f5;
+        border-left-color: #dc3545 !important;
+    }
+    
+    .urgency-medium {
+        background: #fffbf0;
+        border-left-color: #ffc107 !important;
+    }
+    
+    .urgency-low {
+        background: #f0f9ff;
+        border-left-color: #17a2b8 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="escalated" {% if request.GET.status == 'escalated' %}selected{% endif %}>Escalated</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Approval Level</label>
+            <select class="form-select" name="level">
+                <option value="">All Levels</option>
+                <option value="1">Manager</option>
+                <option value="2">Director</option>
+                <option value="3">CEO</option>
+                <option value="4">Board</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Budget Type</label>
+            <select class="form-select" name="budget_type">
+                <option value="">All Types</option>
+                <option value="project">Project</option>
+                <option value="department">Department</option>
+                <option value="annual">Annual</option>
+                <option value="operational">Operational</option>
+                <option value="capital">Capital</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Budget Approvals</h5>
+    <div class="btn-group">
+        <a href="{% url 'budget:list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Budgets
+        </a>
+    </div>
+</div>
+
+<!-- Approval Cards -->
+<div class="row">
+    {% for approval in approvals %}
+    <div class="col-12">
+        <div class="approval-card status-{{ approval.status }} 
+            {% if approval.budget.total_amount > 1000000 %}urgency-high{% elif approval.budget.total_amount > 500000 %}urgency-medium{% else %}urgency-low{% endif %}">
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="approval-level me-3">{{ approval.approval_level }}</div>
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'budget:detail' approval.budget.pk %}" class="text-decoration-none">
+                                    {{ approval.budget.name }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">
+                                {{ approval.get_approval_level_display }} Approval Required
+                            </small>
+                        </div>
+                        <div class="ms-auto">
+                            <span class="badge bg-{{ approval.status|yesno:'success,warning,danger,info' }}">
+                                {{ approval.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Budget Summary -->
+                    <div class="budget-summary">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="small text-muted">Budget Details</div>
+                                <div class="fw-semibold">{{ approval.budget.get_budget_type_display }}</div>
+                                <div class="small text-muted">{{ approval.budget.period_start }} - {{ approval.budget.period_end }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted">Owner</div>
+                                <div class="fw-semibold">{{ approval.budget.owner.get_full_name }}</div>
+                                {% if approval.budget.department %}
+                                <div class="small text-muted">{{ approval.budget.department }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <p class="text-muted mb-3">{{ approval.budget.description|truncatewords:25 }}</p>
+                    
+                    <!-- Approval Flow -->
+                    <div class="approval-flow">
+                        {% for level in "1234"|make_list %}
+                        <div class="approval-step 
+                            {% if level|add:0 < approval.approval_level %}completed{% elif level|add:0 == approval.approval_level %}current{% else %}pending{% endif %}">
+                            <div class="step-circle 
+                                {% if level|add:0 < approval.approval_level %}completed{% elif level|add:0 == approval.approval_level %}current{% else %}pending{% endif %}">
+                                {% if level|add:0 < approval.approval_level %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    {{ level }}
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                {% if level == "1" %}Manager
+                                {% elif level == "2" %}Director
+                                {% elif level == "3" %}CEO
+                                {% elif level == "4" %}Board
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Comments -->
+                    {% if approval.comments %}
+                    <div class="mt-3">
+                        <div class="small text-muted">Comments</div>
+                        <div class="bg-light p-2 rounded">{{ approval.comments }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Decision Info -->
+                    {% if approval.decision_date %}
+                    <div class="row g-2 small text-muted mt-3">
+                        <div class="col-auto">
+                            <i class="fas fa-user"></i> {{ approval.approver.get_full_name }}
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar"></i> {{ approval.decision_date|date:"M d, Y H:i" }}
+                        </div>
+                        {% if approval.approved_amount %}
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill"></i> Approved: KES {{ approval.approved_amount|floatformat:0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-end">
+                        <div class="mb-3">
+                            <div class="h4 text-primary mb-1">KES {{ approval.budget.total_amount|floatformat:0 }}</div>
+                            <small class="text-muted">Requested Amount</small>
+                        </div>
+                        
+                        {% if approval.approved_amount and approval.approved_amount != approval.budget.total_amount %}
+                        <div class="mb-3">
+                            <div class="h5 text-success mb-1">KES {{ approval.approved_amount|floatformat:0 }}</div>
+                            <small class="text-muted">Approved Amount</small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Urgency Indicator -->
+                        <div class="mb-3">
+                            {% if approval.budget.total_amount > 1000000 %}
+                            <span class="badge bg-danger">High Priority</span>
+                            {% elif approval.budget.total_amount > 500000 %}
+                            <span class="badge bg-warning text-dark">Medium Priority</span>
+                            {% else %}
+                            <span class="badge bg-info">Standard</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        {% if approval.status == 'pending' and approval.budget.can_approve %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'budget:approval_update' approval.pk %}" class="btn btn-primary">
+                                <i class="fas fa-gavel"></i> Review & Decide
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'budget:detail' approval.budget.pk %}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye"></i> View Budget
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Time Info -->
+                        <div class="mt-3 small text-muted text-center">
+                            <i class="fas fa-clock"></i>
+                            {{ approval.created_at|timesince }} ago
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No approval requests found</h5>
+            <p class="text-muted">Budget approval requests will appear here when submitted.</p>
+            <a href="{% url 'budget:list' %}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Budgets
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Approval pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.level %}&level={{ request.GET.level }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh for pending approvals every 30 seconds
+    if (document.querySelector('.approval-card.status-pending')) {
+        setInterval(function() {
+            // Add a subtle indicator that the page will refresh
+            const pendingCards = document.querySelectorAll('.approval-card.status-pending');
+            if (pendingCards.length > 0) {
+                // You could add auto-refresh logic here if needed
+                console.log('Checking for approval updates...');
+            }
+        }, 30000);
+    }
+    
+    // Highlight urgent approvals
+    const urgentApprovals = document.querySelectorAll('.urgency-high');
+    urgentApprovals.forEach(card => {
+        card.style.animation = 'pulse 2s infinite';
+    });
+});
+
+// Add subtle pulse animation for urgent items
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        50% { box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+        100% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

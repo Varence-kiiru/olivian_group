@@ -1,0 +1,311 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Service Area: {{ object.name }}{% else %}Create Service Area{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-{{ object|yesno:'edit,map-marked-alt' }} mr-2"></i>
+                        {% if object %}Edit Service Area: {{ object.name }}{% else %}Create New Service Area{% endif %}
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:service_area_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Basic Information</h5>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                                        {{ form.name.label }}{% if form.name.field.required %} <span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.area_type.id_for_label }}" class="form-label">
+                                        {{ form.area_type.label }}{% if form.area_type.field.required %} <span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ form.area_type }}
+                                    {% if form.area_type.errors %}
+                                        <div class="text-danger small">{{ form.area_type.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.county.id_for_label }}" class="form-label">
+                                        {{ form.county.label }}{% if form.county.field.required %} <span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ form.county }}
+                                    {% if form.county.errors %}
+                                        <div class="text-danger small">{{ form.county.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">County name (leave empty for county-type areas)</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.coverage_type.id_for_label }}" class="form-label">
+                                        {{ form.coverage_type.label }}{% if form.coverage_type.field.required %} <span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ form.coverage_type }}
+                                    {% if form.coverage_type.errors %}
+                                        <div class="text-danger small">{{ form.coverage_type.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                                        {{ form.description.label }}
+                                    </label>
+                                    {{ form.description }}
+                                    {% if form.description.errors %}
+                                        <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Contact Information</h5>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.contact_person.id_for_label }}" class="form-label">
+                                        {{ form.contact_person.label }}
+                                    </label>
+                                    {{ form.contact_person }}
+                                    {% if form.contact_person.errors %}
+                                        <div class="text-danger small">{{ form.contact_person.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.contact_phone.id_for_label }}" class="form-label">
+                                        {{ form.contact_phone.label }}
+                                    </label>
+                                    {{ form.contact_phone }}
+                                    {% if form.contact_phone.errors %}
+                                        <div class="text-danger small">{{ form.contact_phone.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.estimated_response_time.id_for_label }}" class="form-label">
+                                        {{ form.estimated_response_time.label }}
+                                    </label>
+                                    {{ form.estimated_response_time }}
+                                    {% if form.estimated_response_time.errors %}
+                                        <div class="text-danger small">{{ form.estimated_response_time.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <h5 class="mb-3 mt-4">Geographic Information</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.latitude.id_for_label }}" class="form-label">
+                                                {{ form.latitude.label }}
+                                            </label>
+                                            {{ form.latitude }}
+                                            {% if form.latitude.errors %}
+                                                <div class="text-danger small">{{ form.latitude.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.longitude.id_for_label }}" class="form-label">
+                                                {{ form.longitude.label }}
+                                            </label>
+                                            {{ form.longitude }}
+                                            {% if form.longitude.errors %}
+                                                <div class="text-danger small">{{ form.longitude.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.center_point.id_for_label }}" class="form-label">
+                                        {{ form.center_point.label }}
+                                    </label>
+                                    {{ form.center_point }}
+                                    {% if form.center_point.errors %}
+                                        <div class="text-danger small">{{ form.center_point.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">JSON format: [latitude, longitude]</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="mb-3">Advanced Settings</h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.boundary_geojson.id_for_label }}" class="form-label">
+                                                {{ form.boundary_geojson.label }}
+                                            </label>
+                                            {{ form.boundary_geojson }}
+                                            {% if form.boundary_geojson.errors %}
+                                                <div class="text-danger small">{{ form.boundary_geojson.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">GeoJSON polygon for precise boundary definition</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.radius_km.id_for_label }}" class="form-label">
+                                                {{ form.radius_km.label }}
+                                            </label>
+                                            {{ form.radius_km }}
+                                            {% if form.radius_km.errors %}
+                                                <div class="text-danger small">{{ form.radius_km.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Service radius in kilometers (circular areas)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.is_active.id_for_label }}" class="form-label">
+                                                {{ form.is_active.label }}
+                                            </label>
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                                    Active (available for service coverage checks)
+                                                </label>
+                                            </div>
+                                            {% if form.is_active.errors %}
+                                                <div class="text-danger small">{{ form.is_active.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.order.id_for_label }}" class="form-label">
+                                                {{ form.order.label }}
+                                            </label>
+                                            {{ form.order }}
+                                            {% if form.order.errors %}
+                                                <div class="text-danger small">{{ form.order.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Display order (lower numbers appear first)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                {% if object %}
+                                    <a href="{% url 'core:service_area_detail' object.pk %}" class="btn btn-info">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <a href="{% url 'core:service_area_list' %}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary" id="submit-btn">
+                                    <i class="fas fa-save"></i>
+                                    {% if object %}Update Service Area{% else %}Create Service Area{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-populate county field for county-type areas
+document.getElementById('{{ form.area_type.id_for_label }}').addEventListener('change', function() {
+    const areaType = this.value;
+    const countyField = document.getElementById('{{ form.county.id_for_label }}');
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+
+    if (areaType === 'county') {
+        // For county areas, auto-populate county field with name
+        countyField.value = nameField.value;
+        countyField.disabled = true;
+    } else {
+        countyField.disabled = false;
+    }
+});
+
+// Trigger on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const areaTypeField = document.getElementById('{{ form.area_type.id_for_label }}');
+    if (areaTypeField.value === 'county') {
+        document.getElementById('{{ form.county.id_for_label }}').disabled = true;
+    }
+});
+</script>
+
+<style>
+.card-header .card-tools {
+    margin-top: 0;
+}
+
+.form-text {
+    font-size: 0.875em;
+    color: #6c757d;
+}
+
+h5 {
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', function(e) {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% if object %}Updating{% else %}Creating{% endif %}...';
+
+        // Let the form submit normally, but we'll handle success/error messages via Django messages
+        // The Sweet Alert success/error will be shown by the view via Django messages framework
+    });
+});
+</script>
+{% endblock %}

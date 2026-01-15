@@ -1,0 +1,91 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="padding: 30px 0;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 30px;">
+        {% if campaign.hero_image %}
+        <img src="{{ campaign.hero_image.url }}" alt="{{ campaign.title }}" style="max-width: 100%; height: auto; border-radius: 8px;">
+        {% endif %}
+        <h1 style="color: #333; margin: 20px 0 10px 0; font-size: 28px;">{{ campaign.subject }}</h1>
+        {% if campaign.preview_text %}
+        <p style="color: #666; font-size: 16px; margin: 0;">{{ campaign.preview_text }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Content -->
+    <div style="color: #333; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+        {{ rendered_content|safe }}
+    </div>
+    
+    <!-- Call to Action -->
+    {% if campaign.call_to_action_text and campaign.call_to_action_url %}
+    <div style="text-align: center; margin: 40px 0;">
+        <a href="{{ click_tracking_url }}?url={{ campaign.call_to_action_url|urlencode }}" 
+           style="background-color: #38b6ff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
+            {{ campaign.call_to_action_text }}
+        </a>
+    </div>
+    {% endif %}
+    
+    <!-- Divider -->
+    <div style="border-top: 1px solid #eee; margin: 40px 0 30px 0;"></div>
+    
+    <!-- Company Info -->
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">About {{ company_name }}</h3>
+        <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">
+            We're Kenya's trusted partner for comprehensive solar energy solutions, combining cutting-edge technology with unparalleled expertise.
+        </p>
+        <p style="color: #666; margin: 0;">
+            <strong>Contact us:</strong><br>
+            📧 {{ company_email }}<br>
+            📞 {{ company_phone }}<br>
+            🌐 {{ company_website }}
+        </p>
+    </div>
+    
+    <!-- Solar Tips -->
+    <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38b6ff;">
+        <h4 style="color: #333; margin-bottom: 15px;">💡 Solar Energy Tip</h4>
+        <p style="color: #555; margin: 0; line-height: 1.6;">
+            Regular cleaning of your solar panels can increase energy production by up to 25%. Clean panels early morning or late evening when they're cool to avoid thermal shock.
+        </p>
+    </div>
+    
+    <!-- Social Media -->
+    <div style="text-align: center; margin: 30px 0;">
+        <p style="color: #666; margin-bottom: 15px;">Follow us for daily solar insights:</p>
+        <div style="margin: 0;">
+            {% if social_media.facebook %}
+            <a href="{{ social_media.facebook }}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiMxODc3RjIiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTguNSA1SDE2VjEzSDguNVY5SDExVjdIOC41VjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+Cjwvc3ZnPgo=" alt="Facebook" style="width: 32px; height: 32px;">
+            </a>
+            {% endif %}
+            {% if social_media.twitter %}
+            <a href="{{ social_media.twitter }}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiMxREE1RjIiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDVIMTBWM0g2VjVINFYxM0g2VjVIOVYxM0gxMlY1WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPgo8L3N2Zz4K" alt="Twitter" style="width: 32px; height: 32px;">
+            </a>
+            {% endif %}
+            {% if social_media.linkedin %}
+            <a href="{{ social_media.linkedin }}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiMwMDc3QjUiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQgNkg2VjEzSDRWNlpNNSAzQzUuNTUgMyA2IDMuNDUgNiA0QzYgNC41NSA1LjU1IDUgNSA1QzQuNDUgNSA0IDQuNTUgNCA0QzQgMy40NSA0LjQ1IDMgNSAzWk04IDZINTBWMTNIOFY5LjVDOCA4LjY3IDguNjcgOCA5LjUgOEM10LjMzIDggMTEgOC42NyAxMSA5LjVWMTNIMTNWOS41QzEzIDcuNTcgMTEuNDMgNiA5LjUgNkM4LjY3IDYgOCA2LjQ1IDggN1Y2WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPgo8L3N2Zz4K" alt="LinkedIn" style="width: 32px; height: 32px;">
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Tracking Pixel -->
+    <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display: none;" alt="">
+
+    <!-- Prominent Unsubscribe Button -->
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+        <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+            Not interested in our newsletter anymore?
+        </p>
+        <a href="{{ unsubscribe_url }}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 14px;">
+            🚫 Unsubscribe from Newsletter
+        </a>
+    </div>
+</div>
+{% endblock %}

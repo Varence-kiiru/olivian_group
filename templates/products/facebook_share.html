@@ -1,0 +1,684 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Share {{ product.name }} to Facebook - {{ company.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.share-preview {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    border: 1px solid #e9ecef;
+}
+
+.share-preview h4 {
+    color: var(--dark-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.share-preview h4 i {
+    color: #1877f2;
+}
+
+.preview-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.product-image-preview {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f8f9fa;
+}
+
+.product-image-preview.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.product-image-preview.placeholder i {
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+.preview-content {
+    padding: 1.5rem;
+}
+
+.preview-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1877f2;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.preview-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.preview-url {
+    color: #999;
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.share-text-area {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.share-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-facebook {
+    background: #1877f2;
+    border: 2px solid #1877f2;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-facebook:hover {
+    background: #166fe5;
+    border-color: #166fe5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(24, 119, 242, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-facebook i {
+    font-size: 1.1rem;
+}
+
+.btn-outline-secondary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+.product-info {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    border: 1px solid #e9ecef;
+}
+
+.product-info h5 {
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.product-info h5 i {
+    color: var(--primary-color);
+}
+
+.product-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.spec-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.spec-label {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.spec-value {
+    color: var(--primary-color);
+}
+
+.share-tips {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.share-tips h5 {
+    color: white;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.share-tips ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.share-tips li {
+    margin-bottom: 0.5rem;
+}
+
+.alert-info-custom {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+@media (max-width: 768px) {
+    .share-actions {
+        flex-direction: column;
+    }
+
+    .share-actions .btn {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-specs {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'products:manage' %}">Product Management</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'admin:products_product_change' product.id %}">{{ product.name }}</a></li>
+                        <li class="breadcrumb-item active">Share to Facebook</li>
+                    </ol>
+                </nav>
+
+                <h1 class="mb-3">
+                    <i class="fab fa-facebook-square text-primary me-3"></i>
+                    Share "{{ product.name }}" to Facebook
+                </h1>
+                <p class="text-muted">
+                    Preview how this product will appear when shared on Facebook and post it directly to your Facebook page.
+                </p>
+            </div>
+        </div>
+
+        <!-- Facebook SDK Status -->
+        <div id="fb-sdk-status-detail" class="row mb-3" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin me-2"></i>
+                    Loading Facebook integration...
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Tips -->
+        <div class="share-tips">
+            <h5><i class="fas fa-lightbulb"></i> Sharing Tips</h5>
+            <ul>
+                <li>Make sure you're logged into Facebook in another tab</li>
+                <li>The post will open Facebook's sharing dialog where you can choose which page to post to</li>
+                <li>You can edit the post text before publishing if needed</li>
+                <li>Images and links will automatically be included in the post</li>
+            </ul>
+        </div>
+
+        <div class="row">
+            <!-- Left Column - Product Info & Preview -->
+            <div class="col-lg-8">
+                <!-- Product Information -->
+                <div class="product-info">
+                    <h5><i class="fas fa-info-circle"></i> Product Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="spec-item">
+                                <span class="spec-label">Name:</span>
+                                <span class="spec-value">{{ product.name }}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">SKU:</span>
+                                <span class="spec-value">{{ product.sku }}</span>
+                            </div>
+                            {% if product.brand %}
+                            <div class="spec-item">
+                                <span class="spec-label">Brand:</span>
+                                <span class="spec-value">{{ product.brand }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="spec-item">
+                                <span class="spec-label">Category:</span>
+                                <span class="spec-value">{{ product.category.name }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="spec-item">
+                                <span class="spec-label">Type:</span>
+                                <span class="spec-value">{{ product.get_product_type_display }}</span>
+                            </div>
+                            {% if product.power_rating %}
+                            <div class="spec-item">
+                                <span class="spec-label">Power:</span>
+                                <span class="spec-value">{{ product.power_rating }}W</span>
+                            </div>
+                            {% endif %}
+                            {% if product.efficiency %}
+                            <div class="spec-item">
+                                <span class="spec-label">Efficiency:</span>
+                                <span class="spec-value">{{ product.efficiency }}%</span>
+                            </div>
+                            {% endif %}
+                            {% if product.warranty_years %}
+                            <div class="spec-item">
+                                <span class="spec-label">Warranty:</span>
+                                <span class="spec-value">{{ product.warranty_years }} years</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Facebook Preview -->
+                <div class="share-preview">
+                    <h4><i class="fab fa-facebook"></i> Facebook Post Preview</h4>
+                    <p class="text-muted small">This is how your post will appear on Facebook:</p>
+
+                    <div class="preview-card">
+                        {% if image_url %}
+                        <img src="{{ image_url }}" alt="{{ product.name }}" class="product-image-preview">
+                        {% else %}
+                        <div class="product-image-preview placeholder">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="preview-content">
+                            <div class="preview-title">{{ product.name }}</div>
+                            {% if product.short_description %}
+                            <div class="preview-description">{{ product.short_description }}</div>
+                            {% endif %}
+                            <a href="{{ product_url }}" class="preview-url" target="_blank">{{ product_url|truncatechars:50 }}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Share Text -->
+                <div class="share-preview">
+                    <h4><i class="fas fa-edit"></i> Post Content</h4>
+                    <p class="text-muted small">This text will be included in your Facebook post:</p>
+                    <div class="share-text-area">{{ share_text }}</div>
+
+                    <div class="alert alert-info-custom">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You can edit this text in Facebook's sharing dialog before posting.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Actions -->
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 2rem;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fab fa-facebook-square me-2"></i>
+                            Share Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="share-actions">
+                            <button type="button" class="btn-facebook">
+                                <i class="fab fa-facebook-f"></i>
+                                Share to Facebook
+                            </button>
+
+                            <a href="{% url 'products:manage' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Back to Products
+                            </a>
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center">
+                            {% if image_url %}
+                            <p class="text-success mb-2">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Product image included
+                            </p>
+                            {% else %}
+                            <p class="text-warning mb-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                No product image available
+                            </p>
+                            {% endif %}
+
+                            <p class="text-success mb-2">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Product link included
+                            </p>
+
+                            {% if product.customer_display_price %}
+                            <p class="text-success mb-0">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Price information included
+                            </p>
+                            {% else %}
+                            <p class="text-info mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Contact for pricing
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Browser-agnostic Facebook sharing -->
+<div id="fb-sdk-status-detail" style="display: none;">
+    <div class="alert alert-info">
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        Initializing Facebook sharing...
+    </div>
+</div>
+
+<script>
+// Browser-agnostic Facebook sharing system
+let fbSdkAvailable = false;
+let fbSdkChecked = false;
+let sharingMethod = 'detecting'; // 'sdk', 'url', or 'detecting'
+
+// Smart Facebook integration detection
+function initializeFacebookSharing() {
+    const statusDiv = document.getElementById('fb-sdk-status-detail');
+
+    // Show initial status
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                Checking Facebook integration compatibility...
+            </div>
+        `;
+    }
+
+    // Try to load Facebook SDK (works in some browsers)
+    loadFacebookSDK();
+
+    // Set a timeout to determine final method
+    setTimeout(function() {
+        determineSharingMethod();
+    }, 8000); // 8 second timeout for SDK detection
+}
+
+function loadFacebookSDK() {
+    // Clear any existing SDK
+    const existingScript = document.querySelector('script[src*="connect.facebook.net"]');
+    if (existingScript) {
+        existingScript.remove();
+    }
+
+    // Remove any existing FB global
+    if (window.FB) {
+        delete window.FB;
+    }
+
+    // Create and load the Facebook SDK
+    const script = document.createElement('script');
+    script.async = true;
+    script.defer = true;
+    script.crossOrigin = 'anonymous';
+    script.src = 'https://connect.facebook.net/en_US/sdk.js';
+
+    script.onload = function() {
+        console.log('Facebook SDK script loaded, waiting for initialization...');
+        // Give SDK time to initialize FB object
+        setTimeout(function() {
+            if (window.FB && typeof window.FB.init === 'function') {
+                window.fbAsyncInit();
+            } else {
+                console.log('Facebook SDK loaded but FB object not available');
+                fbSdkAvailable = false;
+                fbSdkChecked = true;
+            }
+        }, 2000);
+    };
+
+    script.onerror = function() {
+        console.log('Facebook SDK failed to load - will use URL-based sharing');
+        fbSdkAvailable = false;
+        fbSdkChecked = true;
+    };
+
+    document.head.appendChild(script);
+}
+
+// Facebook SDK initialization
+window.fbAsyncInit = function() {
+    console.log('Facebook SDK initializing...');
+    try {
+        FB.init({
+            appId: null, // No app ID required for basic sharing
+            xfbml: true,
+            version: 'v18.0'
+        });
+        fbSdkAvailable = true;
+        console.log('Facebook SDK initialized successfully');
+    } catch (error) {
+        console.error('Facebook SDK initialization failed:', error);
+        fbSdkAvailable = false;
+    }
+    fbSdkChecked = true;
+};
+
+// Determine which sharing method to use
+function determineSharingMethod() {
+    const statusDiv = document.getElementById('fb-sdk-status-detail');
+
+    if (fbSdkAvailable && fbSdkChecked) {
+        // SDK works - use enhanced sharing
+        sharingMethod = 'sdk';
+        console.log('Using Facebook SDK sharing (Enhanced mode)');
+
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fab fa-facebook me-2"></i>
+                    Facebook enhanced sharing active
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    } else {
+        // SDK failed - use URL-based sharing
+        sharingMethod = 'url';
+        console.log('Using URL-based Facebook sharing (Compatible mode)');
+
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <div class="alert alert-info alert-dismissible fade show">
+                    <i class="fas fa-link me-2"></i>
+                    Facebook sharing ready (compatible mode)
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    }
+
+    // Hide status after 4 seconds
+    setTimeout(function() {
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
+    }, 4000);
+}
+
+// Build Facebook Share Dialog URL
+function buildFacebookShareUrl(productUrl, shareText) {
+    let shareUrl = 'https://www.facebook.com/dialog/share?';
+
+    // Add Facebook App ID if available
+    if (window.FACEBOOK_APP_ID) {
+        shareUrl += `app_id=${window.FACEBOOK_APP_ID}&`;
+    }
+
+    shareUrl += 'display=popup&';
+    shareUrl += `href=${encodeURIComponent(productUrl)}`;
+
+    if (shareText) {
+        shareUrl += `&quote=${encodeURIComponent(shareText)}`;
+    }
+
+    return shareUrl;
+}
+
+// Enhanced Facebook sharing (SDK when available)
+function shareProductToFacebook() {
+    const productUrl = '{{ product_url }}';
+    const shareText = '{{ share_text|escapejs }}';
+
+    if (sharingMethod === 'detecting') {
+        alert('Facebook sharing is still initializing. Please wait a moment and try again.');
+        return;
+    }
+
+    if (sharingMethod === 'sdk' && typeof FB !== 'undefined') {
+        // Use Facebook SDK (enhanced experience)
+        console.log('Using Facebook SDK for sharing');
+
+        const shareBtn = document.querySelector('.btn-facebook');
+        const originalText = shareBtn.innerHTML;
+        shareBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Opening Facebook...';
+        shareBtn.disabled = true;
+
+        FB.ui({
+            method: 'share',
+            href: productUrl,
+            quote: shareText,
+            picture: '{{ image_url }}' || undefined,
+            title: '{{ product.name|escapejs }}',
+            description: shareText
+        }, function(response) {
+            if (response && !response.error_message) {
+                alert('Product shared successfully to Facebook!');
+            } else {
+                console.log('Facebook SDK share failed, falling back to URL method');
+                // Fallback to URL method
+                useUrlBasedSharing(productUrl, shareText, 'SDK sharing failed, using compatible method instead.');
+            }
+
+            // Reset button
+            shareBtn.innerHTML = originalText;
+            shareBtn.disabled = false;
+        });
+    } else {
+        // Use URL-based sharing (compatible with all browsers)
+        console.log('Using URL-based sharing');
+        useUrlBasedSharing(productUrl, shareText);
+    }
+}
+
+// URL-based sharing (works in all browsers)
+function useUrlBasedSharing(productUrl, shareText, message) {
+    const shareUrl = buildFacebookShareUrl(productUrl, shareText);
+
+    // Open Facebook share dialog
+    const popup = window.open(shareUrl, 'facebook-share', 'width=600,height=400,scrollbars=yes,resizable=yes');
+
+    if (popup) {
+        alert(message || 'Facebook sharing dialog opened! Select your page and share the product.');
+    } else {
+        alert('Popup blocked! Please allow popups for this site and try again.');
+    }
+}
+
+// Update the share button when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const shareBtn = document.querySelector('.btn-facebook');
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Share "{{ product.name }}" to Facebook?\n\nThis will open Facebook\'s sharing dialog where you can choose which page to post to.')) {
+                shareProductToFacebook();
+            }
+        });
+    }
+
+    // Initialize sharing system
+    setTimeout(initializeFacebookSharing, 500);
+});
+</script>
+{% endblock %}

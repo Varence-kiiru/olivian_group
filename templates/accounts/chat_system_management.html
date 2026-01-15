@@ -1,0 +1,1511 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Chat System Management - {{ company.name|default:"Olivian Group" }}{% endblock %}
+{% block page_title %}Chat System Management{% endblock %}
+{% block page_subtitle %}System-wide chat data management and statistics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+        transition: var(--transition);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+    }
+
+    .metric-card.rooms::before { background: linear-gradient(90deg, var(--primary-color), var(--primary-light)); }
+    .metric-card.messages::before { background: linear-gradient(90deg, var(--success-color), #20c997); }
+    .metric-card.activity::before { background: linear-gradient(90deg, var(--warning-color), #ffc720); }
+    .metric-card.attachments::before { background: linear-gradient(90deg, var(--info-color), #20c0f3); }
+
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+    }
+
+    .metric-icon.rooms { background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); }
+    .metric-icon.messages { background: linear-gradient(135deg, var(--success-color), #20c997); }
+    .metric-icon.activity { background: linear-gradient(135deg, var(--warning-color), #ffc720); }
+    .metric-icon.attachments { background: linear-gradient(135deg, var(--info-color), #20c0f3); }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        color: var(--dark-color);
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .management-panel {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .management-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .management-title i {
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+
+    .warning-banner {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid var(--warning-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .warning-banner p {
+        margin: 0;
+        color: var(--warning-darker);
+        font-weight: 500;
+    }
+
+    .clear-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .action-card {
+        background: var(--light-color);
+        border: 1px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        transition: var(--transition);
+    }
+
+    .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+        border-color: var(--primary-color);
+    }
+
+    .action-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .action-title i {
+        margin-right: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .action-description {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 1rem;
+        line-height: 1.4;
+    }
+
+    .action-button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        width: 100%;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .action-button:hover {
+        background: var(--primary-dark);
+        color: white;
+        text-decoration: none;
+    }
+
+    .action-button.danger {
+        background: var(--danger-color);
+    }
+
+    .action-button.danger:hover {
+        background: #c82333;
+    }
+
+    .action-button.warning {
+        background: var(--warning-color);
+    }
+
+    .action-button.warning:hover {
+        background: #e67e22;
+    }
+
+    .action-button.success {
+        background: var(--success-color);
+    }
+
+    .action-button.success:hover {
+        background: #218838;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .stat-card {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        border: 1px solid #e9ecef;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .management-tabs {
+        margin-bottom: 2rem;
+    }
+
+    .tab-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .tab-button {
+        background: none;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: #666;
+        transition: var(--transition);
+    }
+
+    .tab-button.active,
+    .tab-button:hover {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .management-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .management-table th,
+    .management-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .management-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+
+    .room-name {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .room-type {
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .room-type.department {
+        background: rgba(0, 123, 255, 0.1);
+        color: #0056b3;
+    }
+
+    .room-type.project {
+        background: rgba(40, 167, 69, 0.1);
+        color: #1e8449;
+    }
+
+    .room-type.general {
+        background: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+
+    .room-type.private {
+        background: rgba(255, 193, 7, 0.1);
+        color: #d39e00;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-active {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success-color);
+    }
+
+    .status-inactive {
+        background: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+
+    .status-banned {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .status-permanent {
+        background: rgba(255, 193, 7, 0.1);
+        color: var(--warning-color);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-success {
+        background: var(--success-color);
+        color: white;
+        border: none;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+    }
+
+    .btn-warning {
+        background: var(--warning-color);
+        color: white;
+        border: none;
+    }
+
+    .btn-warning:hover {
+        background: #e67e22;
+    }
+
+    .btn-danger {
+        background: var(--danger-color);
+        color: white;
+        border: none;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+
+    .user-info .name {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .user-info .role {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--dark-color);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    /* Beautiful Confirmation Modal Styles */
+    .confirm-modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: modalSlideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .confirm-modal-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+        animation: progressBar 3s linear;
+    }
+
+    .confirm-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 2rem;
+        position: relative;
+    }
+
+    .confirm-icon i {
+        position: relative;
+        z-index: 1;
+        animation: iconPulse 1s infinite;
+    }
+
+    .confirm-icon::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        opacity: 0.2;
+        animation: bgPulse 2s infinite;
+    }
+
+    .confirm-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .confirm-message {
+        font-size: 1rem;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+    }
+
+    .confirm-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .confirm-actions button {
+        padding: 0.75rem 2rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+        min-width: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-cancel {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+    }
+
+    .btn-cancel:hover {
+        background: #e9ecef;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-proceed {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+
+    .btn-proceed:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+    }
+
+    /* Specific button styles for different alert types */
+    .confirm-modal-content.danger .confirm-icon::before {
+        background: linear-gradient(135deg, #dc3545, #e74c3c);
+    }
+
+    .confirm-modal-content.warning .confirm-icon::before {
+        background: linear-gradient(135deg, #ffc107, #f39c12);
+    }
+
+    .confirm-modal-content.success .confirm-icon::before {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+
+    .confirm-modal-content.info .confirm-icon::before {
+        background: linear-gradient(135deg, #17a2b8, #3498db);
+    }
+
+    /* Animations */
+    @keyframes modalSlideIn {
+        from {
+            transform: scale(0.9) translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes progressBar {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); transform-origin: left; }
+    }
+
+    @keyframes iconPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    @keyframes bgPulse {
+        0%, 100% {
+            opacity: 0.2;
+        }
+        50% {
+            opacity: 0.4;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Chat System Metrics -->
+<div class="chat-metrics">
+    <div class="metric-card rooms">
+        <div class="metric-icon rooms">
+            <i class="fas fa-comments"></i>
+        </div>
+        <div class="metric-value">{{ total_rooms }}</div>
+        <div class="metric-label">Total Chat Rooms</div>
+    </div>
+
+    <div class="metric-card messages">
+        <div class="metric-icon messages">
+            <i class="fas fa-envelope"></i>
+        </div>
+        <div class="metric-value">{{ total_messages }}</div>
+        <div class="metric-label">Total Messages</div>
+    </div>
+
+    <div class="metric-card activity">
+        <div class="metric-icon activity">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="metric-value">{{ total_users_with_activity }}</div>
+        <div class="metric-label">Active Users</div>
+    </div>
+
+    <div class="metric-card attachments">
+        <div class="metric-icon attachments">
+            <i class="fas fa-paperclip"></i>
+        </div>
+        <div class="metric-value">{{ messages_with_attachments }}</div>
+        <div class="metric-label">Messages with Attachments</div>
+        <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+            {{ total_attachments_size }} total size
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics -->
+<div class="management-panel">
+    <div class="management-title">
+        <i class="fas fa-chart-bar"></i>
+        Chat System Statistics
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_reactions }}</div>
+            <div class="stat-label">Message Reactions</div>
+        </div>
+    </div>
+</div>
+
+<!-- Management Tabs -->
+<div class="management-tabs">
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="showTab('data-clear')">Data Management</button>
+        <button class="tab-button" onclick="showTab('rooms')">Room Management</button>
+        <button class="tab-button" onclick="showTab('users')">User Management</button>
+        <button class="tab-button" onclick="showTab('bans')">Ban Management</button>
+    </div>
+
+    <!-- Data Clear Tab -->
+    <div id="data-clear" class="tab-content active">
+        <div class="management-panel">
+            <div class="management-title">
+                <i class="fas fa-tools"></i>
+                Data Management Actions
+            </div>
+
+            <div class="warning-banner">
+                <p>
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> These operations cannot be undone. Please proceed with extreme caution.
+                </p>
+            </div>
+
+            <form method="post" onsubmit="return confirmAction(this)">
+                {% csrf_token %}
+
+                <div class="clear-actions">
+                    <div class="action-card">
+                        <div class="action-title">
+                            <i class="fas fa-envelope-open-text text-primary"></i>
+                            Clear All Messages
+                        </div>
+                        <div class="action-description">
+                            Delete all messages and related data (reactions, read statuses) from all chat rooms.
+                            This will remove the entire message history across the entire system.
+                        </div>
+                        <button type="submit" name="clear_action" value="messages" class="action-button warning">
+                            <i class="fas fa-envelope-open-text me-2"></i>
+                            Clear Messages
+                        </button>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-title">
+                            <i class="fas fa-paperclip text-info"></i>
+                            Clear All Attachments
+                        </div>
+                        <div class="action-description">
+                            Delete all file attachments from chat messages. This will permanently remove
+                            all uploaded files but keep the messages themselves (with broken links).
+                        </div>
+                        <button type="submit" name="clear_action" value="attachments" class="action-button success">
+                            <i class="fas fa-paperclip me-2"></i>
+                            Clear Attachments
+                        </button>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-title">
+                            <i class="fas fa-user-clock text-warning"></i>
+                            Clear User Activity
+                        </div>
+                        <div class="action-description">
+                            Clear all user online/typing status data. This will reset all user activity
+                            tracking but won't affect message history or settings.
+                        </div>
+                        <button type="submit" name="clear_action" value="activity" class="action-button warning">
+                            <i class="fas fa-user-clock me-2"></i>
+                            Clear Activity
+                        </button>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-title">
+                            <i class="fas fa-trash-alt text-danger"></i>
+                            Clear Everything
+                        </div>
+                        <div class="action-description">
+                            Complete system reset: clears all messages, attachments, activity data,
+                            and notification preferences. This will restore the chat system to a completely clean state.
+                        </div>
+                        <button type="submit" name="clear_action" value="all" class="action-button danger">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Room Management Tab -->
+    <div id="rooms" class="tab-content">
+        <div class="management-panel">
+            <div class="management-title">
+                <i class="fas fa-comments"></i>
+                Chat Room Management
+            </div>
+
+            <div class="table-responsive">
+                <table class="management-table">
+                    <thead>
+                        <tr>
+                            <th>Room Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Participants</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room in chat_rooms %}
+                        <tr>
+                            <td>
+                                <div class="room-name">{{ room.name }}</div>
+                                {% if room.description %}
+                                <small class="text-muted">{{ room.description|truncatechars:50 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="room-type {{ room.room_type }}">{{ room.room_type }}</span>
+                            </td>
+                            <td>
+                                {% if room.is_active %}
+                                <span class="status-badge status-active">Active</span>
+                                {% else %}
+                                <span class="status-badge status-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ room.get_participants_count }}</td>
+                            <td>{{ room.created_at|date:"M j, Y" }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if room.is_active %}
+                                    <button class="btn-sm btn-warning" onclick="deactivateRoom({{ room.id }}, '{{ room.name }}')">
+                                        <i class="fas fa-ban"></i> Deactivate
+                                    </button>
+                                    {% else %}
+                                    <button class="btn-sm btn-success" onclick="activateRoom({{ room.id }}, '{{ room.name }}')">
+                                        <i class="fas fa-play"></i> Activate
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn-sm btn-danger" onclick="deleteRoom({{ room.id }}, '{{ room.name }}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-comments"></i>
+                                <p>No chat rooms found</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Tab -->
+    <div id="users" class="tab-content">
+        <div class="management-panel">
+            <div class="management-title">
+                <i class="fas fa-users-cog"></i>
+                User Management
+            </div>
+
+            <div class="table-responsive">
+                <table class="management-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Messages</th>
+                            <th>Status</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in chat_users %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center;">
+                                    <div class="user-avatar">
+                                        {% if user.first_name %}{{ user.first_name.0|upper }}{% else %}{{ user.username.0|upper }}{% endif %}
+                                    </div>
+                                    <div class="user-info">
+                                        <div class="name">{{ user.get_full_name|default:user.username }}</div>
+                                        <div class="role">{{ user.get_role_display }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ user.message_count }}</td>
+                            <td>
+                                {% if user.banned_from_chat %}
+                                <span class="status-badge status-banned">Banned</span>
+                                {% else %}
+                                <span class="status-badge status-active">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.chat_activity.first %}
+                                {{ user.chat_activity.first.last_activity|timesince }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if user.banned_from_chat %}
+                                    <button class="btn-sm btn-success" onclick="unbanUser({{ user.id }}, '{{ user.username }}')">
+                                        <i class="fas fa-check"></i> Unban
+                                    </button>
+                                    {% else %}
+                                    <button class="btn-sm btn-danger" onclick="banUser({{ user.id }}, '{{ user.username }}')">
+                                        <i class="fas fa-ban"></i> Ban
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn-sm btn-warning" onclick="disconnectUser({{ user.id }}, '{{ user.username }}')">
+                                        <i class="fas fa-power-off"></i> Disconnect
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>No users with chat activity found</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ban Management Tab -->
+    <div id="bans" class="tab-content">
+        <div class="management-panel">
+            <div class="management-title">
+                <i class="fas fa-gavel"></i>
+                Ban Management ({{ banned_users|length }} banned users)
+            </div>
+
+            <div class="table-responsive">
+                <table class="management-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Banned By</th>
+                            <th>Reason</th>
+                            <th>Ban Status</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ban in banned_users %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center;">
+                                    <div class="user-avatar">
+                                        {% if ban.user.first_name %}{{ ban.user.first_name.0|upper }}{% else %}{{ ban.user.username.0|upper }}{% endif %}
+                                    </div>
+                                    <div class="user-info">
+                                        <div class="name">{{ ban.user.get_full_name|default:ban.user.username }}</div>
+                                        <div class="role">{{ ban.user.get_role_display }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if ban.banned_by %}
+                                {{ ban.banned_by.get_full_name|default:ban.banned_by.username }}
+                                {% else %}
+                                System
+                                {% endif %}
+                            </td>
+                            <td>{{ ban.reason|default:"No reason specified" }}</td>
+                            <td>
+                                {% if ban.status == "Permanent" %}
+                                <span class="status-badge status-permanent">{{ ban.status }}</span>
+                                {% elif ban.status == "Active" %}
+                                <span class="status-badge status-banned">{{ ban.status }}</span>
+                                {% else %}
+                                <span class="status-badge status-inactive">{{ ban.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ban.expires_at %}
+                                {{ ban.expires_at|date:"M j, Y H:i" }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn-sm btn-success" onclick="unbanUser({{ ban.user.id }}, '{{ ban.user.username }}')">
+                                    <i class="fas fa-check"></i> Unban
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <p>No banned users</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ban User Modal -->
+<div id="banUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Ban User from Chat</h5>
+            <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="banUserForm">
+            <input type="hidden" id="banUserId" name="user_id">
+            <div class="form-group">
+                <label class="form-label">Ban Reason:</label>
+                <textarea class="form-textarea" id="banReason" name="reason" placeholder="Enter reason for banning this user..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ban Duration:</label>
+                <select class="form-select" id="banDuration" name="duration">
+                    <option value="permanent">Permanent</option>
+                    <option value="1">1 Day</option>
+                    <option value="7">7 Days</option>
+                    <option value="30">30 Days</option>
+                    <option value="90">90 Days</option>
+                </select>
+            </div>
+            <button type="submit" class="action-button danger" style="width: auto; margin-top: 1rem;">
+                <i class="fas fa-ban me-2"></i>Ban User
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Beautiful Confirmation Modal -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content confirm-modal-content">
+        <div class="confirm-icon">
+            <i id="confirmIcon" class="fas"></i>
+        </div>
+        <h2 id="confirmTitle" class="confirm-title"></h2>
+        <p id="confirmMessage" class="confirm-message"></p>
+        <div class="confirm-actions">
+            <button id="confirmCancel" class="btn-cancel">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button id="confirmProceed" class="btn-proceed">
+                <i id="confirmProceedIcon" class="fas"></i> <span id="confirmProceedText"></span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Tab switching functionality
+function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected tab
+    document.getElementById(tabId).classList.add('active');
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+
+    // Find and activate the corresponding button
+    event.target.classList.add('active');
+}
+
+// Modal functionality
+function openModal() {
+    document.getElementById('banUserModal').classList.add('show');
+}
+
+function closeModal() {
+    document.getElementById('banUserModal').classList.remove('show');
+    document.getElementById('banUserForm').reset();
+}
+
+// Confirmation dialog for destructive actions
+function confirmAction(form) {
+    const action = form.querySelector('button[type="submit"]:focus, button[type="submit"]:active');
+
+    if (!action) return true;
+
+    const actionType = action.value;
+    let message = '';
+
+    switch(actionType) {
+        case 'messages':
+            message = 'Are you sure you want to delete ALL messages from ALL chat rooms? This action cannot be undone.';
+            break;
+        case 'attachments':
+            message = 'Are you sure you want to delete ALL file attachments? This will permanently remove uploaded files.';
+            break;
+        case 'activity':
+            message = 'Are you sure you want to clear all user activity data? This will reset online/typing statuses.';
+            break;
+        case 'all':
+            message = 'Are you sure you want to COMPLETELY CLEAR the chat system? This will delete all messages, attachments, activity data, and preferences. This action CANNOT be undone.';
+            break;
+        default:
+            message = 'Are you sure you want to perform this action?';
+    }
+
+    return confirm(message);
+}
+
+// Room management functions
+function deactivateRoom(roomId, roomName) {
+    if (confirm(`Are you sure you want to deactivate the room "${roomName}"? Users will no longer be able to access it.`)) {
+        performAction('deactivate_room', {room_id: roomId});
+    }
+}
+
+function activateRoom(roomId, roomName) {
+    if (confirm(`Are you sure you want to activate the room "${roomName}"?`)) {
+        performAction('activate_room', {room_id: roomId});
+    }
+}
+
+function deleteRoom(roomId, roomName) {
+    if (confirm(`Are you sure you want to PERMANENTLY DELETE the room "${roomName}"? This will also delete all messages in the room and cannot be undone.`)) {
+        performAction('delete_room', {room_id: roomId});
+    }
+}
+
+// User management functions
+function banUser(userId, username) {
+    document.getElementById('banUserId').value = userId;
+    document.querySelector('.modal-title').textContent = `Ban User: ${username}`;
+    openModal();
+}
+
+function unbanUser(userId, username) {
+    if (confirm(`Are you sure you want to unban ${username}? They will be able to use chat again.`)) {
+        performAction('unban_user', {user_id: userId});
+    }
+}
+
+function disconnectUser(userId, username) {
+    if (confirm(`Are you sure you want to force disconnect ${username} from chat?`)) {
+        performAction('disconnect_user', {user_id: userId});
+    }
+}
+
+// Handle ban form submission
+document.getElementById('banUserForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const userId = document.getElementById('banUserId').value;
+    const reason = document.getElementById('banReason').value;
+    const duration = document.getElementById('banDuration').value;
+
+    performAction('ban_user', {
+        user_id: userId,
+        reason: reason,
+        duration: duration
+    });
+
+    closeModal();
+});
+
+// AJAX action handler
+function performAction(action, data) {
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: action,
+            ...data
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload(); // Refresh the page to show updated data
+        } else {
+            alert('Error: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while performing the action.');
+    });
+}
+
+// Beautiful Confirmation Modal Functions
+let confirmCallback = null;
+
+function showConfirmModal(options) {
+    const modal = document.getElementById('confirmModal');
+    const icon = document.getElementById('confirmIcon');
+    const title = document.getElementById('confirmTitle');
+    const message = document.getElementById('confirmMessage');
+    const proceedBtn = document.getElementById('confirmProceed');
+    const proceedIcon = document.getElementById('confirmProceedIcon');
+    const proceedText = document.getElementById('confirmProceedText');
+    const modalContent = modal.querySelector('.confirm-modal-content');
+
+    // Set content
+    icon.className = options.icon;
+    title.textContent = options.title;
+    message.textContent = options.message;
+    proceedIcon.className = options.proceedIcon;
+    proceedText.textContent = options.proceedText;
+
+    // Set modal type for styling
+    modalContent.className = 'confirm-modal-content';
+    if (options.type) {
+        modalContent.classList.add(options.type);
+    }
+
+    // Show modal
+    modal.classList.add('show');
+    confirmCallback = options.onConfirm;
+
+    // Auto-close after timeout if specified
+    if (options.timeout) {
+        setTimeout(() => {
+            hideConfirmModal();
+        }, options.timeout);
+    }
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('show');
+    confirmCallback = null;
+}
+
+// Event handlers for modal buttons
+document.getElementById('confirmCancel').addEventListener('click', hideConfirmModal);
+
+document.getElementById('confirmProceed').addEventListener('click', function() {
+    if (confirmCallback) {
+        confirmCallback();
+        hideConfirmModal();
+    }
+});
+
+// Beautiful confirm functions
+function confirmWithModal(title, message, options = {}) {
+    return new Promise((resolve) => {
+        const defaultOptions = {
+            title,
+            message,
+            icon: 'fas fa-question-circle',
+            proceedIcon: 'fas fa-check',
+            proceedText: 'Confirm',
+            type: 'info',
+            ...options
+        };
+
+        showConfirmModal({
+            ...defaultOptions,
+            onConfirm: () => resolve(true)
+        });
+    });
+}
+
+// Room management functions with beautiful confirmations
+function deactivateRoom(roomId, roomName) {
+    confirmWithModal(
+        'Deactivate Chat Room',
+        `Are you sure you want to deactivate the room "${roomName}"? Users will no longer be able to access it.`,
+        {
+            icon: 'fas fa-ban',
+            proceedIcon: 'fas fa-ban',
+            proceedText: 'Deactivate',
+            type: 'warning'
+        }
+    ).then(confirmed => {
+        if (confirmed) {
+            performAction('deactivate_room', {room_id: roomId});
+        }
+    });
+}
+
+function activateRoom(roomId, roomName) {
+    confirmWithModal(
+        'Activate Chat Room',
+        `Are you sure you want to activate the room "${roomName}"?`,
+        {
+            icon: 'fas fa-play',
+            proceedIcon: 'fas fa-play',
+            proceedText: 'Activate',
+            type: 'success'
+        }
+    ).then(confirmed => {
+        if (confirmed) {
+            performAction('activate_room', {room_id: roomId});
+        }
+    });
+}
+
+function deleteRoom(roomId, roomName) {
+    confirmWithModal(
+        'Delete Chat Room',
+        `Are you sure you want to PERMANENTLY DELETE the room "${roomName}"? This will also delete all messages in the room and cannot be undone.`,
+        {
+            icon: 'fas fa-trash-alt',
+            proceedIcon: 'fas fa-trash',
+            proceedText: 'Delete Forever',
+            type: 'danger'
+        }
+    ).then(confirmed => {
+        if (confirmed) {
+            performAction('delete_room', {room_id: roomId});
+        }
+    });
+}
+
+function unbanUser(userId, username) {
+    confirmWithModal(
+        'Unban User',
+        `Are you sure you want to unban ${username}? They will be able to use chat again.`,
+        {
+            icon: 'fas fa-check-circle',
+            proceedIcon: 'fas fa-check',
+            proceedText: 'Unban User',
+            type: 'success'
+        }
+    ).then(confirmed => {
+        if (confirmed) {
+            performAction('unban_user', {user_id: userId});
+        }
+    });
+}
+
+function disconnectUser(userId, username) {
+    confirmWithModal(
+        'Disconnect User',
+        `Are you sure you want to force disconnect ${username} from chat?`,
+        {
+            icon: 'fas fa-power-off',
+            proceedIcon: 'fas fa-power-off',
+            proceedText: 'Disconnect',
+            type: 'warning'
+        }
+    ).then(confirmed => {
+        if (confirmed) {
+            performAction('disconnect_user', {user_id: userId});
+        }
+    });
+}
+
+// Update confirmAction function to use beautiful modal
+function confirmAction(form) {
+    const action = form.querySelector('button[type="submit"]:focus, button[type="submit"]:active');
+
+    if (!action) return false;
+
+    const actionType = action.value;
+    let options = {};
+
+    switch(actionType) {
+        case 'messages':
+            options = {
+                title: 'Clear All Messages',
+                message: 'Are you sure you want to delete ALL messages from ALL chat rooms? This action cannot be undone.',
+                icon: 'fas fa-envelope-open-text',
+                proceedIcon: 'fas fa-trash',
+                proceedText: 'Delete All Messages',
+                type: 'danger'
+            };
+            break;
+        case 'attachments':
+            options = {
+                title: 'Clear All Attachments',
+                message: 'Are you sure you want to delete ALL file attachments? This will permanently remove uploaded files.',
+                icon: 'fas fa-paperclip',
+                proceedIcon: 'fas fa-trash',
+                proceedText: 'Delete All Files',
+                type: 'warning'
+            };
+            break;
+        case 'activity':
+            options = {
+                title: 'Clear User Activity',
+                message: 'Are you sure you want to clear all user activity data? This will reset online/typing statuses.',
+                icon: 'fas fa-user-clock',
+                proceedIcon: 'fas fa-eraser',
+                proceedText: 'Clear Activity',
+                type: 'warning'
+            };
+            break;
+        case 'all':
+            options = {
+                title: 'Complete System Reset',
+                message: 'Are you sure you want to COMPLETELY CLEAR the chat system? This will delete all messages, attachments, activity data, and preferences. This action CANNOT be undone.',
+                icon: 'fas fa-exclamation-triangle',
+                proceedIcon: 'fas fa-trash-alt',
+                proceedText: 'Complete Reset',
+                type: 'danger'
+            };
+            break;
+        default:
+            return true;
+    }
+
+    confirmWithModal(options.title, options.message, options).then(confirmed => {
+        if (confirmed) {
+            form.submit();
+        }
+    });
+
+    return false; // Prevent default form submission
+}
+
+// Close modal when clicking outside
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideConfirmModal();
+    }
+});
+
+// Auto-refresh statistics every 30 seconds
+setInterval(function() {
+    if (!document.hidden) {
+        fetch(window.location.href, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update metrics if AJAX response includes updated data
+            if (data.total_rooms) {
+                document.querySelector('.metric-card.rooms .metric-value').textContent = data.total_rooms;
+            }
+            if (data.total_messages) {
+                document.querySelector('.metric-card.messages .metric-value').textContent = data.total_messages;
+            }
+            if (data.total_users_with_activity) {
+                document.querySelector('.metric-card.activity .metric-value').textContent = data.total_users_with_activity;
+            }
+            if (data.messages_with_attachments) {
+                document.querySelector('.metric-card.attachments .metric-value').textContent = data.messages_with_attachments;
+            }
+        })
+        .catch(error => {
+            console.log('Failed to refresh chat statistics:', error);
+        });
+    }
+}, 30000);
+</script>
+{% endblock %}

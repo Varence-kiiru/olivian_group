@@ -1,0 +1,290 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Staff Management{% endblock %}
+{% block page_subtitle %}Manage team members and their roles{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1">{{ total_staff }}</h3>
+                        <p class="mb-0">Total Staff</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1">{{ role_stats.manager|default:0 }}</h3>
+                        <p class="mb-0">Managers</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-user-tie fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1">{{ sales_team_count|default:0 }}</h3>
+                        <p class="mb-0">Sales Team</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1">{{ technical_team_count|default:0 }}</h3>
+                        <p class="mb-0">Technical Team</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tools fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Quick Actions
+                    </h5>
+                    <a href="{% url 'accounts:staff_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add New Staff Member
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>Staff Members
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if staff_users %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Role</th>
+                                    <th>Department</th>
+                                    <th>Employee ID</th>
+                                    <th>Employee Status</th>
+                                    <th>Admin Access</th>
+                                    <th>Superuser</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for staff in staff_users %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3" 
+                                                 style="width: 40px; height: 40px; background: {{ company.primary_color|default:'#38b6ff' }}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                                {% if staff.first_name %}{{ staff.first_name.0|upper }}{% elif staff.username %}{{ staff.username.0|upper }}{% else %}U{% endif %}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ staff.get_full_name|default:staff.username }}</div>
+                                                <small class="text-muted">{{ staff.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ staff.get_role_display }}</span>
+                                    </td>
+                                    <td>{{ staff.department|default:"-" }}</td>
+                                    <td>{{ staff.employee_id|default:"-" }}</td>
+                                    <td>
+                                        {% if staff.is_active_employee %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if staff.is_staff %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-shield-alt me-1"></i>Admin
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-outline-secondary">
+                                                <i class="fas fa-user me-1"></i>No Access
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if staff.is_superuser %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-crown me-1"></i>Superuser
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-outline-secondary">
+                                                <i class="fas fa-user me-1"></i>Standard
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ staff.date_joined|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'accounts:staff_detail' staff.pk %}" 
+                                               class="btn btn-outline-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            
+                                            <a href="{% url 'accounts:staff_edit' staff.pk %}" 
+                                               class="btn btn-outline-primary" title="Edit Details">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            
+                                            <!-- Admin Access Toggle -->
+                                            {% if staff.role != 'super_admin' or staff == user %}
+                                                <form method="post" action="{% url 'accounts:staff_toggle_staff_status' staff.pk %}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to {% if staff.is_staff %}revoke{% else %}grant{% endif %} Django admin access for {{ staff.get_full_name }}?')">
+                                                    {% csrf_token %}
+                                                    {% if staff.is_staff %}
+                                                        <button type="submit" class="btn btn-outline-warning" title="Revoke Admin Access">
+                                                            <i class="fas fa-shield-alt"></i>
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn btn-outline-info" title="Grant Admin Access">
+                                                            <i class="fas fa-shield-alt"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </form>
+                                            {% endif %}
+
+                                            <!-- Superuser Status Toggle -->
+                                            {% if staff != user %}
+                                                <form method="post" action="{% url 'accounts:staff_toggle_superuser_status' staff.pk %}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to {% if staff.is_superuser %}revoke{% else %}grant{% endif %} superuser privileges for {{ staff.get_full_name }}?')">
+                                                    {% csrf_token %}
+                                                    {% if staff.is_superuser %}
+                                                        <button type="submit" class="btn btn-outline-danger" title="Revoke Superuser Status">
+                                                            <i class="fas fa-crown"></i>
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn btn-outline-danger" title="Grant Superuser Status">
+                                                            <i class="fas fa-crown"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </form>
+                                            {% endif %}
+                                            
+                                            <!-- Employee Status Toggle -->
+                                            {% if staff.role != 'super_admin' %}
+                                                <form method="post" action="{% url 'accounts:staff_toggle_active' staff.pk %}" 
+                                                      class="d-inline" 
+                                                      onsubmit="return confirm('Are you sure you want to {% if staff.is_active_employee %}deactivate{% else %}activate{% endif %} this staff member?')">
+                                                    {% csrf_token %}
+                                                    {% if staff.is_active_employee %}
+                                                        <button type="submit" class="btn btn-outline-warning" title="Deactivate">
+                                                            <i class="fas fa-pause"></i>
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn btn-outline-success" title="Activate">
+                                                            <i class="fas fa-play"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Staff Members</h5>
+                        <p class="text-muted">No staff members have been added yet.</p>
+                        <a href="{% url 'accounts:staff_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add First Staff Member
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Role Statistics -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Role Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for role_stat in role_display_stats %}
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ role_stat.count }}</h4>
+                                <p class="text-muted mb-0">{{ role_stat.name }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh page every 30 seconds to show updates
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+});
+</script>
+{% endblock %}

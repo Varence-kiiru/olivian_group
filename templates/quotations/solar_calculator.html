@@ -1,0 +1,388 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Solar Calculator - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section" style="padding: 120px 0 80px; min-height: 60vh;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="hero-title">Solar Calculator</h1>
+                <p class="hero-subtitle">Calculate your potential savings and get a personalized solar quote based on your energy consumption and property details.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Calculator Form -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Solar System Calculator</h4>
+                        <p class="text-muted mb-0">Get an estimate for your solar installation</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="solarCalculator">
+                            <!-- Step 1: Property Information -->
+                            <div class="calculator-step" id="step1">
+                                <h5 class="mb-3">Property Information</h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Property Type *</label>
+                                        <select class="form-control" name="property_type" required>
+                                            <option value="">Select Property Type</option>
+                                            <option value="residential">Residential Home</option>
+                                            <option value="commercial">Commercial Building</option>
+                                            <option value="industrial">Industrial Facility</option>
+                                            <option value="agricultural">Agricultural</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Roof Type *</label>
+                                        <select class="form-control" name="roof_type" required>
+                                            <option value="">Select Roof Type</option>
+                                            <option value="iron_sheets">Iron Sheets</option>
+                                            <option value="tiles">Tiles</option>
+                                            <option value="concrete">Concrete Slab</option>
+                                            <option value="asbestos">Asbestos</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Available Roof Area (sq meters) *</label>
+                                        <input type="number" class="form-control" name="roof_area" placeholder="e.g., 100" required>
+                                        <small class="text-muted">Approximate usable roof space for solar panels</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Location *</label>
+                                        <input type="text" class="form-control" name="location" placeholder="e.g., Nairobi, Karen" required>
+                                    </div>
+                                </div>
+                                
+                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next Step</button>
+                            </div>
+                            
+                            <!-- Step 2: Energy Consumption -->
+                            <div class="calculator-step" id="step2" style="display: none;">
+                                <h5 class="mb-3">Energy Consumption</h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Monthly Electricity Bill (KES) *</label>
+                                        <input type="number" class="form-control" name="monthly_bill" placeholder="e.g., 15000" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Monthly Consumption (kWh)</label>
+                                        <input type="number" class="form-control" name="monthly_consumption" placeholder="e.g., 500">
+                                        <small class="text-muted">Check your electricity bill for kWh usage</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Current Electricity Provider</label>
+                                    <select class="form-control" name="electricity_provider">
+                                        <option value="kplc">Kenya Power (KPLC)</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Peak Usage Hours</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <select class="form-control" name="peak_start">
+                                                <option value="6">6:00 AM</option>
+                                                <option value="7">7:00 AM</option>
+                                                <option value="8">8:00 AM</option>
+                                                <option value="9">9:00 AM</option>
+                                                <option value="18" selected>6:00 PM</option>
+                                                <option value="19">7:00 PM</option>
+                                                <option value="20">8:00 PM</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-control" name="peak_end">
+                                                <option value="22" selected>10:00 PM</option>
+                                                <option value="23">11:00 PM</option>
+                                                <option value="24">12:00 AM</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(1)">Previous</button>
+                                    <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next Step</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 3: System Preferences -->
+                            <div class="calculator-step" id="step3" style="display: none;">
+                                <h5 class="mb-3">System Preferences</h5>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">System Type *</label>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="system_type" value="grid_tied" id="grid_tied" checked>
+                                                <label class="form-check-label" for="grid_tied">
+                                                    <strong>Grid-Tied System</strong><br>
+                                                    <small class="text-muted">Connected to the main grid, no battery backup</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="system_type" value="hybrid" id="hybrid">
+                                                <label class="form-check-label" for="hybrid">
+                                                    <strong>Hybrid System</strong><br>
+                                                    <small class="text-muted">Grid-tied with battery backup</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="system_type" value="off_grid" id="off_grid">
+                                                <label class="form-check-label" for="off_grid">
+                                                    <strong>Off-Grid System</strong><br>
+                                                    <small class="text-muted">Complete independence from the grid</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="system_type" value="backup" id="backup">
+                                                <label class="form-check-label" for="backup">
+                                                    <strong>Backup System</strong><br>
+                                                    <small class="text-muted">Emergency power during outages</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Budget Range (KES)</label>
+                                        <select class="form-control" name="budget_range">
+                                            <option value="">Select Budget Range</option>
+                                            <option value="0-500000">Under 500,000</option>
+                                            <option value="500000-1000000">500,000 - 1,000,000</option>
+                                            <option value="1000000-2000000">1,000,000 - 2,000,000</option>
+                                            <option value="2000000-5000000">2,000,000 - 5,000,000</option>
+                                            <option value="5000000+">Over 5,000,000</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Installation Timeline</label>
+                                        <select class="form-control" name="timeline">
+                                            <option value="asap">As soon as possible</option>
+                                            <option value="1-3months">1-3 months</option>
+                                            <option value="3-6months">3-6 months</option>
+                                            <option value="6months+">More than 6 months</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">Previous</button>
+                                    <button type="button" class="btn btn-primary" onclick="nextStep(4)">Next Step</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 4: Contact Information -->
+                            <div class="calculator-step" id="step4" style="display: none;">
+                                <h5 class="mb-3">Contact Information</h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Full Name *</label>
+                                        <input type="text" class="form-control" name="customer_name" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Email Address *</label>
+                                        <input type="email" class="form-control" name="customer_email" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-control" name="customer_phone" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Preferred Contact Method</label>
+                                        <select class="form-control" name="contact_method">
+                                            <option value="phone">Phone Call</option>
+                                            <option value="email">Email</option>
+                                            <option value="whatsapp">WhatsApp</option>
+                                            <option value="visit">Site Visit</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Additional Comments</label>
+                                    <textarea class="form-control" name="comments" rows="3" placeholder="Any specific requirements or questions?"></textarea>
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" name="agree_terms" required>
+                                    <label class="form-check-label">
+                                        I agree to receive communication regarding my solar quote and accept the terms of service.
+                                    </label>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(3)">Previous</button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-calculator me-2"></i>Calculate & Get Quote
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Why Choose Solar?</h2>
+            <p class="section-subtitle">Discover the benefits of switching to solar energy</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <h5>Save Money</h5>
+                    <p>Reduce your electricity bills by up to 90% and enjoy long-term savings.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h5>Go Green</h5>
+                    <p>Reduce your carbon footprint and contribute to environmental sustainability.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h5>Energy Independence</h5>
+                    <p>Generate your own clean energy and reduce dependence on the grid.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <h5>Increase Property Value</h5>
+                    <p>Solar installations can increase your property value by up to 15%.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStep = 1;
+
+function nextStep(step) {
+    // Validate current step
+    if (validateStep(currentStep)) {
+        document.getElementById(`step${currentStep}`).style.display = 'none';
+        document.getElementById(`step${step}`).style.display = 'block';
+        currentStep = step;
+    }
+}
+
+function prevStep(step) {
+    document.getElementById(`step${currentStep}`).style.display = 'none';
+    document.getElementById(`step${step}`).style.display = 'block';
+    currentStep = step;
+}
+
+function validateStep(step) {
+    const currentStepElement = document.getElementById(`step${step}`);
+    const requiredFields = currentStepElement.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    return isValid;
+}
+
+document.getElementById('solarCalculator').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!validateStep(currentStep)) {
+        return;
+    }
+    
+    // Collect form data
+    const formData = new FormData(this);
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Calculating...';
+    submitBtn.disabled = true;
+    
+    // Simulate calculation (replace with actual endpoint)
+    setTimeout(() => {
+        // Show results or redirect to results page
+        alert('Thank you! Your solar quote has been calculated. Our team will contact you within 24 hours with detailed results.');
+        
+        // Reset form
+        this.reset();
+        currentStep = 1;
+        document.querySelectorAll('.calculator-step').forEach(step => step.style.display = 'none');
+        document.getElementById('step1').style.display = 'block';
+        
+        // Reset button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }, 3000);
+});
+
+// Update monthly consumption based on bill amount
+document.querySelector('[name="monthly_bill"]').addEventListener('input', function() {
+    const billAmount = parseFloat(this.value);
+    if (billAmount) {
+        // Estimate consumption based on average KES 30 per kWh
+        const estimatedConsumption = Math.round(billAmount / 30);
+        document.querySelector('[name="monthly_consumption"]').value = estimatedConsumption;
+    }
+});
+</script>
+{% endblock %}

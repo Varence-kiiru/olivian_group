@@ -1,0 +1,91 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Newsletter Subscription Success - {{ company.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_subscribe' %}">Newsletter</a></li>
+<li class="breadcrumb-item active">Success</li>
+{% endblock %}
+
+{% block content %}
+<section class="section hero-newsletter-success">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-6">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-5 text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-envelope-open-text text-success success-icon-large"></i>
+                        </div>
+
+                        <h2 class="h3 mb-3">Thank You for Subscribing!</h2>
+
+                        <p class="text-muted mb-4">
+                            You've successfully subscribed to the {{ company.name }} newsletter.
+                            Check your email for a welcome message with what to expect.
+                        </p>
+
+                        <div class="alert alert-success" role="alert">
+                            <h6 class="alert-heading">What's Next?</h6>
+                            <ul class="mb-0 text-start">
+                                <li>Check your email for a welcome message</li>
+                                <li>Add our email to your contacts to ensure delivery</li>
+                                <li>Look out for solar tips, industry insights, and exclusive offers</li>
+                            </ul>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="p-3 bg-light rounded">
+                                    <i class="fas fa-lightbulb text-warning mb-2 lightbulb-icon"></i>
+                                    <h6>Solar Tips</h6>
+                                    <small class="text-muted">Weekly insights to maximize your solar investment</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="p-3 bg-light rounded">
+                                    <i class="fas fa-tags text-primary mb-2 tags-icon"></i>
+                                    <h6>Exclusive Offers</h6>
+                                    <small class="text-muted">Special discounts and early access to new products</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'core:home' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Continue Browsing
+                            </a>
+                            <a href="{% url 'quotations:calculator' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-calculator me-2"></i>Get Solar Quote
+                            </a>
+                        </div>
+                        
+                        <!-- Social Follow -->
+                        <div class="mt-5 pt-4 border-top">
+                            <h6 class="text-muted mb-3">Follow Us for Daily Updates</h6>
+                            <div class="social-links">
+                                {% if social_media.facebook %}
+                                <a href="{{ social_media.facebook }}" target="_blank" class="me-3">
+                                    <i class="fab fa-facebook-f"></i> Facebook
+                                </a>
+                                {% endif %}
+                                {% if social_media.twitter %}
+                                <a href="{{ social_media.twitter }}" target="_blank" class="me-3">
+                                    <i class="fab fa-twitter"></i> Twitter
+                                </a>
+                                {% endif %}
+                                {% if social_media.linkedin %}
+                                <a href="{{ social_media.linkedin }}" target="_blank" class="me-3">
+                                    <i class="fab fa-linkedin"></i> LinkedIn
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

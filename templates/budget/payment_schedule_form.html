@@ -1,0 +1,408 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Payment Schedule{% else %}Create Payment Schedule{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Payment Schedule{% else %}Create Payment Schedule{% endif %}
+{% endblock %}
+{% block page_subtitle %}
+    {% if object %}Update payment schedule details{% else %}Set up a new payment milestone{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:payment_schedule_list' %}">Payment Schedules</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit Schedule{% else %}Create Schedule{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .form-section {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .required-field::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .calculation-preview {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .project-info {
+        background: #e3f2fd;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .payment-status {
+        background: #f0f9ff;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .milestone-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <form method="post" id="paymentScheduleForm">
+            {% csrf_token %}
+            
+            <!-- Basic Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Basic Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_project" class="form-label required-field">Project</label>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                                <div class="text-danger small">{{ form.project.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Select the associated project</div>
+                            
+                            {% if object.project %}
+                            <div class="project-info" id="projectInfo">
+                                <div class="small text-muted">Project Details</div>
+                                <div class="fw-semibold">{{ object.project.name }}</div>
+                                <div class="small text-muted">{{ object.project.project_number }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_milestone" class="form-label">Milestone</label>
+                            {{ form.milestone }}
+                            {% if form.milestone.errors %}
+                                <div class="text-danger small">{{ form.milestone.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Optional project milestone</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="id_description" class="form-label required-field">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                        <div class="help-text">Describe this payment milestone</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financial Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Financial Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_amount" class="form-label required-field">Payment Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">KES</span>
+                                {{ form.amount }}
+                            </div>
+                            {% if form.amount.errors %}
+                                <div class="text-danger small">{{ form.amount.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Payment amount in Kenyan Shillings</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_percentage" class="form-label required-field">Percentage of Contract</label>
+                            <div class="input-group">
+                                {{ form.percentage }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                            {% if form.percentage.errors %}
+                                <div class="text-danger small">{{ form.percentage.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Percentage of total contract value</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label for="id_budget_category" class="form-label">Budget Category</label>
+                            {{ form.budget_category }}
+                            {% if form.budget_category.errors %}
+                                <div class="text-danger small">{{ form.budget_category.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Link to budget category for tracking</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Schedule Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Schedule Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_due_date" class="form-label required-field">Due Date</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger small">{{ form.due_date.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">When payment is due</div>
+                        </div>
+                        
+                        {% if object %}
+                        <div class="col-md-6">
+                            <label for="id_payment_date" class="form-label">Payment Date</label>
+                            {{ form.payment_date }}
+                            {% if form.payment_date.errors %}
+                                <div class="text-danger small">{{ form.payment_date.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Actual payment date (if paid)</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Status Section -->
+            {% if object %}
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Payment Status</h5>
+                    
+                    <div class="payment-status">
+                        <div class="form-check mb-3">
+                            {{ form.is_paid }}
+                            <label class="form-check-label" for="id_is_paid">
+                                Payment Completed
+                            </label>
+                        </div>
+                        
+                        <div class="row g-3" id="payment-details" style="{% if not object.is_paid %}display: none;{% endif %}">
+                            <div class="col-md-6">
+                                <label for="id_invoice_number" class="form-label">Invoice Number</label>
+                                {{ form.invoice_number }}
+                                {% if form.invoice_number.errors %}
+                                    <div class="text-danger small">{{ form.invoice_number.errors.0 }}</div>
+                                {% endif %}
+                                <div class="help-text">Invoice or receipt number</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="id_payment_reference" class="form-label">Payment Reference</label>
+                                {{ form.payment_reference }}
+                                {% if form.payment_reference.errors %}
+                                    <div class="text-danger small">{{ form.payment_reference.errors.0 }}</div>
+                                {% endif %}
+                                <div class="help-text">Transaction ID or reference</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Preview Section -->
+            <div class="form-card">
+                <div class="calculation-preview">
+                    <h6 class="mb-3">Payment Schedule Preview</h6>
+                    <div id="schedulePreview">
+                        <div class="text-muted">Preview will appear here as you fill out the form</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-card">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'budget:payment_schedule_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 
+                        {% if object %}Update Schedule{% else %}Create Schedule{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('paymentScheduleForm');
+    const projectSelect = document.getElementById('id_project');
+    const milestoneSelect = document.getElementById('id_milestone');
+    const amountInput = document.getElementById('id_amount');
+    const percentageInput = document.getElementById('id_percentage');
+    const dueDateInput = document.getElementById('id_due_date');
+    const isPaidCheckbox = document.getElementById('id_is_paid');
+    const paymentDetails = document.getElementById('payment-details');
+    
+    // Initialize form state
+    updatePreview();
+    
+    // Handle payment status toggle
+    if (isPaidCheckbox && paymentDetails) {
+        isPaidCheckbox.addEventListener('change', function() {
+            paymentDetails.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    // Form field changes
+    form.addEventListener('input', updatePreview);
+    
+    // Project selection change
+    projectSelect.addEventListener('change', function() {
+        updateProjectInfo();
+        updateMilestones();
+        updatePreview();
+    });
+    
+    function updateProjectInfo() {
+        const selectedOption = projectSelect.options[projectSelect.selectedIndex];
+        const projectInfo = document.getElementById('projectInfo');
+        
+        if (selectedOption.value && projectInfo) {
+            // This would typically fetch project details via AJAX
+            projectInfo.style.display = 'block';
+        } else if (projectInfo) {
+            projectInfo.style.display = 'none';
+        }
+    }
+    
+    function updateMilestones() {
+        const projectId = projectSelect.value;
+        if (!projectId || !milestoneSelect) return;
+        
+        // This would typically fetch milestones via AJAX
+        // For now, we'll just clear the milestone selection
+        milestoneSelect.innerHTML = '<option value="">Select a milestone</option>';
+    }
+    
+    function updatePreview() {
+        const project = projectSelect.options[projectSelect.selectedIndex].text;
+        const description = document.getElementById('id_description').value;
+        const amount = amountInput.value;
+        const percentage = percentageInput.value;
+        const dueDate = dueDateInput.value;
+        
+        if (project && project !== '---------' && (description || amount || percentage || dueDate)) {
+            const preview = document.getElementById('schedulePreview');
+            const milestone = milestoneSelect.options[milestoneSelect.selectedIndex].text;
+            
+            preview.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>${description || 'Payment Description'}</h6>
+                        <div class="small text-muted">
+                            <i class="fas fa-project-diagram"></i> ${project}
+                            ${milestone && milestone !== '---------' ? `<span class="milestone-badge ms-2"><i class="fas fa-flag"></i> ${milestone}</span>` : ''}
+                        </div>
+                        ${dueDate ? `<div class="small text-muted mt-1"><i class="fas fa-calendar"></i> Due: ${formatDate(dueDate)}</div>` : ''}
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="h5 text-primary">KES ${formatNumber(amount) || '0'}</div>
+                        ${percentage ? `<div class="small text-muted">${percentage}% of contract</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    function formatNumber(num) {
+        if (!num) return '';
+        return parseFloat(num).toLocaleString();
+    }
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        const requiredFields = ['id_project', 'id_description', 'id_amount', 'id_percentage', 'id_due_date'];
+        
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Validate percentage
+        const percentageValue = parseFloat(percentageInput.value);
+        if (percentageValue < 0 || percentageValue > 100) {
+            isValid = false;
+            percentageInput.classList.add('is-invalid');
+            alert('Percentage must be between 0 and 100.');
+        }
+        
+        // Validate amount
+        const amountValue = parseFloat(amountInput.value);
+        if (amountValue <= 0) {
+            isValid = false;
+            amountInput.classList.add('is-invalid');
+            alert('Amount must be greater than 0.');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields with valid values.');
+        }
+    });
+});
+</script>
+{% endblock %}

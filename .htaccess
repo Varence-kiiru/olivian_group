@@ -1,0 +1,43 @@
+# ------------------------------------------------------------
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/olivian1/olivian"
+PassengerBaseURI "/"
+PassengerPython "/home/olivian1/virtualenv/olivian/3.11/bin/python"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION BEGIN
+<IfModule Litespeed>
+</IfModule>
+# DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION END
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# MIME TYPE FIXES
+# Ensure CSS and JS files are served with the correct MIME types
+AddType text/css .css
+AddType application/javascript .js
+
+<FilesMatch "\.css$">
+  ForceType text/css
+</FilesMatch>
+
+<FilesMatch "\.js$">
+  ForceType application/javascript
+</FilesMatch>
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# CONTENT SECURITY POLICY (CSP) - Disabled, using Django CSP middleware instead
+# Adjust domains depending on what you want to allow
+# <IfModule mod_headers.c>
+#   Header set Content-Security-Policy "default-src 'self';
+#     connect-src 'self' https://olivian.co.ke https://embed.tawk.to wss://*.tawk.to https://*.tawk.to https://maps.googleapis.com https://maps.gstatic.com https://cdn.jsdelivr.net https://ep1.adtrafficquality.google;
+#     script-src 'self' https://*.google.com https://*.googletagmanager.com https://*.gstatic.com https://cdn.jsdelivr.net;
+#     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+#     style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+#     img-src 'self' data: https://*.google.com https://*.gstatic.com https://cdn.jsdelivr.net;
+#     font-src 'self' https://cdn.jsdelivr.net;"
+# </IfModule>
+# ------------------------------------------------------------

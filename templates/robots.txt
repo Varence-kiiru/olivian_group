@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+
+# Block admin and sensitive areas
+Disallow: /admin/
+Disallow: /accounts/login/
+Disallow: /accounts/register/
+Disallow: /accounts/password_reset/
+Disallow: /crm/
+Disallow: /inventory/
+Disallow: /financial/
+Disallow: /procurement/
+Disallow: /budget/
+Disallow: /pos/
+Disallow: /ecommerce/cart/
+Disallow: /system/
+Disallow: /quotations/
+
+# Allow access to important directories
+Allow: /blog/
+Allow: /products/
+Allow: /services/
+Allow: /projects/
+
+# Sitemap
+Sitemap: https://olivian.co.ke/sitemap.xml

@@ -1,0 +1,258 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Purchase Order - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:purchase_order_list' %}">Purchase Orders</a></li>
+{% if object %}
+<li class="breadcrumb-item"><a href="{% url 'inventory:purchase_order_detail' object.pk %}">{{ object.order_number }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Create Purchase Order</li>
+{% endif %}
+{% endblock %}
+
+{% block page_name %}{% if object %}Edit{% else %}Create{% endif %} Purchase Order{% endblock %}
+{% block page_title %}{% if object %}Edit{% else %}Create{% endif %} Purchase Order{% endblock %}
+{% block page_subtitle %}{% if object %}Update purchase order details{% else %}Create new purchase order for supplier{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .section-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+    
+    .section-title {
+        margin: 0;
+        color: #495057;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .section-description {
+        margin: 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 182, 255, 0.3);
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .items-section {
+        margin-top: 2rem;
+    }
+    
+    .item-row {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="purchaseOrderForm">
+    {% csrf_token %}
+    
+    <!-- Purchase Order Details -->
+    <div class="form-section">
+        <div class="section-header">
+            <h5 class="section-title">Purchase Order Information</h5>
+            <p class="section-description">Basic purchase order details and supplier information</p>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Supplier -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="id_supplier" class="form-label">
+                            Supplier <span class="required">*</span>
+                        </label>
+                        <select name="supplier" id="id_supplier" class="form-select" required>
+                            <option value="">Select supplier...</option>
+                            {% for value, text in form.supplier.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.supplier.value == value %}selected{% endif %}>{{ text }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.supplier.errors %}
+                            <div class="text-danger small">{{ form.supplier.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Order Date -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="id_order_date" class="form-label">
+                            Order Date <span class="required">*</span>
+                        </label>
+                        <input type="date" name="order_date" id="id_order_date" class="form-control" 
+                               value="{{ form.order_date.value|default:'' }}" required>
+                        {% if form.order_date.errors %}
+                            <div class="text-danger small">{{ form.order_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Expected Delivery -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="id_expected_delivery_date" class="form-label">
+                            Expected Delivery Date
+                        </label>
+                        <input type="date" name="expected_delivery_date" id="id_expected_delivery_date" class="form-control" 
+                               value="{{ form.expected_delivery_date.value|default:'' }}">
+                        {% if form.expected_delivery_date.errors %}
+                            <div class="text-danger small">{{ form.expected_delivery_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="id_status" class="form-label">
+                            Status
+                        </label>
+                        <select name="status" id="id_status" class="form-select">
+                            {% for value, text in form.status.field.choices %}
+                            <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ text }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.status.errors %}
+                            <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="col-md-12">
+                    <div class="form-group mb-3">
+                        <label for="id_notes" class="form-label">
+                            Notes
+                        </label>
+                        <textarea name="notes" id="id_notes" class="form-control" rows="3" 
+                                 placeholder="Additional notes or special instructions for this purchase order">{{ form.notes.value|default:'' }}</textarea>
+                        {% if form.notes.errors %}
+                            <div class="text-danger small">{{ form.notes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center">
+        <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-secondary me-3">
+            <i class="fas fa-times me-2"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>{% if object %}Update{% else %}Create{% endif %} Purchase Order
+        </button>
+    </div>
+</form>
+
+<!-- Order Summary -->
+{% if object %}
+<div class="summary-card">
+    <div class="row">
+        <div class="col-md-4 text-center">
+            <h4 class="mb-1">{{ object.order_number }}</h4>
+            <small>Order Number</small>
+        </div>
+        <div class="col-md-4 text-center">
+            <h4 class="mb-1">KES {{ object.total_amount|default:0|floatformat:2 }}</h4>
+            <small>Total Amount</small>
+        </div>
+        <div class="col-md-4 text-center">
+            <h4 class="mb-1">{{ object.get_status_display }}</h4>
+            <small>Status</small>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default order date to today if creating new
+    {% if not object %}
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('id_order_date').value = today;
+    {% endif %}
+    
+    // Form validation
+    document.getElementById('purchaseOrderForm').addEventListener('submit', function(e) {
+        const supplier = document.getElementById('id_supplier').value;
+        const orderDate = document.getElementById('id_order_date').value;
+        
+        if (!supplier) {
+            e.preventDefault();
+            alert('Please select a supplier.');
+            return false;
+        }
+        
+        if (!orderDate) {
+            e.preventDefault();
+            alert('Please enter an order date.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

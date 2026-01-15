@@ -1,0 +1,1048 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Quotation Builder - {{ block.super }}{% endblock %}
+
+{% block page_title %}Professional Quotation Builder{% endblock %}
+{% block page_subtitle %}Create comprehensive solar system quotations with drag-and-drop functionality{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'quotations:list' %}">Quotations</a></li>
+<li class="breadcrumb-item active">Quotation Builder</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .builder-container {
+        display: flex;
+        gap: 1rem;
+        min-height: 80vh;
+    }
+    
+    .product-palette {
+        width: 300px;
+        background: white;
+        border-radius: 15px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .quotation-canvas {
+        flex: 1;
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .palette-category {
+        margin-bottom: 1.5rem;
+    }
+    
+    .category-header {
+        background: linear-gradient(135deg, #38b6ff, #20c997);
+        color: white;
+        padding: 0.75rem;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+    
+    .draggable-item {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        cursor: grab;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .draggable-item:hover {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+        transform: translateX(5px);
+    }
+    
+    .draggable-item.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+    
+    .item-icon {
+        width: 30px;
+        height: 30px;
+        background: #38b6ff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .item-info {
+        flex: 1;
+    }
+    
+    .item-name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #2c3e50;
+    }
+    
+    .item-price {
+        font-size: 0.85rem;
+        color: #38b6ff;
+        font-weight: 600;
+    }
+    
+    .drop-zone {
+        min-height: 200px;
+        border: 3px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        color: #6c757d;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .drop-zone.drag-over {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+        color: #38b6ff;
+    }
+    
+    .drop-zone.has-items {
+        border-style: solid;
+        border-color: #e9ecef;
+        background: #f8f9fa;
+        text-align: left;
+        padding: 1rem;
+    }
+    
+    .dropped-item {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .dropped-item:hover {
+        border-color: #38b6ff;
+        box-shadow: 0 4px 12px rgba(56, 182, 255, 0.15);
+    }
+    
+    .item-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+    
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-right: 1rem;
+    }
+    
+    .quantity-btn {
+        width: 25px;
+        height: 25px;
+        border: none;
+        border-radius: 5px;
+        background: #38b6ff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.7rem;
+    }
+    
+    .quantity-input {
+        width: 50px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 0.25rem;
+        font-size: 0.85rem;
+    }
+    
+    .remove-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        font-size: 0.7rem;
+    }
+    
+    .quotation-header {
+        background: linear-gradient(135deg, #38b6ff, #20c997);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+    
+    .quotation-form {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #38b6ff;
+    }
+    
+    .totals-summary {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .total-row:last-child {
+        border-bottom: none;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #38b6ff;
+        margin-top: 0.5rem;
+        padding-top: 1rem;
+        border-top: 2px solid #38b6ff;
+    }
+    
+    .actions-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .action-btn {
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .preview-panel {
+        position: fixed;
+        top: 0;
+        right: -400px;
+        width: 400px;
+        height: 100vh;
+        background: white;
+        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+        transition: right 0.3s ease;
+        z-index: 1050;
+        overflow-y: auto;
+    }
+    
+    .preview-panel.open {
+        right: 0;
+    }
+    
+    .preview-header {
+        background: #38b6ff;
+        color: white;
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    
+    .preview-content {
+        padding: 1rem;
+    }
+    
+    .template-selector {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .template-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .template-option:hover {
+        border-color: #38b6ff;
+    }
+    
+    .template-option.active {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+    }
+    
+    .savings-calculator {
+        background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        border-left: 5px solid #28a745;
+    }
+    
+    .savings-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(40, 167, 69, 0.2);
+    }
+    
+    .savings-item:last-child {
+        border-bottom: none;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #28a745;
+    }
+    
+    .search-filter {
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 0.5rem 0;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .search-input {
+        width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .floating-toolbar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 25px;
+        padding: 0.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        display: flex;
+        gap: 0.5rem;
+        z-index: 1040;
+    }
+    
+    .toolbar-btn {
+        width: 45px;
+        height: 45px;
+        border: none;
+        border-radius: 50%;
+        background: #38b6ff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .toolbar-btn:hover {
+        background: #2c8fd6;
+        transform: scale(1.1);
+    }
+
+    /* New Styles for QuotationBuilder */
+    .quotation-builder {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .product-panel {
+        flex: 0 0 300px;
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .product-categories {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .category-tab {
+        flex: 1;
+        padding: 0.75rem;
+        background: #e9ecef;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    
+    .category-tab.active {
+        background: #38b6ff;
+        color: white;
+    }
+    
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    
+    .product-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .product-image {
+        height: 80px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .product-image img {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+    }
+    
+    .product-details {
+        text-align: center;
+    }
+    
+    .quotation-panel {
+        flex: 1;
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quotation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .quotation-header h5 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .total-amount {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #38b6ff;
+    }
+    
+    .selected-items {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 1.5rem;
+    }
+    
+    .selected-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .item-details {
+        flex-grow: 1;
+    }
+    
+    .item-details h6 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .item-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .quotation-summary {
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .summary-item.total {
+        font-weight: 600;
+        color: #38b6ff;
+        border-top: 2px solid #38b6ff;
+        padding-top: 0.75rem;
+    }
+    
+    .quotation-actions {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    /* End of New Styles */
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="quotationBuilder" class="quotation-builder">
+    <!-- Product Selection Panel -->
+    <div class="product-panel">
+        <div class="product-categories">
+            <div v-for="category in categories" 
+                 :key="category.id"
+                 class="category-tab"
+                 :class="{ active: selectedCategory === category.slug }"
+                 @click="selectedCategory = category.slug">
+                [[ category.name ]]
+            </div>
+        </div>
+
+        <div class="products-grid">
+            <div v-for="product in filteredProducts" 
+                 :key="product.id" 
+                 class="product-card"
+                 @click="addToQuotation(product)">
+                <div class="product-image">
+                    <img :src="product.image || '/static/images/placeholder.png'" :alt="product.name">
+                </div>
+                <div class="product-details">
+                    <h6 class="product-name">[[ product.name ]]</h6>
+                    <p class="product-price">KES [[ product.price.toLocaleString() ]]</p>
+                    <p class="product-description" v-if="product.short_description">[[ product.short_description ]]</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quotation Building Panel -->
+    <div class="quotation-panel">
+        <div class="quotation-header">
+            <h5>Build Your Quotation</h5>
+            <div class="total-amount">
+                Total: KES {% verbatim %}{{ totalAmount.toLocaleString() }}{% endverbatim %}
+            </div>
+        </div>
+
+        <div class="selected-items">
+            <div v-for="(item, index) in selectedItems" 
+                 :key="index" 
+                 class="selected-item">
+                <div class="item-details">
+                    <h6>{% verbatim %}{{ item.name }}{% endverbatim %}</h6>
+                    <p class="text-muted">
+                        KES {% verbatim %}{{ item.price.toLocaleString() }} x {{ item.quantity }}{% endverbatim %}
+                    </p>
+                </div>
+                <div class="item-controls">
+                    <button class="btn btn-sm btn-outline-primary" @click="decreaseQuantity(index)">-</button>
+                    <span class="quantity">{% verbatim %}{{ item.quantity }}{% endverbatim %}</span>
+                    <button class="btn btn-sm btn-outline-primary" @click="increaseQuantity(index)">+</button>
+                    <button class="btn btn-sm btn-danger ms-2" @click="removeItem(index)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="quotation-summary">
+            <div class="summary-item">
+                <span>Subtotal</span>
+                <span>KES {% verbatim %}{{ subtotal.toLocaleString() }}{% endverbatim %}</span>
+            </div>
+            <div class="summary-item">
+                <span>VAT (16%)</span>
+                <span>KES {% verbatim %}{{ vatAmount.toLocaleString() }}{% endverbatim %}</span>
+            </div>
+            <div class="summary-item total">
+                <span>Total Amount</span>
+                <span>KES {% verbatim %}{{ totalAmount.toLocaleString() }}{% endverbatim %}</span>
+            </div>
+        </div>
+
+        <div class="quotation-actions">
+            <button class="btn btn-primary" @click="saveQuotation">
+                <i class="fas fa-save me-2"></i>Save Quotation
+            </button>
+            <button class="btn btn-outline-primary" @click="previewQuotation">
+                <i class="fas fa-eye me-2"></i>Preview
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Panel -->
+<div class="preview-panel" :class="{ open: showPreview }">
+    <div class="preview-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-eye me-2"></i>Quotation Preview
+            </h5>
+            <button class="btn btn-outline-light btn-sm" @click="closePreview">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="preview-content">
+        <!-- Preview content will be dynamically generated -->
+        <div v-html="previewContent"></div>
+    </div>
+</div>
+
+<!-- Floating Toolbar -->
+<div class="floating-toolbar">
+    <button class="toolbar-btn" @click="autoCalculate" title="Auto Calculate">
+        <i class="fas fa-calculator"></i>
+    </button>
+    <button class="toolbar-btn" @click="loadTemplate" title="Load Template">
+        <i class="fas fa-file-import"></i>
+    </button>
+    <button class="toolbar-btn" @click="togglePreview" title="Preview">
+        <i class="fas fa-eye"></i>
+    </button>
+    <button class="toolbar-btn" @click="saveQuotation" title="Save">
+        <i class="fas fa-save"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            categories: {{ product_categories|safe }},
+            productsByCategory: {{ products_by_category|safe }},
+            selectedCategory: null,
+            selectedItems: [],
+            isDragOver: false,
+            showPreview: false,
+            searchQuery: '',
+            selectedTemplate: 'standard',
+            quotation: {
+                quotation_number: '',
+                customer: {
+                    name: '',
+                    email: '',
+                    phone: '',
+                    company: '',
+                    address: ''
+                },
+                system_type: 'grid_tied',
+                installation_type: 'roof_mount',
+                system_capacity: 5,
+                monthly_consumption: 300,
+                payment_terms: '50_50',
+                delivery_time: '2-4 weeks',
+                validity_days: 30,
+                discount_percentage: 0,
+                notes: ''
+            },
+            quotationItems: [],
+            products: {
+                panels: [
+                    {
+                        id: 1, name: 'Jinko Solar Tiger Pro 545W', price: 25000, 
+                        category: 'panels', unit: 'piece',
+                        description: '545W Monocrystalline, 21.2% efficiency'
+                    },
+                    {
+                        id: 2, name: 'Longi Solar LR5-72HIH 540W', price: 24500,
+                        category: 'panels', unit: 'piece', 
+                        description: '540W Monocrystalline, 20.9% efficiency'
+                    }
+                ],
+                inverters: [
+                    {
+                        id: 3, name: 'Victron MultiPlus II 5kW', price: 120000,
+                        category: 'inverters', unit: 'piece',
+                        description: '5kW Hybrid Inverter with Battery Support'
+                    },
+                    {
+                        id: 4, name: 'Fronius Primo 5.0-1', price: 95000,
+                        category: 'inverters', unit: 'piece',
+                        description: '5kW Grid-tie Inverter, 96.1% efficiency'
+                    }
+                ],
+                batteries: [
+                    {
+                        id: 5, name: 'Victron Lithium 200Ah', price: 180000,
+                        category: 'batteries', unit: 'piece',
+                        description: '200Ah Lithium Iron Phosphate, 5000 cycles'
+                    }
+                ],
+                mounting: [
+                    {
+                        id: 6, name: 'Roof Mount Kit - 10 Panels', price: 45000,
+                        category: 'mounting', unit: 'kit',
+                        description: 'Aluminum mounting system for 10 panels'
+                    }
+                ],
+                cables: [
+                    {
+                        id: 7, name: 'DC Cable 4mm²', price: 450,
+                        category: 'cables', unit: 'meter',
+                        description: 'Solar DC cable, UV resistant, 30A rating'
+                    }
+                ],
+                protection: [
+                    {
+                        id: 8, name: 'DC Combiner Box 4-String', price: 15000,
+                        category: 'protection', unit: 'piece',
+                        description: '4-string combiner with breakers and surge protection'
+                    }
+                ],
+                monitoring: [
+                    {
+                        id: 9, name: 'Victron VRM Portal Access', price: 5000,
+                        category: 'monitoring', unit: 'license',
+                        description: 'Cloud monitoring and remote management'
+                    }
+                ],
+                installation: [
+                    {
+                        id: 10, name: 'Professional Installation Service', price: 50000,
+                        category: 'installation', unit: 'service',
+                        description: 'Complete system installation and commissioning'
+                    }
+                ]
+            },
+            quotationTemplates: [
+                {
+                    id: 'standard',
+                    name: 'Standard Residential',
+                    description: 'Basic residential solar system'
+                },
+                {
+                    id: 'premium',
+                    name: 'Premium Hybrid',
+                    description: 'Hybrid system with battery backup'
+                },
+                {
+                    id: 'commercial',
+                    name: 'Commercial System',
+                    description: 'Large scale commercial installation'
+                }
+            ]
+        };
+    },
+    computed: {
+        filteredProducts() {
+            return this.selectedCategory ? this.productsByCategory[this.selectedCategory] || [] : [];
+        },
+        subtotal() {
+            return this.selectedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+        },
+        vatAmount() {
+            return this.subtotal * 0.16;
+        },
+        totalAmount() {
+            return this.subtotal + this.vatAmount;
+        },
+        savings() {
+            const systemCapacity = this.quotation.system_capacity;
+            const monthlyGeneration = systemCapacity * 120; // Rough estimate
+            const monthlyBill = this.quotation.monthly_consumption * 25; // KES per kWh
+            const monthly = Math.min(monthlyBill, monthlyGeneration * 25);
+            const annual = monthly * 12;
+            const payback = this.totals.total / annual;
+            const lifetime = annual * 25;
+            
+            return {
+                monthly: Math.round(monthly),
+                annual: Math.round(annual),
+                payback: payback.toFixed(1),
+                lifetime: Math.round(lifetime)
+            };
+        },
+        isValid() {
+            return this.quotation.customer.name && 
+                   this.quotation.customer.email && 
+                   this.quotationItems.length > 0;
+        },
+        previewContent() {
+            // Generate HTML preview content
+            return this.generatePreviewHTML();
+        }
+    },
+    methods: {
+        addToQuotation(product) {
+            const existingItem = this.selectedItems.find(item => item.id === product.id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                this.selectedItems.push({
+                    ...product,
+                    quantity: 1
+                });
+            }
+        },
+        increaseQuantity(index) {
+            this.selectedItems[index].quantity += 1;
+        },
+        decreaseQuantity(index) {
+            if (this.selectedItems[index].quantity > 1) {
+                this.selectedItems[index].quantity -= 1;
+            }
+        },
+        removeItem(index) {
+            this.selectedItems.splice(index, 1);
+        },
+        calculateTotals() {
+            // Reactive computation handles this
+        },
+        getProductIcon(category) {
+            const categoryMap = {
+                panels: 'fas fa-solar-panel',
+                inverters: 'fas fa-microchip',
+                batteries: 'fas fa-battery-full',
+                mounting: 'fas fa-tools',
+                cables: 'fas fa-plug',
+                protection: 'fas fa-shield-alt',
+                monitoring: 'fas fa-chart-line',
+                installation: 'fas fa-wrench'
+            };
+            return categoryMap[category] || 'fas fa-box';
+        },
+        selectTemplate(templateId) {
+            this.selectedTemplate = templateId;
+            this.loadTemplateProducts(templateId);
+        },
+        loadTemplateProducts(templateId) {
+            // Load predefined products based on template
+            this.quotationItems = [];
+            
+            if (templateId === 'standard') {
+                this.addProduct(this.products.panels[0]);
+                this.addProduct(this.products.inverters[1]);
+                this.addProduct(this.products.mounting[0]);
+            } else if (templateId === 'premium') {
+                this.addProduct(this.products.panels[0]);
+                this.addProduct(this.products.inverters[0]);
+                this.addProduct(this.products.batteries[0]);
+                this.addProduct(this.products.mounting[0]);
+            }
+        },
+        togglePreview() {
+            this.showPreview = !this.showPreview;
+        },
+        closePreview() {
+            this.showPreview = false;
+        },
+        generatePreviewHTML() {
+            return `
+                <div class="quotation-preview">
+                    <h6>Quotation Preview</h6>
+                    <p><strong>Customer:</strong> ${this.quotation.customer.name}</p>
+                    <p><strong>System Type:</strong> ${this.quotation.system_type}</p>
+                    <p><strong>Total Cost:</strong> KES ${this.formatNumber(this.totals.total)}</p>
+                    
+                    <h6 class="mt-3">Items:</h6>
+                    ${this.quotationItems.map(item => `
+                        <div class="border-bottom py-2">
+                            <strong>${item.name}</strong><br>
+                            ${item.quantity} × KES ${this.formatNumber(item.unit_price)} = 
+                            KES ${this.formatNumber(item.total_price)}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        },
+        resetQuotation() {
+            if (confirm('Are you sure you want to reset the quotation? All changes will be lost.')) {
+                this.quotationItems = [];
+                this.quotation = {
+                    quotation_number: '',
+                    customer: { name: '', email: '', phone: '', company: '', address: '' },
+                    system_type: 'grid_tied',
+                    installation_type: 'roof_mount',
+                    system_capacity: 5,
+                    monthly_consumption: 300,
+                    payment_terms: '50_50',
+                    delivery_time: '2-4 weeks',
+                    validity_days: 30,
+                    discount_percentage: 0,
+                    notes: ''
+                };
+            }
+        },
+        saveAsDraft() {
+            this.saveQuotation('draft');
+        },
+        saveQuotation(status = 'draft') {
+            const quotationData = {
+                ...this.quotation,
+                status: status,
+                items: this.quotationItems,
+                totals: this.totals
+            };
+            
+            // Save to localStorage for now (in real app, send to server)
+            localStorage.setItem('currentQuotation', JSON.stringify(quotationData));
+            alert(`Quotation saved as ${status}!`);
+        },
+        generateQuotation() {
+            if (!this.isValid) {
+                alert('Please fill in all required fields and add at least one product.');
+                return;
+            }
+            
+            this.saveQuotation('generated');
+            // Redirect to quotation view or generate PDF
+            window.location.href = '/quotations/';
+        },
+        sendQuotation() {
+            if (!this.isValid) {
+                alert('Please fill in all required fields and add at least one product.');
+                return;
+            }
+            
+            if (confirm('Send quotation to customer?')) {
+                this.saveQuotation('sent');
+                alert('Quotation sent to customer successfully!');
+            }
+        },
+        autoCalculate() {
+            // Auto-calculate system requirements based on consumption
+            const consumption = this.quotation.monthly_consumption;
+            const recommendedCapacity = Math.ceil(consumption / 120); // Rough calculation
+            this.quotation.system_capacity = recommendedCapacity;
+            alert(`Recommended system capacity: ${recommendedCapacity}kW`);
+        },
+        loadTemplate() {
+            // Load quotation template
+            const templates = ['standard', 'premium', 'commercial'];
+            const template = prompt('Enter template name (standard/premium/commercial):');
+            if (templates.includes(template)) {
+                this.selectTemplate(template);
+            }
+        },
+        formatNumber(num) {
+            return new Intl.NumberFormat().format(num);
+        },
+        filterProducts() {
+            // Reactive filtering handled by computed property
+        }
+    },
+    mounted() {
+        if (this.categories.length > 0) {
+            this.selectedCategory = this.categories[0].slug;
+        }
+        
+        // Load saved quotation if exists
+        const saved = localStorage.getItem('currentQuotation');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.quotation = data;
+            this.quotationItems = data.items || [];
+        }
+        
+        // Load products from selector if coming from product selector
+        const selectorProducts = localStorage.getItem('quotationProducts');
+        if (selectorProducts) {
+            const config = JSON.parse(selectorProducts);
+            if (config.products) {
+                this.quotationItems = config.products.map(item => ({
+                    id: item.product.id,
+                    name: item.product.name,
+                    description: item.product.description || '',
+                    category: item.product.category,
+                    unit_price: item.product.price,
+                    unit: item.product.unit || 'piece',
+                    quantity: item.quantity,
+                    total_price: item.total
+                }));
+            }
+            localStorage.removeItem('quotationProducts');
+        }
+    }
+}).mount('#quotationBuilder');
+</script>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Leads - {{ block.super }}{% endblock %}
+
+{% block page_title %}Lead Management{% endblock %}
+{% block page_subtitle %}Track and nurture potential customers{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Leads</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .lead-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .lead-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .lead-card.status-new { border-left-color: #17a2b8; }
+    .lead-card.status-contacted { border-left-color: #ffc107; }
+    .lead-card.status-qualified { border-left-color: #28a745; }
+    .lead-card.status-proposal { border-left-color: #fd7e14; }
+    .lead-card.status-negotiation { border-left-color: #dc3545; }
+    .lead-card.status-converted { border-left-color: #6f42c1; }
+    .lead-card.status-lost { border-left-color: #6c757d; }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-new { background: #e3f2fd; color: #1976d2; }
+    .status-contacted { background: #fff3e0; color: #f57c00; }
+    .status-qualified { background: #e8f5e8; color: #2e7d32; }
+    .status-proposal { background: #fff3e0; color: #f57c00; }
+    .status-negotiation { background: #ffebee; color: #c62828; }
+    .status-converted { background: #f3e5f5; color: #7b1fa2; }
+    .status-lost { background: #f8f9fa; color: #6c757d; }
+    
+    .priority-high { color: #dc3545; }
+    .priority-medium { color: #ffc107; }
+    .priority-low { color: #28a745; }
+    
+    .lead-score {
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-user-plus me-2"></i>Leads
+            <span class="badge bg-primary ms-2">{{ page_obj.paginator.count }}</span>
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'crm:lead_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Lead
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card mb-4">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Name, email, company...">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="priority" class="form-label">Priority</label>
+            <select class="form-select" id="priority" name="priority">
+                <option value="">All Priorities</option>
+                {% for value, label in priority_choices %}
+                <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="source" class="form-label">Source</label>
+            <select class="form-select" id="source" name="source">
+                <option value="">All Sources</option>
+                {% for source in lead_sources %}
+                <option value="{{ source.id }}" {% if current_source == source.id|stringformat:"s" %}selected{% endif %}>
+                    {{ source.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-2"></i>Apply Filters
+            </button>
+            <a href="{% url 'crm:lead_list' %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times me-2"></i>Clear Filters
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Leads Grid -->
+<div class="row">
+    {% for lead in leads %}
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="lead-card status-{{ lead.status }}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">
+                        <a href="{% url 'crm:lead_detail' lead.pk %}" class="text-decoration-none text-dark">
+                            {{ lead.title }}
+                        </a>
+                    </h6>
+                    <div class="text-muted small">
+                        {% if lead.company %}
+                            <i class="fas fa-building me-1"></i>{{ lead.company.name }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="ms-3">
+                    <span class="status-badge status-{{ lead.status }}">
+                        {{ lead.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0">
+                        <div class="contact-avatar">
+                            {{ lead.contact.first_name.0|upper }}{{ lead.contact.last_name.0|upper }}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-2">
+                        <div>{{ lead.contact.get_full_name }}</div>
+                        <div class="small text-muted">
+                            <i class="fas fa-envelope me-1"></i>{{ lead.contact.email|truncatechars:20 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="small text-muted">Priority</div>
+                    <div class="priority-{{ lead.priority }}">
+                        <i class="fas fa-flag"></i> {{ lead.get_priority_display }}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="small text-muted">Source</div>
+                    <div>{{ lead.source.name|default:"Unknown" }}</div>
+                </div>
+                {% if lead.estimated_value %}
+                <div class="col-12">
+                    <div class="small text-muted">Estimated Value</div>
+                    <div class="text-success">KES {{ lead.estimated_value|floatformat:0 }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="small text-muted">
+                    <i class="fas fa-clock me-1"></i>{{ lead.created_at|timesince }} ago
+                </div>
+                <div class="btn-group">
+                    <a href="{% url 'crm:lead_detail' lead.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'crm:lead_update' lead.pk %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% if lead.status in 'qualified,proposal' and not lead.opportunity %}
+                    <a href="{% url 'crm:lead_convert' lead.pk %}" 
+                       class="btn btn-sm btn-outline-success"
+                       onclick="return confirm('Convert this lead to an opportunity?')">
+                        <i class="fas fa-exchange-alt"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No leads found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_priority or current_source %}
+                    Try adjusting your search filters
+                {% else %}
+                    Start by adding your first lead
+                {% endif %}
+            </p>
+            <a href="{% url 'crm:lead_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Lead
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Lead pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{{ request.GET.urlencode }}" aria-label="First">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode }}" aria-label="Previous">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode }}" aria-label="Next">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{{ request.GET.urlencode }}" aria-label="Last">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

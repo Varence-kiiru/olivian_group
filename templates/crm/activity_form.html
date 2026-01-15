@@ -1,0 +1,765 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} Activity - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Activity{% else %}New Activity{% endif %}{% endblock %}
+{% block page_subtitle %}{% if form.instance.pk %}Update activity details{% else %}Create a new CRM activity{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:activity_list' %}">Activities</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}New{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .btn-secondary {
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .activity-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .activity-type-option {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .activity-type-option:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    .activity-type-option.selected {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .activity-type-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .priority-selector {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .priority-option {
+        flex: 1;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .priority-option.selected {
+        border-color: var(--priority-color);
+        background: var(--priority-color);
+        color: white;
+    }
+
+    .priority-high { --priority-color: #dc3545; }
+    .priority-medium { --priority-color: #ffc107; }
+    .priority-low { --priority-color: #28a745; }
+    
+    .priority-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .reminder-settings {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .reminder-option {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .datetime-group {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .datetime-group .form-group {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .quick-actions-preview {
+        background: #e3f2fd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .contact-preview {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+    }
+
+    .contact-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .contact-avatar {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="activityForm">
+    {% csrf_token %}
+
+    <!-- Activity Type Selection -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-tags me-2"></i>Activity Type
+        </h5>
+
+        <div class="activity-type-selector">
+            <div class="activity-type-option" data-type="call" onclick="selectActivityType('call')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-phone"></i>
+                </div>
+                <strong>Phone Call</strong><br>
+                <small>Make or receive a call</small>
+            </div>
+
+            <div class="activity-type-option" data-type="email" onclick="selectActivityType('email')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <strong>Email</strong><br>
+                <small>Send or receive email</small>
+            </div>
+
+            <div class="activity-type-option" data-type="meeting" onclick="selectActivityType('meeting')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <strong>Meeting</strong><br>
+                <small>Schedule a meeting</small>
+            </div>
+
+            <div class="activity-type-option" data-type="demo" onclick="selectActivityType('demo')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-laptop"></i>
+                </div>
+                <strong>Product Demo</strong><br>
+                <small>Present system/products</small>
+            </div>
+
+            <div class="activity-type-option" data-type="site_visit" onclick="selectActivityType('site_visit')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-location-arrow"></i>
+                </div>
+                <strong>Site Visit</strong><br>
+                <small>Visit customer premises</small>
+            </div>
+
+            <div class="activity-type-option" data-type="presentation" onclick="selectActivityType('presentation')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-presentation"></i>
+                </div>
+                <strong>Presentation</strong><br>
+                <small>Present findings</small>
+            </div>
+
+            <div class="activity-type-option" data-type="training" onclick="selectActivityType('training')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <strong>Training</strong><br>
+                <small>Conduct training session</small>
+            </div>
+
+            <div class="activity-type-option" data-type="negotiation" onclick="selectActivityType('negotiation')">
+                <div class="activity-type-icon">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <strong>Negotiation</strong><br>
+                <small>Contract discussions</small>
+            </div>
+        </div>
+
+        {{ form.activity_type }}
+    </div>
+    
+    <!-- Basic Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-info-circle me-2"></i>Basic Information
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="form-group">
+                    <label for="{{ form.subject.id_for_label }}" class="form-label">
+                        Subject <span class="required">*</span>
+                    </label>
+                    {{ form.subject }}
+                    {% if form.subject.errors %}
+                        <div class="text-danger small mt-1">{{ form.subject.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                        Status <span class="required">*</span>
+                    </label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contact and Assignment -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-user me-2"></i>Contact & Assignment
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.contact.id_for_label }}" class="form-label">
+                        Contact <span class="required">*</span>
+                    </label>
+                    {{ form.contact }}
+                    {% if form.contact.errors %}
+                        <div class="text-danger small mt-1">{{ form.contact.errors.0 }}</div>
+                    {% endif %}
+                    <div class="small text-muted mt-1">
+                        <a href="{% url 'crm:contact_create' %}" target="_blank">Create new contact</a>
+                    </div>
+                    
+                    <div id="contactPreview" class="contact-preview" style="display: none;">
+                        <div class="contact-info">
+                            <div class="contact-avatar" id="contactAvatar">?</div>
+                            <div>
+                                <div id="contactName">Contact Name</div>
+                                <div class="small text-muted" id="contactDetails">Contact Details</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
+                        Assigned To <span class="required">*</span>
+                    </label>
+                    {{ form.assigned_to }}
+                    {% if form.assigned_to.errors %}
+                        <div class="text-danger small mt-1">{{ form.assigned_to.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.opportunity.id_for_label }}" class="form-label">Related Opportunity</label>
+                    {{ form.opportunity }}
+                    {% if form.opportunity.errors %}
+                        <div class="text-danger small mt-1">{{ form.opportunity.errors.0 }}</div>
+                    {% endif %}
+                    <div class="small text-muted mt-1">Optional: Link to a sales opportunity</div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <div class="priority-selector">
+                        <div class="priority-option priority-low" data-priority="low" onclick="selectPriority('low')">
+                            <div class="priority-indicator" style="background: #28a745;"></div>
+                            Low
+                        </div>
+                        <div class="priority-option priority-medium" data-priority="medium" onclick="selectPriority('medium')">
+                            <div class="priority-indicator" style="background: #ffc107;"></div>
+                            Medium
+                        </div>
+                        <div class="priority-option priority-high" data-priority="high" onclick="selectPriority('high')">
+                            <div class="priority-indicator" style="background: #dc3545;"></div>
+                            High
+                        </div>
+                    </div>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                        <div class="text-danger small mt-1">{{ form.priority.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Date and Time -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-calendar me-2"></i>Date & Time
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.scheduled_datetime.id_for_label }}" class="form-label required-field">
+                        Scheduled Date & Time
+                    </label>
+                    {{ form.scheduled_datetime }}
+                    {% if form.scheduled_datetime.errors %}
+                        <div class="text-danger small mt-1">{{ form.scheduled_datetime.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.duration_minutes.id_for_label }}" class="form-label">
+                        Duration (minutes)
+                    </label>
+                    {{ form.duration_minutes }}
+                    {% if form.duration_minutes.errors %}
+                        <div class="text-danger small mt-1">{{ form.duration_minutes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Date Buttons -->
+        <div class="quick-actions-preview">
+            <strong>Quick Actions:</strong>
+            <div class="d-flex gap-2 mt-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickDate('today')">
+                    Today
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickDate('tomorrow')">
+                    Tomorrow
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickDate('next_week')">
+                    Next Week
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickDate('next_month')">
+                    Next Month
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reminders -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-bell me-2"></i>Reminders & Notifications
+        </h5>
+        
+        <div class="reminder-settings">
+            <div class="reminder-option">
+                <input type="checkbox" class="form-check-input" id="emailReminder" name="email_reminder">
+                <label class="form-check-label" for="emailReminder">
+                    <i class="fas fa-envelope me-2"></i>Email Reminder
+                </label>
+                <select class="form-select" style="width: auto; margin-left: auto;">
+                    <option value="15">15 minutes before</option>
+                    <option value="30">30 minutes before</option>
+                    <option value="60">1 hour before</option>
+                    <option value="1440">1 day before</option>
+                </select>
+            </div>
+            
+            <div class="reminder-option">
+                <input type="checkbox" class="form-check-input" id="smsReminder" name="sms_reminder">
+                <label class="form-check-label" for="smsReminder">
+                    <i class="fas fa-sms me-2"></i>SMS Reminder
+                </label>
+                <select class="form-select" style="width: auto; margin-left: auto;">
+                    <option value="15">15 minutes before</option>
+                    <option value="30">30 minutes before</option>
+                    <option value="60">1 hour before</option>
+                </select>
+            </div>
+            
+            <div class="reminder-option">
+                <input type="checkbox" class="form-check-input" id="systemNotification" name="system_notification">
+                <label class="form-check-label" for="systemNotification">
+                    <i class="fas fa-desktop me-2"></i>System Notification
+                </label>
+                <select class="form-select" style="width: auto; margin-left: auto;">
+                    <option value="5">5 minutes before</option>
+                    <option value="15">15 minutes before</option>
+                    <option value="30">30 minutes before</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Information -->
+    <div class="form-card">
+        <h5 class="section-header">
+            <i class="fas fa-cog me-2"></i>Additional Information
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
+                    {{ form.location }}
+                    {% if form.location.errors %}
+                        <div class="text-danger small mt-1">{{ form.location.errors.0 }}</div>
+                    {% endif %}
+                    <div class="small text-muted mt-1">Meeting location or call number</div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.outcome.id_for_label }}" class="form-label">
+                        Outcome
+                    </label>
+                    {{ form.outcome }}
+                    {% if form.outcome.errors %}
+                        <div class="text-danger small mt-1">{{ form.outcome.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="form-card">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'crm:activity_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Cancel
+            </a>
+            
+            <div class="d-flex gap-2">
+                {% if form.instance.pk %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update Activity
+                    </button>
+                    <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                        <i class="fas fa-save me-2"></i>Save & Continue Editing
+                    </button>
+                {% else %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Activity
+                    </button>
+                    <button type="submit" name="action" value="save_continue" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>Save & Add Another
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+var activityFormConfig = {
+    activityType: "{{ form.activity_type.name }}",
+    subjectField: "{{ form.subject.name }}",
+    priorityField: "{{ form.priority.name }}",
+    scheduledDatetimeField: "{{ form.scheduled_datetime.name }}",
+    contactField: "{{ form.contact.name }}"
+};
+
+function selectActivityType(type) {
+    // Update visual selection
+    document.querySelectorAll('.activity-type-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    document.querySelector('[data-type="' + type + '"]').classList.add('selected');
+
+    // Update hidden field
+    document.getElementsByName(activityFormConfig.activityType)[0].value = type;
+
+    // Update subject placeholder based on type
+    const subjectField = document.getElementsByName(activityFormConfig.subjectField)[0];
+    const placeholders = {
+        'call': 'e.g., Follow-up call with client',
+        'email': 'e.g., Send proposal to client',
+        'meeting': 'e.g., Project kickoff meeting',
+        'demo': 'e.g., Present solar system specifications',
+        'site_visit': 'e.g., Assess installation site',
+        'presentation': 'e.g., Strategic partnership presentation',
+        'training': 'e.g., System operation training',
+        'negotiation': 'e.g., Contract terms negotiation'
+    };
+    subjectField.placeholder = placeholders[type] || 'Activity subject';
+}
+
+function selectPriority(priority) {
+    // Update visual selection
+    document.querySelectorAll('.priority-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    document.querySelector('[data-priority="' + priority + '"]').classList.add('selected');
+
+    // Update hidden field
+    document.getElementsByName(activityFormConfig.priorityField)[0].value = priority;
+}
+
+function setQuickDate(period) {
+    const scheduledDatetime = document.getElementsByName(activityFormConfig.scheduledDatetimeField)[0];
+    const now = new Date();
+    let targetDate;
+
+    switch(period) {
+        case 'today':
+            targetDate = new Date(now);
+            targetDate.setHours(now.getHours() + 1, 0, 0, 0);
+            break;
+        case 'tomorrow':
+            targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + 1);
+            targetDate.setHours(9, 0, 0, 0);
+            break;
+        case 'next_week':
+            targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + 7);
+            targetDate.setHours(9, 0, 0, 0);
+            break;
+        case 'next_month':
+            targetDate = new Date(now);
+            targetDate.setMonth(now.getMonth() + 1);
+            targetDate.setHours(9, 0, 0, 0);
+            break;
+    }
+
+    // Format for datetime-local input
+    const formatted = targetDate.toISOString().slice(0, 16);
+    scheduledDatetime.value = formatted;
+}
+
+function updateContactPreview() {
+    const contactSelect = document.getElementsByName(activityFormConfig.contactField)[0];
+    const selectedOption = contactSelect.options[contactSelect.selectedIndex];
+    const preview = document.getElementById('contactPreview');
+
+    if (selectedOption.value) {
+        // Show preview (in real implementation, you'd fetch contact details via AJAX)
+        preview.style.display = 'block';
+        document.getElementById('contactName').textContent = selectedOption.text;
+        document.getElementById('contactAvatar').textContent = selectedOption.text.charAt(0).toUpperCase();
+        document.getElementById('contactDetails').textContent = 'Contact details would be loaded here';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Set initial values and event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial activity type
+    const currentType = document.getElementsByName(activityFormConfig.activityType)[0].value || 'call';
+    selectActivityType(currentType);
+
+    // Set initial priority
+    const currentPriority = document.getElementsByName(activityFormConfig.priorityField)[0].value || 'medium';
+    selectPriority(currentPriority);
+
+    // Add contact change listener
+    const contactField = document.getElementsByName(activityFormConfig.contactField)[0];
+    if (contactField) {
+        contactField.addEventListener('change', updateContactPreview);
+        updateContactPreview();
+    }
+
+    {% if not form.instance.pk %}
+    // Set default due date to 1 hour from now if creating new
+    setQuickDate('today');
+    {% endif %}
+
+    // Add form validation
+    const form = document.getElementById('activityForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const subjectField = document.getElementsByName(activityFormConfig.subjectField)[0];
+            const contactField = document.getElementsByName(activityFormConfig.contactField)[0];
+            const assignedToField = document.querySelector('[name*="assigned_to"]');
+
+            let hasErrors = false;
+
+            // Clear previous error messages
+            document.querySelectorAll('.alert-danger').forEach(function(el) {
+                el.remove();
+            });
+
+            if (subjectField && !subjectField.value.trim()) {
+                showFieldError(subjectField, 'Activity subject is required.');
+                hasErrors = true;
+            }
+
+            if (contactField && !contactField.value) {
+                showFieldError(contactField, 'Contact selection is required.');
+                hasErrors = true;
+            }
+
+            if (assignedToField && !assignedToField.value) {
+                showFieldError(assignedToField, 'Assignee is required.');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+
+function showFieldError(field, message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'alert alert-danger small mt-1';
+    errorDiv.textContent = message;
+    field.parentNode.appendChild(errorDiv);
+    field.classList.add('is-invalid');
+
+    // Remove error after 3 seconds
+    setTimeout(() => {
+        if (errorDiv && errorDiv.parentNode) {
+            errorDiv.remove();
+            field.classList.remove('is-invalid');
+        }
+    }, 3000);
+}
+
+// Add dynamic field handling based on activity type
+function toggleMeetingFields() {
+    const activityType = document.getElementsByName(activityFormConfig.activityType)[0].value;
+    const meetingFields = document.querySelectorAll('.meeting-field');
+    const virtualFields = document.querySelectorAll('.virtual-meeting-field');
+
+    if (['meeting', 'demo', 'presentation', 'training', 'negotiation'].includes(activityType)) {
+        meetingFields.forEach(field => field.style.display = 'block');
+    } else {
+        meetingFields.forEach(field => field.style.display = 'none');
+    }
+
+    if (['meeting', 'demo', 'presentation', 'training'].includes(activityType)) {
+        virtualFields.forEach(field => field.style.display = 'block');
+    } else {
+        virtualFields.forEach(field => field.style.display = 'none');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,994 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ opportunity.name }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{{ opportunity.name }}{% endblock %}
+{% block page_subtitle %}Opportunity details and sales tracking{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:opportunity_list' %}">Opportunities</a></li>
+<li class="breadcrumb-item active">{{ opportunity.name|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .opportunity-header {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .opportunity-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+
+    .stage-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        display: inline-block;
+    }
+
+    .probability-circle {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: conic-gradient(
+            #28a745 0deg,
+            #28a745 var(--percentage),
+            rgba(255, 255, 255, 0.3) var(--percentage),
+            rgba(255, 255, 255, 0.3) 360deg
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 1rem;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .info-card h6 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .stage-progress {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 2rem 0;
+        position: relative;
+    }
+
+    .stage-progress::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+
+    .progress-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), #28a745);
+        z-index: 2;
+        transition: width 0.3s ease;
+    }
+
+    .stage-step {
+        background: white;
+        border: 3px solid #e9ecef;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        z-index: 3;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .stage-step.completed {
+        background: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    
+    .stage-step.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(56, 182, 255, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(56, 182, 255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(56, 182, 255, 0); }
+    }
+    
+    .value-display {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .value-amount {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .value-label {
+        opacity: 0.8;
+        font-size: 1rem;
+    }
+    
+    .weighted-value {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .competition-section {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .next-steps {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        margin-left: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .quick-actions {
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: between;
+    }
+    
+    .action-btn i {
+        margin-right: 0.75rem;
+        width: 20px;
+    }
+    
+    .risk-indicator {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-top: 1rem;
+    }
+    
+    .risk-low { background: #d4edda; color: #155724; }
+    .risk-medium { background: #fff3cd; color: #856404; }
+    .risk-high { background: #f8d7da; color: #721c24; }
+    
+    .value-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        text-align: center;
+    }
+    
+    .actual-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .weighted-value {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    
+    .stage-progress {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .stage-btn {
+        flex: 1;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        background: #fff;
+        color: #6c757d;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .stage-btn:hover:not(:disabled) {
+        background: #e9ecef;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .stage-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stage-content i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stage-content small {
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+
+    .stage-btn.active {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0a58ca;
+    }
+
+    .stage-btn.active small {
+        color: rgba(255,255,255,0.8);
+    }
+
+    .decision-branch {
+        text-align: center;
+    }
+
+    .branch-divider {
+        position: relative;
+        margin-bottom: 1.5rem;
+        color: #6c757d;
+    }
+
+    .branch-divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .branch-divider i,
+    .branch-divider span {
+        position: relative;
+        background: #f8f9fa;
+        padding: 0 1rem;
+        z-index: 2;
+    }
+
+    .branch-options {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+    }
+
+    .stage-btn.stage-final {
+        width: 200px;
+    }
+
+    .stage-btn.stage-final.success {
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .stage-btn.stage-final.success:hover:not(:disabled) {
+        background: #198754;
+        color: #fff;
+    }
+
+    .stage-btn.stage-final.danger {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .stage-btn.stage-final.danger:hover:not(:disabled) {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    .stage-btn.stage-final.active.success {
+        background: #198754;
+        color: #fff;
+    }
+
+    .stage-btn.stage-final.active.danger {
+        background: #dc3545;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Add messages container -->
+<div class="messages mb-3">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Opportunity Header -->
+<div class="opportunity-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-3">{{ opportunity.name }}</h2>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="stage-badge {% if opportunity.stage in 'closed_won' %}bg-success{% elif opportunity.stage == 'closed_lost' %}bg-danger{% else %}bg-primary{% endif %}">{{ opportunity.get_stage_display }}</span>
+                <span class="opacity-75">{{ opportunity.probability }}% Probability</span>
+            </div>
+            <div class="opacity-75">
+                <i class="fas fa-user me-2"></i>{{ opportunity.contact.get_full_name }}
+                {% if opportunity.company %}
+                    <i class="fas fa-building ms-3 me-2"></i>{{ opportunity.company.name }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="probability-circle" style="--percentage: {{ opportunity.probability }}%;">
+                {{ opportunity.probability }}%
+            </div>
+            <div class="text-center">
+                <small class="opacity-75">Close Probability</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Value Display -->
+        <div class="value-display">
+            <div class="value-amount">KES {{ opportunity.value|floatformat:0 }}</div>
+            <div class="value-label">Opportunity Value</div>
+            <div class="weighted-value">
+                <span>Weighted Value ({{ opportunity.probability }}%):</span>
+                <strong>KES {{ opportunity.weighted_value|floatformat:0 }}</strong>
+            </div>
+        </div>
+        
+        <!-- Stage Progress -->
+        <div class="info-card">
+            <h6><i class="fas fa-chart-line me-2"></i>Sales Stage Progress</h6>
+            
+            <div class="stage-flow">
+                <!-- Regular stages -->
+                <div class="stage-group">
+                    <button type="button" class="stage-btn {% if opportunity.stage == 'qualification' %}active{% endif %}"
+                        data-stage="qualification" data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}">
+                        <div class="stage-content">
+                            <i class="fas fa-search"></i>
+                            <span class="stage-name">Qualification</span>
+                            <small>10%</small>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="stage-btn {% if opportunity.stage == 'needs_analysis' %}active{% endif %}"
+                        data-stage="needs_analysis" data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}">
+                        <div class="stage-content">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span class="stage-name">Needs Analysis</span>
+                            <small>30%</small>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="stage-btn {% if opportunity.stage == 'proposal' %}active{% endif %}"
+                        data-stage="proposal" data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}">
+                        <div class="stage-content">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span class="stage-name">Proposal/Quote</span>
+                            <small>50%</small>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="stage-btn {% if opportunity.stage == 'negotiation' %}active{% endif %}"
+                        data-stage="negotiation" data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}">
+                        <div class="stage-content">
+                            <i class="fas fa-handshake"></i>
+                            <span class="stage-name">Negotiation</span>
+                            <small>70%</small>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Decision branch -->
+                <div class="decision-branch">
+                    <div class="branch-divider">
+                        <i class="fas fa-code-branch"></i>
+                        <span>Decision</span>
+                    </div>
+                    
+                    <div class="branch-options">
+                        <button type="button" 
+                            class="stage-btn stage-final success {% if opportunity.stage == 'closed_won' %}active{% endif %}"
+                            data-stage="closed_won" 
+                            data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}"
+                            {% if opportunity.stage == 'closed_lost' %}disabled{% endif %}>
+                            <div class="stage-content">
+                                <i class="fas fa-check-circle"></i>
+                                <span class="stage-name">Won</span>
+                                <small>100%</small>
+                            </div>
+                        </button>
+
+                        <button type="button" 
+                            class="stage-btn stage-final danger {% if opportunity.stage == 'closed_lost' %}active{% endif %}"
+                            data-stage="closed_lost" 
+                            data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}"
+                            {% if opportunity.stage == 'closed_won' %}disabled{% endif %}>
+                            <div class="stage-content">
+                                <i class="fas fa-times-circle"></i>
+                                <span class="stage-name">Lost</span>
+                                <small>0%</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Opportunity Details -->
+        <div class="info-card">
+            <h6><i class="fas fa-info-circle me-2"></i>Opportunity Details</h6>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <strong>Expected Close Date:</strong><br>
+                        <span class="{% if opportunity.is_overdue %}text-danger{% endif %}">
+                            {{ opportunity.expected_close_date|date:"F d, Y" }}
+                            {% if opportunity.is_overdue %}
+                                <span class="badge bg-danger ms-2">Overdue</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    {% if opportunity.actual_close_date %}
+                    <div class="mb-3">
+                        <strong>Actual Close Date:</strong><br>
+                        {{ opportunity.actual_close_date|date:"F d, Y" }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if opportunity.assigned_to %}
+                    <div class="mb-3">
+                        <strong>Assigned To:</strong><br>
+                        {{ opportunity.assigned_to.get_full_name }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <strong>Created:</strong><br>
+                        {{ opportunity.created_at|date:"F d, Y" }} by {{ opportunity.created_by.get_full_name }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Last Updated:</strong><br>
+                        {{ opportunity.updated_at|date:"F d, Y H:i" }}
+                    </div>
+                    
+                    {% if opportunity.lead %}
+                    <div class="mb-3">
+                        <strong>Related Lead:</strong><br>
+                        <a href="{% url 'crm:lead_detail' opportunity.lead.pk %}" class="text-decoration-none">
+                            {{ opportunity.lead.title }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Description -->
+        {% if opportunity.description %}
+        <div class="info-card">
+            <h6><i class="fas fa-file-alt me-2"></i>Description</h6>
+            <p>{{ opportunity.description|linebreaks }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Next Steps -->
+        {% if opportunity.next_steps %}
+        <div class="info-card">
+            <h6><i class="fas fa-tasks me-2"></i>Next Steps</h6>
+            <div class="next-steps">
+                {{ opportunity.next_steps|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Competition -->
+        {% if opportunity.competition %}
+        <div class="info-card">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Competition Analysis</h6>
+            <div class="competition-section">
+                <strong>Competing Solutions:</strong>
+                <p class="mt-2 mb-0">{{ opportunity.competition|linebreaks }}</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Activities Timeline -->
+        <div class="info-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Activity Timeline</h6>
+                <a href="{% url 'crm:activity_create' %}?opportunity={{ opportunity.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Activity
+                </a>
+            </div>
+            
+            {% if activities %}
+            <div class="timeline">
+                {% for activity in activities %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-primary">{{ activity.get_activity_type_display }}</span>
+                            <strong class="ms-2">{{ activity.subject }}</strong>
+                        </div>
+                        <small class="text-muted">{{ activity.scheduled_datetime|date:"M d, Y H:i" }}</small>
+                    </div>
+                    
+                    {% if activity.description %}
+                    <p class="mb-2 text-muted">{{ activity.description|linebreaks }}</p>
+                    {% endif %}
+                    
+                    {% if activity.outcome %}
+                    <div class="bg-light p-2 rounded">
+                        <strong>Outcome:</strong> {{ activity.outcome }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ activity.assigned_to.get_full_name }}
+                        </small>
+                        <a href="{% url 'crm:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No activities recorded</h6>
+                <p class="text-muted">Start tracking your interactions with this opportunity.</p>
+                <a href="{% url 'crm:activity_create' %}?opportunity={{ opportunity.pk }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add First Activity
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="quick-actions">
+            <!-- Quick Actions -->
+            <div class="info-card">
+                <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crm:opportunity_update' opportunity.pk %}" class="btn btn-primary action-btn">
+                        <i class="fas fa-edit"></i>
+                        <span>Edit Opportunity</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    
+                    <a href="{% url 'crm:activity_create' %}?opportunity={{ opportunity.pk }}" class="btn btn-success action-btn">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Log Activity</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    
+                    <a href="{% url 'crm:email_composer' %}?opportunity={{ opportunity.pk }}&contact={{ opportunity.contact.id }}" class="btn btn-outline-primary action-btn">
+                        <i class="fas fa-envelope"></i>
+                        <span>Send Email</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    
+                    {% if opportunity.contact.phone %}
+                    <a href="tel:{{ opportunity.contact.phone }}" class="btn btn-outline-success action-btn">
+                        <i class="fas fa-phone"></i>
+                        <span>Call Contact</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-warning action-btn" onclick="updateStage()">
+                        <i class="fas fa-arrow-right"></i>
+                        <span>Update Stage</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </button>
+                    
+                    <button class="btn btn-outline-info action-btn" onclick="scheduleFollowUp()">
+                        <i class="fas fa-clock"></i>
+                        <span>Schedule Follow-up</span>
+                        <i class="fas fa-chevron-right ms-auto"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Risk Assessment -->
+            <div class="info-card">
+                <h6><i class="fas fa-shield-alt me-2"></i>Risk Assessment</h6>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Deal Risk:</span>
+                        <strong class="text-warning">Medium</strong>
+                    </div>
+                </div>
+                
+                <div class="risk-indicator risk-medium">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Competition detected - monitor closely
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        Risk factors: Close date approaching, competitive environment
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Related Information -->
+            <div class="info-card">
+                <h6><i class="fas fa-link me-2"></i>Related Information</h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crm:contact_detail' opportunity.contact.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user me-2"></i>View Contact
+                    </a>
+                    
+                    {% if opportunity.company %}
+                    <a href="{% url 'crm:company_detail' opportunity.company.pk %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-building me-2"></i>View Company
+                    </a>
+                    {% endif %}
+                    
+                    {% if opportunity.lead %}
+                    <a href="{% url 'crm:lead_detail' opportunity.lead.pk %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-user-plus me-2"></i>View Original Lead
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'crm:activity_list' %}?opportunity={{ opportunity.pk }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-history me-2"></i>All Activities
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Opportunity Statistics -->
+            <div class="info-card">
+                <h6><i class="fas fa-chart-bar me-2"></i>Statistics</h6>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Days in Pipeline:</span>
+                        <strong>{{ days_in_pipeline }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Activities Logged:</span>
+                        <strong>{{ total_activities }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Stage Progress:</span>
+                        <div>
+                            <div class="progress" style="width: 100px; height: 6px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ stage_progress }}%;" 
+                                     aria-valuenow="{{ stage_progress }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ stage_progress }}%</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Expected Revenue:</span>
+                        <strong class="text-success">KES {{ opportunity.weighted_value|floatformat:0 }}</strong>
+                    </div>
+                </div>
+
+                {% if opportunity.stage in 'closed_won,closed_lost' %}
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">
+                        <i class="fas fa-flag-checkered me-1"></i>
+                        Opportunity {{ opportunity.get_stage_display|lower }} on {{ opportunity.actual_close_date|date:"M d, Y" }}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Replace the stage buttons section -->
+<div class="stage-progress mb-4">
+    {% for stage_code, stage_name in opportunity.STAGE_CHOICES %}
+    <button type="button"
+        class="stage-btn {% if opportunity.stage == stage_code %}active{% endif %} {% if stage_code in 'closed_won,closed_lost' %}stage-final{% endif %}"
+        data-stage="{{ stage_code }}"
+        data-url="{% url 'crm:opportunity_change_stage' opportunity.pk %}"
+        {% if opportunity.stage in 'closed_won,closed_lost' and stage_code != opportunity.stage %}disabled{% endif %}
+    >
+        <span class="stage-name">{{ stage_name }}</span>
+        {% if opportunity.stage == stage_code %}
+        <span class="stage-current">
+            <i class="fas fa-check-circle"></i>
+        </span>
+        {% endif %}
+    </button>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stageButtons = document.querySelectorAll('.stage-btn');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const messagesContainer = document.querySelector('.messages');
+
+    stageButtons.forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            if (this.disabled || this.classList.contains('active')) return;
+
+            const stage = this.dataset.stage;
+            const stageName = this.querySelector('.stage-name').textContent.trim();
+            const url = this.dataset.url;
+            
+            if (!confirm(`Change stage to ${stageName}?`)) return;
+
+            try {
+                // Show loading state
+                const originalContent = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.disabled = true;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `stage=${stage}`
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update visual elements
+                    updateStageUI(this, stage, data);
+                    
+                    // Show success message
+                    const alert = createAlert(`Stage updated to ${stageName}`, 'success');
+                    messagesContainer.appendChild(alert);
+
+                    // Reload after delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Failed to update stage');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const alert = createAlert(`Error: ${error.message}`, 'danger');
+                messagesContainer.appendChild(alert);
+                this.innerHTML = originalContent;
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+
+    function updateStageUI(activeButton, newStage, data) {
+        const stageWeights = {
+            'qualification': {'progress': 20, 'probability': 10},
+            'needs_analysis': {'progress': 40, 'probability': 30},
+            'proposal': {'progress': 60, 'probability': 50},
+            'negotiation': {'progress': 80, 'probability': 70},
+            'closed_won': {'progress': 100, 'probability': 100},
+            'closed_lost': {'progress': 100, 'probability': 0}
+        };
+
+        // Update stage buttons
+        stageButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (newStage.includes('closed')) {
+                btn.disabled = btn !== activeButton;
+            }
+        });
+        activeButton.classList.add('active');
+
+        // Update progress bar
+        const progressBar = document.querySelector('.progress-bar');
+        if (progressBar && stageWeights[newStage]) {
+            progressBar.style.width = `${stageWeights[newStage].progress}%`;
+            progressBar.setAttribute('aria-valuenow', stageWeights[newStage].progress);
+        }
+
+        // Update probability circle and text
+        const probabilityCircle = document.querySelector('.probability-circle');
+        if (probabilityCircle) {
+            probabilityCircle.style.setProperty('--percentage', `${data.probability}%`);
+            probabilityCircle.textContent = `${data.probability}%`;
+        }
+
+        const probabilityText = document.querySelector('.opacity-75');
+        if (probabilityText) {
+            probabilityText.textContent = `${data.probability}% Probability`;
+        }
+
+        // Update weighted value
+        const weightedValue = document.querySelector('.weighted-value strong');
+        if (weightedValue) {
+            weightedValue.textContent = `KES ${Number(data.weighted_value).toLocaleString()}`;
+        }
+    }
+
+    function createAlert(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            <div>${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => alert.remove(), 5000);
+        
+        return alert;
+    }
+});
+
+function updateStage() {
+    window.location.href = '{% url "crm:opportunity_update" opportunity.pk %}';
+}
+
+function scheduleFollowUp() {
+    window.location.href = '{% url "crm:activity_create" %}?opportunity={{ opportunity.pk }}&type=follow_up';
+}
+</script>
+{% endblock %}

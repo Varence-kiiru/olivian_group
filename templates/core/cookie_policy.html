@@ -1,0 +1,232 @@
+{% extends "website/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {{ company.name }}{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.legal-document {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.cookie-category-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.cookie-category-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.cookie-category-body {
+    padding: 1.5rem;
+}
+
+.cookie-table {
+    margin-top: 1rem;
+}
+
+.cookie-table th {
+    background: #f1f3f4;
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.cookie-table td {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    vertical-align: top;
+}
+
+.cookie-name {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.third-party-badge {
+    background: #ffc107;
+    color: #212529;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.first-party-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.manage-cookies-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.manage-cookies-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(56, 182, 255, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="legal-document">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-cookie-bite text-primary me-3"></i>Cookie Policy
+            </h1>
+            <p class="lead text-muted">Learn about how we use cookies on our website</p>
+            {% if document.last_updated %}
+            <p class="text-muted">
+                <small><strong>Last Updated:</strong> {{ document.last_updated|date:"F d, Y" }}</small>
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Cookie Policy Content -->
+        {% if document %}
+        <div class="legal-content mb-5">
+            {{ document.content|safe }}
+        </div>
+        {% endif %}
+
+        <!-- Cookie Categories Breakdown -->
+        <div class="cookie-categories-section">
+            <h2 class="mb-4">
+                <i class="fas fa-list me-2"></i>Cookie Categories Used on This Website
+            </h2>
+            
+            {% for category in categories %}
+            <div class="cookie-category-card">
+                <div class="cookie-category-header">
+                    <h4 class="mb-0">
+                        {{ category.display_name }}
+                        {% if category.is_essential %}
+                        <span class="badge bg-light text-dark ms-2">Always Active</span>
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="cookie-category-body">
+                    <p class="mb-3">{{ category.description }}</p>
+                    
+                    {% if category.cookies.all %}
+                    <h6 class="mb-2">Cookies in this category:</h6>
+                    <div class="table-responsive">
+                        <table class="table cookie-table">
+                            <thead>
+                                <tr>
+                                    <th>Cookie Name</th>
+                                    <th>Purpose</th>
+                                    <th>Duration</th>
+                                    <th>Provider</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cookie in category.cookies.all %}
+                                {% if cookie.is_active %}
+                                <tr>
+                                    <td>
+                                        <code class="cookie-name">{{ cookie.name }}</code>
+                                    </td>
+                                    <td>{{ cookie.purpose }}</td>
+                                    <td>{{ cookie.duration }}</td>
+                                    <td>
+                                        {{ cookie.provider|default:"First Party" }}
+                                        {% if cookie.third_party %}
+                                        <span class="third-party-badge">Third Party</span>
+                                        {% else %}
+                                        <span class="first-party-badge">First Party</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted"><em>No specific cookies listed for this category.</em></p>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Cookie categories are being configured. Please check back later.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Manage Cookies Section -->
+        <div class="text-center mt-5 p-4" style="background: #f8f9fa; border-radius: 8px;">
+            <h3 class="mb-3">Manage Your Cookie Preferences</h3>
+            <p class="mb-4">You can manage your cookie preferences at any time by clicking the button below.</p>
+            <button onclick="window.cookieConsent.showPreferences()" class="btn manage-cookies-btn">
+                <i class="fas fa-cog me-2"></i>Manage Cookie Preferences
+            </button>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="mt-5">
+            <h3>How to Control Cookies</h3>
+            <p>Most web browsers allow you to control cookies through their settings preferences. However, if you limit the cookies, it may impact your experience of our website.</p>
+            
+            <h4>Browser Cookie Settings:</h4>
+            <ul>
+                <li><strong>Chrome:</strong> Settings > Privacy and security > Cookies and other site data</li>
+                <li><strong>Firefox:</strong> Settings > Privacy & Security > Cookies and Site Data</li>
+                <li><strong>Safari:</strong> Preferences > Privacy > Manage Website Data</li>
+                <li><strong>Edge:</strong> Settings > Cookies and site permissions > Cookies and site data</li>
+            </ul>
+
+            <h4>Contact Us</h4>
+            <p>If you have any questions about our use of cookies, please contact us:</p>
+            <ul>
+                <li><strong>Email:</strong> {{ company.email|default:"info@olivian.co.ke" }}</li>
+                <li><strong>Phone:</strong> {{ company.phone|default:"+254-719-728-666" }}</li>
+                <li><strong>Address:</strong> {{ company.address|default:"Kahawa Sukari Road, Nairobi, Kenya" }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure cookie manager is available
+    if (typeof window.cookieConsent === 'undefined') {
+        console.warn('Cookie consent manager not available');
+    }
+});
+</script>
+{% endblock %}

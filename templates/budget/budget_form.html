@@ -1,0 +1,471 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Budget{% else %}Create Budget{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Budget{% else %}Create Budget{% endif %}
+{% endblock %}
+{% block page_subtitle %}
+    {% if object %}Update budget details and allocations{% else %}Set up a new budget for financial planning{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit Budget{% else %}Create Budget{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .form-section {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .required-field::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .budget-type-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .budget-type-card {
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+    }
+    
+    .budget-type-card:hover {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.1);
+    }
+    
+    .budget-type-card.selected {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .calculation-preview {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .amount-input {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .period-info {
+        background: #e3f2fd;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <form method="post" id="budgetForm">
+            {% csrf_token %}
+            
+            <!-- Basic Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Basic Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label for="id_name" class="form-label required-field">Budget Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Enter a descriptive name for this budget</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="id_department" class="form-label">Department</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                                <div class="text-danger small">{{ form.department.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Optional department assignment</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="id_description" class="form-label required-field">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                        <div class="help-text">Provide a detailed description of the budget purpose and scope</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Budget Type Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Budget Type</h5>
+                    
+                    <div class="budget-type-grid">
+                        <div class="budget-type-card" data-value="project">
+                            <i class="fas fa-project-diagram fa-2x mb-2 text-primary"></i>
+                            <div class="fw-semibold">Project Budget</div>
+                            <small class="text-muted">For specific projects</small>
+                        </div>
+                        <div class="budget-type-card" data-value="department">
+                            <i class="fas fa-building fa-2x mb-2 text-success"></i>
+                            <div class="fw-semibold">Department Budget</div>
+                            <small class="text-muted">Department operations</small>
+                        </div>
+                        <div class="budget-type-card" data-value="annual">
+                            <i class="fas fa-calendar-alt fa-2x mb-2 text-warning"></i>
+                            <div class="fw-semibold">Annual Budget</div>
+                            <small class="text-muted">Yearly financial plan</small>
+                        </div>
+                        <div class="budget-type-card" data-value="quarterly">
+                            <i class="fas fa-calendar fa-2x mb-2 text-info"></i>
+                            <div class="fw-semibold">Quarterly Budget</div>
+                            <small class="text-muted">3-month period</small>
+                        </div>
+                        <div class="budget-type-card" data-value="monthly">
+                            <i class="fas fa-calendar-day fa-2x mb-2 text-secondary"></i>
+                            <div class="fw-semibold">Monthly Budget</div>
+                            <small class="text-muted">Monthly planning</small>
+                        </div>
+                        <div class="budget-type-card" data-value="operational">
+                            <i class="fas fa-cogs fa-2x mb-2 text-primary"></i>
+                            <div class="fw-semibold">Operational Budget</div>
+                            <small class="text-muted">Day-to-day operations</small>
+                        </div>
+                        <div class="budget-type-card" data-value="capital">
+                            <i class="fas fa-industry fa-2x mb-2 text-danger"></i>
+                            <div class="fw-semibold">Capital Budget</div>
+                            <small class="text-muted">Large investments</small>
+                        </div>
+                    </div>
+                    {{ form.budget_type }}
+                    {% if form.budget_type.errors %}
+                        <div class="text-danger small mt-2">{{ form.budget_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Financial Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Financial Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_total_amount" class="form-label required-field">Total Budget Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">KES</span>
+                                {{ form.total_amount }}
+                            </div>
+                            {% if form.total_amount.errors %}
+                                <div class="text-danger small">{{ form.total_amount.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Total budget allocation in Kenyan Shillings</div>
+                        </div>
+                        
+                        {% if object %}
+                        <div class="col-md-6">
+                            <div class="calculation-preview">
+                                <div class="small text-muted mb-1">Current Status</div>
+                                <div class="row g-2 small">
+                                    <div class="col-6">
+                                        <strong>Allocated:</strong> KES {{ object.allocated_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Spent:</strong> KES {{ object.spent_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Available:</strong> KES {{ object.available_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Utilization:</strong> {{ object.utilization_percentage|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Period Information Section -->
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Budget Period</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_period_start" class="form-label required-field">Start Date</label>
+                            {{ form.period_start }}
+                            {% if form.period_start.errors %}
+                                <div class="text-danger small">{{ form.period_start.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Budget period start date</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_period_end" class="form-label required-field">End Date</label>
+                            {{ form.period_end }}
+                            {% if form.period_end.errors %}
+                                <div class="text-danger small">{{ form.period_end.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Budget period end date</div>
+                        </div>
+                    </div>
+                    
+                    <div class="period-info" id="periodInfo" style="display: none;">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="small text-muted">Duration</div>
+                                <div class="fw-semibold" id="budgetDuration">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="small text-muted">Fiscal Year</div>
+                                <div class="fw-semibold" id="fiscalYear">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="small text-muted">Monthly Allocation</div>
+                                <div class="fw-semibold" id="monthlyAllocation">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project Association Section -->
+            {% if form.project %}
+            <div class="form-card">
+                <div class="form-section">
+                    <h5 class="mb-3">Project Association</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_project" class="form-label">Associated Project</label>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                                <div class="text-danger small">{{ form.project.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Link this budget to a specific project (optional)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Preview Section -->
+            <div class="form-card">
+                <div class="calculation-preview">
+                    <h6 class="mb-3">Budget Preview</h6>
+                    <div id="budgetPreview">
+                        <div class="text-muted">Budget preview will appear here as you fill out the form</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-card">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'budget:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 
+                        {% if object %}Update Budget{% else %}Create Budget{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('budgetForm');
+    const budgetTypeInput = document.getElementById('id_budget_type');
+    const startDateInput = document.getElementById('id_period_start');
+    const endDateInput = document.getElementById('id_period_end');
+    const totalAmountInput = document.getElementById('id_total_amount');
+    
+    // Initialize form state
+    updateBudgetTypeSelection();
+    updatePeriodInfo();
+    updatePreview();
+    
+    // Budget type selection
+    document.querySelectorAll('.budget-type-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const value = this.getAttribute('data-value');
+            budgetTypeInput.value = value;
+            updateBudgetTypeSelection();
+            updatePreview();
+        });
+    });
+    
+    // Form field changes
+    form.addEventListener('input', function() {
+        updatePeriodInfo();
+        updatePreview();
+    });
+    
+    startDateInput.addEventListener('change', updatePeriodInfo);
+    endDateInput.addEventListener('change', updatePeriodInfo);
+    
+    function updateBudgetTypeSelection() {
+        const selectedValue = budgetTypeInput.value;
+        document.querySelectorAll('.budget-type-card').forEach(card => {
+            card.classList.toggle('selected', card.getAttribute('data-value') === selectedValue);
+        });
+    }
+    
+    function updatePeriodInfo() {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const periodInfo = document.getElementById('periodInfo');
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            if (end > start) {
+                periodInfo.style.display = 'block';
+                
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const diffMonths = Math.round(diffDays / 30);
+                
+                document.getElementById('budgetDuration').textContent = `${diffDays} days (${diffMonths} months)`;
+                document.getElementById('fiscalYear').textContent = start.getFullYear();
+                
+                const totalAmount = parseFloat(totalAmountInput.value) || 0;
+                const monthlyAmount = diffMonths > 0 ? totalAmount / diffMonths : 0;
+                document.getElementById('monthlyAllocation').textContent = `KES ${formatNumber(monthlyAmount)}`;
+            } else {
+                periodInfo.style.display = 'none';
+            }
+        } else {
+            periodInfo.style.display = 'none';
+        }
+    }
+    
+    function updatePreview() {
+        const name = document.getElementById('id_name').value;
+        const description = document.getElementById('id_description').value;
+        const budgetType = budgetTypeInput.value;
+        const totalAmount = totalAmountInput.value;
+        const department = document.getElementById('id_department').value;
+        
+        if (name || description || budgetType || totalAmount) {
+            const preview = document.getElementById('budgetPreview');
+            preview.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>${name || 'Budget Name'}</h6>
+                        <p class="text-muted small mb-2">${description || 'Budget description'}</p>
+                        <div class="small">
+                            <span class="badge bg-primary">${getBudgetTypeDisplay(budgetType)}</span>
+                            ${department ? `<span class="badge bg-secondary ms-1">${department}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="h5 text-primary">KES ${formatNumber(totalAmount) || '0'}</div>
+                        <small class="text-muted">Total Budget</small>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    function getBudgetTypeDisplay(type) {
+        const types = {
+            'project': 'Project Budget',
+            'department': 'Department Budget',
+            'annual': 'Annual Budget',
+            'quarterly': 'Quarterly Budget',
+            'monthly': 'Monthly Budget',
+            'operational': 'Operational Budget',
+            'capital': 'Capital Budget'
+        };
+        return types[type] || 'Select Budget Type';
+    }
+    
+    function formatNumber(num) {
+        if (!num) return '';
+        return parseFloat(num).toLocaleString();
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        const requiredFields = ['id_name', 'id_description', 'id_budget_type', 'id_total_amount', 'id_period_start', 'id_period_end'];
+        
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Validate date range
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (endDate <= startDate) {
+            isValid = false;
+            endDateInput.classList.add('is-invalid');
+            alert('End date must be after start date.');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields and ensure dates are valid.');
+        }
+    });
+});
+</script>
+{% endblock %}

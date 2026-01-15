@@ -1,0 +1,599 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sales Dashboard - {{ company.name|default:"Olivian Group" }}{% endblock %}
+{% block page_title %}Sales Dashboard{% endblock %}
+{% block page_subtitle %}Track your sales performance and manage customers{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+{% include "components/customer_modal_css.html" %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .sales-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+    }
+    
+    .metric-card.revenue::before { background: var(--success-color); }
+    .metric-card.orders::before { background: var(--primary-color); }
+    .metric-card.quotations::before { background: var(--warning-color); }
+    .metric-card.conversion::before { background: var(--info-color); }
+    .metric-card.commission::before { background: var(--danger-color); }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-value.revenue { color: var(--success-color); }
+    .metric-value.orders { color: var(--primary-color); }
+    .metric-value.quotations { color: var(--warning-color); }
+    .metric-value.conversion { color: var(--info-color); }
+    .metric-value.commission { color: var(--danger-color); }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .metric-change.positive {
+        color: var(--success-color);
+    }
+    
+    .metric-change.negative {
+        color: var(--danger-color);
+    }
+    
+    .metric-icon {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 2rem;
+        opacity: 0.1;
+    }
+    
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .quick-actions {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        height: fit-content;
+    }
+    
+    .action-button {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        border-radius: var(--border-radius);
+        text-align: center;
+        font-weight: 600;
+        transition: var(--transition);
+        border: none;
+    }
+    
+    .action-button:hover {
+        background: var(--primary-dark);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .action-button.secondary {
+        background: var(--light-color);
+        color: var(--dark-color);
+        border: 1px solid #ddd;
+    }
+    
+    .action-button.secondary:hover {
+        background: #e9ecef;
+        color: var(--dark-color);
+    }
+    
+    .leads-pipeline {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .pipeline-stage {
+        background: var(--light-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .pipeline-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stage-name {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .stage-count {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .stage-value {
+        font-size: 1.1rem;
+        color: var(--success-color);
+        font-weight: 600;
+    }
+    
+    .recent-activities {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .activity-time {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .currency {
+        color: var(--success-color);
+        font-weight: 600;
+    }
+    
+    .targets-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .target-progress {
+        margin-bottom: 1.5rem;
+    }
+    
+    .target-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .target-label {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .target-percentage {
+        font-size: 0.9rem;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 20px;
+        background: var(--light-color);
+    }
+    
+    .progress-bar {
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Sales Metrics -->
+<div class="sales-metrics">
+    <div class="metric-card revenue">
+        <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
+        <div class="metric-value revenue">KES {{ sales_stats.monthly_revenue|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Monthly Revenue</div>
+        <div class="metric-change {% if sales_stats.revenue_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if sales_stats.revenue_change >= 0 %}up{% else %}down{% endif %}"></i>
+            {{ sales_stats.revenue_change|default:0 }}% from last month
+        </div>
+    </div>
+    
+    <div class="metric-card orders">
+        <div class="metric-icon"><i class="fas fa-shopping-cart"></i></div>
+        <div class="metric-value orders">{{ sales_stats.monthly_orders|default:0 }}</div>
+        <div class="metric-label">Orders This Month</div>
+        <div class="metric-change {% if sales_stats.orders_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if sales_stats.orders_change >= 0 %}up{% else %}down{% endif %}"></i>
+            {{ sales_stats.orders_change|default:0 }}% from last month
+        </div>
+    </div>
+    
+    <div class="metric-card quotations">
+        <div class="metric-icon"><i class="fas fa-file-invoice"></i></div>
+        <div class="metric-value quotations">{{ sales_stats.monthly_quotations|default:0 }}</div>
+        <div class="metric-label">Quotations Sent</div>
+        <div class="metric-change {% if sales_stats.quotations_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if sales_stats.quotations_change >= 0 %}up{% else %}down{% endif %}"></i>
+            {{ sales_stats.quotations_change|default:0 }}% from last month
+        </div>
+    </div>
+    
+    <div class="metric-card conversion">
+        <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="metric-value conversion">{{ sales_stats.conversion_rate|default:0 }}%</div>
+        <div class="metric-label">Conversion Rate</div>
+        <div class="metric-change {% if sales_stats.conversion_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if sales_stats.conversion_change >= 0 %}up{% else %}down{% endif %}"></i>
+            {{ sales_stats.conversion_change|default:0 }}% from last month
+        </div>
+    </div>
+    
+    <div class="metric-card commission">
+        <div class="metric-icon"><i class="fas fa-percentage"></i></div>
+        <div class="metric-value commission">KES {{ sales_stats.monthly_commission|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Commission Earned</div>
+        <div class="metric-change {% if sales_stats.commission_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if sales_stats.commission_change >= 0 %}up{% else %}down{% endif %}"></i>
+            {{ sales_stats.commission_change|default:0 }}% from last month
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="dashboard-grid">
+    <!-- Sales Chart -->
+    <div class="chart-container">
+        <h4 class="mb-3">
+            <i class="fas fa-chart-area me-2"></i>Sales Performance
+        </h4>
+        <canvas id="salesChart"></canvas>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h4 class="mb-3">
+            <i class="fas fa-bolt me-2"></i>Quick Actions
+        </h4>
+        <a href="/quotations/create/" class="action-button">
+            <i class="fas fa-plus me-2"></i>New Quotation
+        </a>
+        <button type="button" class="action-button" onclick="openSalesDashboardCustomerModal()">
+            <i class="fas fa-user-plus me-2"></i>Add Customer
+        </button>
+        <a href="/leads/" class="action-button secondary">
+            <i class="fas fa-users me-2"></i>Manage Leads
+        </a>
+        <a href="/quotations/" class="action-button secondary">
+            <i class="fas fa-file-invoice me-2"></i>View Quotations
+        </a>
+        <a href="/shop/orders/" class="action-button secondary">
+            <i class="fas fa-shopping-cart me-2"></i>View Orders
+        </a>
+        <a href="/reports/sales/" class="action-button secondary">
+            <i class="fas fa-chart-bar me-2"></i>Sales Reports
+        </a>
+    </div>
+</div>
+
+<!-- Sales Targets -->
+<div class="targets-section">
+    <h4 class="mb-3">
+        <i class="fas fa-target me-2"></i>Monthly Targets
+    </h4>
+    
+    <div class="target-progress">
+        <div class="target-header">
+            <span class="target-label">Revenue Target</span>
+            <span class="target-percentage">{{ targets.revenue_percentage|default:0 }}%</span>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-success" style="width: {{ targets.revenue_percentage|default:0 }}%"></div>
+        </div>
+        <small class="text-muted">KES {{ sales_stats.monthly_revenue|default:0 }} / KES {{ targets.revenue_target|default:0 }}</small>
+    </div>
+    
+    <div class="target-progress">
+        <div class="target-header">
+            <span class="target-label">Orders Target</span>
+            <span class="target-percentage">{{ targets.orders_percentage|default:0 }}%</span>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-primary" style="width: {{ targets.orders_percentage|default:0 }}%"></div>
+        </div>
+        <small class="text-muted">{{ sales_stats.monthly_orders|default:0 }} / {{ targets.orders_target|default:0 }} orders</small>
+    </div>
+    
+    <div class="target-progress">
+        <div class="target-header">
+            <span class="target-label">Quotations Target</span>
+            <span class="target-percentage">{{ targets.quotations_percentage|default:0 }}%</span>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-warning" style="width: {{ targets.quotations_percentage|default:0 }}%"></div>
+        </div>
+        <small class="text-muted">{{ sales_stats.monthly_quotations|default:0 }} / {{ targets.quotations_target|default:0 }} quotations</small>
+    </div>
+</div>
+
+<!-- Leads Pipeline -->
+<div class="leads-pipeline">
+    <h4 class="mb-3">
+        <i class="fas fa-funnel-dollar me-2"></i>Sales Pipeline
+    </h4>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="pipeline-stage">
+                <div class="pipeline-header">
+                    <span class="stage-name">Prospects</span>
+                    <span class="stage-count">{{ pipeline.prospects.count|default:0 }}</span>
+                </div>
+                <div class="stage-value">KES {{ pipeline.prospects.value|floatformat:0|default:0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="pipeline-stage">
+                <div class="pipeline-header">
+                    <span class="stage-name">Qualified</span>
+                    <span class="stage-count">{{ pipeline.qualified.count|default:0 }}</span>
+                </div>
+                <div class="stage-value">KES {{ pipeline.qualified.value|floatformat:0|default:0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="pipeline-stage">
+                <div class="pipeline-header">
+                    <span class="stage-name">Proposal</span>
+                    <span class="stage-count">{{ pipeline.proposal.count|default:0 }}</span>
+                </div>
+                <div class="stage-value">KES {{ pipeline.proposal.value|floatformat:0|default:0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="pipeline-stage">
+                <div class="pipeline-header">
+                    <span class="stage-name">Negotiation</span>
+                    <span class="stage-count">{{ pipeline.negotiation.count|default:0 }}</span>
+                </div>
+                <div class="stage-value">KES {{ pipeline.negotiation.value|floatformat:0|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="recent-activities">
+    <h4 class="mb-3">
+        <i class="fas fa-clock me-2"></i>Recent Sales Activities
+    </h4>
+    
+    {% if recent_activities %}
+        {% for activity in recent_activities %}
+        <div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas {{ activity.icon }}"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">{{ activity.title }}</div>
+                <div class="activity-time">{{ activity.created_at|timesince }} ago</div>
+            </div>
+            {% if activity.amount %}
+            <div class="currency">KES {{ activity.amount|floatformat:0 }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No recent sales activities</p>
+            <a href="/quotations/create/" class="btn btn-primary">Create First Quotation</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% include "components/customer_modal_js.html" %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Make the function globally available
+    window.openSalesDashboardCustomerModal = function() {
+        // Initialize modal config
+        window.customerModalConfig = {
+            includeBusinessFields: true,
+            includeSolarFields: true,
+            onCustomerCreated: function(customer) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Customer Added',
+                    text: `Customer "${customer.name}" has been added successfully.`,
+                    showConfirmButton: true,
+                    confirmButtonText: 'Create Quotation',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `/quotations/create/?customer=${customer.id}`;
+                    }
+                });
+            }
+        };
+        
+        // Open the modal
+        $('#universalCustomerModal').modal('show');
+    };
+
+    // Sales Performance Chart
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.labels|safe }},
+            datasets: [{
+                label: 'Revenue (KES)',
+                data: {{ chart_data.revenue|safe }},
+                borderColor: 'var(--primary-color)',
+                backgroundColor: 'rgba(56, 182, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Orders',
+                data: {{ chart_data.orders|safe }},
+                borderColor: 'var(--success-color)',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Orders'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+    
+    // Auto-refresh data every 5 minutes
+    setInterval(function() {
+        if (!document.hidden) {
+            fetch('/api/sales/dashboard-data/')
+                .then(response => response.json())
+                .then(data => {
+                    // Update metrics
+                    document.querySelector('.metric-value.revenue').textContent = 'KES ' + data.monthly_revenue.toLocaleString();
+                    document.querySelector('.metric-value.orders').textContent = data.monthly_orders;
+                    document.querySelector('.metric-value.quotations').textContent = data.monthly_quotations;
+                    document.querySelector('.metric-value.conversion').textContent = data.conversion_rate + '%';
+                    document.querySelector('.metric-value.commission').textContent = 'KES ' + data.monthly_commission.toLocaleString();
+                });
+        }
+    }, 300000);
+});
+</script>
+{% endblock %}
+
+<!-- Universal Customer Modal -->
+{% include "components/customer_modal.html" %}

@@ -1,0 +1,379 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Stock Adjustment{% else %}Create Stock Adjustment{% endif %} - Inventory Management
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header {
+        border-bottom: 2px solid #38b6ff;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header h2 {
+        color: #2c3e50;
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 182, 255, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .adjustment-type-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .adjustment-type-card:hover {
+        border-color: #38b6ff;
+        background-color: #f8f9fa;
+    }
+    
+    .adjustment-type-card.selected {
+        border-color: #38b6ff;
+        background-color: rgba(56, 182, 255, 0.1);
+    }
+    
+    .adjustment-type-icon {
+        font-size: 2rem;
+        color: #38b6ff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .warehouse-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .form-actions {
+        border-top: 1px solid #e9ecef;
+        padding-top: 1.5rem;
+        margin-top: 2rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                {% if object %}
+                    <i class="fas fa-edit text-primary"></i>
+                    Edit Stock Adjustment
+                {% else %}
+                    <i class="fas fa-plus text-primary"></i>
+                    Create Stock Adjustment
+                {% endif %}
+            </h1>
+            <nav aria-label="breadcrumb" class="mt-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:adjustment_list' %}">Stock Adjustments</a></li>
+                    <li class="breadcrumb-item active">
+                        {% if object %}Edit Adjustment{% else %}Create Adjustment{% endif %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'inventory:adjustment_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>
+                        {% if object %}
+                            Stock Adjustment Details
+                        {% else %}
+                            New Stock Adjustment
+                        {% endif %}
+                    </h2>
+                    <p class="mb-0 text-muted">
+                        {% if object %}
+                            Update the stock adjustment information below.
+                        {% else %}
+                            Create a new stock adjustment to correct inventory discrepancies.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post" id="adjustmentForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Adjustment Type -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="form-label">Adjustment Type <span class="required">*</span></label>
+                                <div class="row">
+                                    {% for value, label in form.adjustment_type.field.choices %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="adjustment-type-card" data-type="{{ value }}">
+                                                <div class="text-center">
+                                                    <div class="adjustment-type-icon">
+                                                        {% if value == 'cycle_count' %}
+                                                            <i class="fas fa-redo"></i>
+                                                        {% elif value == 'physical_count' %}
+                                                            <i class="fas fa-clipboard-check"></i>
+                                                        {% elif value == 'correction' %}
+                                                            <i class="fas fa-edit"></i>
+                                                        {% elif value == 'damage' %}
+                                                            <i class="fas fa-exclamation-triangle"></i>
+                                                        {% elif value == 'theft' %}
+                                                            <i class="fas fa-shield-alt"></i>
+                                                        {% elif value == 'expiry' %}
+                                                            <i class="fas fa-calendar-times"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <h6 class="mb-0">{{ label }}</h6>
+                                                </div>
+                                                <input type="radio" name="{{ form.adjustment_type.name }}" 
+                                                       value="{{ value }}" class="d-none adjustment-type-radio"
+                                                       {% if form.adjustment_type.value == value %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.adjustment_type.errors %}
+                                    <div class="text-danger small">{{ form.adjustment_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Warehouse -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                                    Warehouse <span class="required">*</span>
+                                </label>
+                                <select name="{{ form.warehouse.name }}" id="{{ form.warehouse.id_for_label }}" class="form-select" required>
+                                    <option value="">Select warehouse...</option>
+                                    {% for value, text in form.warehouse.field.choices %}
+                                        {% if value %}
+                                        <option value="{{ value }}" {% if form.warehouse.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% if form.warehouse.errors %}
+                                    <div class="text-danger small">{{ form.warehouse.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Adjustment Date -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.adjustment_date.id_for_label }}" class="form-label">
+                                    Adjustment Date <span class="required">*</span>
+                                </label>
+                                <input type="date" name="{{ form.adjustment_date.name }}" id="{{ form.adjustment_date.id_for_label }}" 
+                                       class="form-control" value="{{ form.adjustment_date.value|default:'' }}" required>
+                                {% if form.adjustment_date.errors %}
+                                    <div class="text-danger small">{{ form.adjustment_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Reason -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.reason.id_for_label }}" class="form-label">
+                                    Reason <span class="required">*</span>
+                                </label>
+                                <textarea name="{{ form.reason.name }}" id="{{ form.reason.id_for_label }}" 
+                                         class="form-control" rows="3" required>{{ form.reason.value|default:'' }}</textarea>
+                                <div class="help-text">
+                                    Provide a detailed explanation for this stock adjustment.
+                                </div>
+                                {% if form.reason.errors %}
+                                    <div class="text-danger small">{{ form.reason.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if object %}
+                        <!-- Approval Status (for existing adjustments) -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="warehouse-info">
+                                    <h6><i class="fas fa-info-circle text-info"></i> Approval Status</h6>
+                                    {% if object.approved %}
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-success me-2">
+                                                <i class="fas fa-check"></i> Approved
+                                            </span>
+                                            <span class="text-muted">
+                                                by {{ object.approved_by.get_full_name }} on {{ object.approved_date|date:"M d, Y H:i" }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <div class="form-check">
+                                            <input type="checkbox" name="{{ form.approved.name }}" id="{{ form.approved.id_for_label }}" 
+                                                   class="form-check-input" {% if form.approved.value %}checked{% endif %}>
+                                            <label for="{{ form.approved.id_for_label }}" class="form-check-label">
+                                                Approve this adjustment
+                                            </label>
+                                        </div>
+                                        <div class="help-text">
+                                            Only approved adjustments will affect inventory levels.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-save"></i>
+                            {% if object %}Update Adjustment{% else %}Create Adjustment{% endif %}
+                        </button>
+                        <a href="{% url 'inventory:adjustment_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Adjustment type selection
+    const typeCards = document.querySelectorAll('.adjustment-type-card');
+    const typeRadios = document.querySelectorAll('.adjustment-type-radio');
+    
+    typeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const radio = this.querySelector('.adjustment-type-radio');
+            
+            // Remove selected class from all cards
+            typeCards.forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            // Check the radio button
+            radio.checked = true;
+        });
+    });
+    
+    // Set initial selection
+    typeRadios.forEach(radio => {
+        if (radio.checked) {
+            radio.closest('.adjustment-type-card').classList.add('selected');
+        }
+    });
+    
+    // Date picker formatting
+    const dateInput = document.querySelector('input[type="date"]');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    // Form validation
+    const form = document.getElementById('adjustmentForm');
+    form.addEventListener('submit', function(e) {
+        const selectedType = document.querySelector('.adjustment-type-radio:checked');
+        if (!selectedType) {
+            e.preventDefault();
+            alert('Please select an adjustment type.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

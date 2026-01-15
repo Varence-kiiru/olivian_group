@@ -1,0 +1,165 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Blog Management - {{ block.super }}{% endblock %}
+
+{% block page_title %}Blog Management Dashboard{% endblock %}
+{% block page_subtitle %}Overview and quick actions for managing blog content{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="stats-value">{{ total_posts }}</div>
+            <div class="stats-label">Total Posts</div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-eye"></i>
+            </div>
+            <div class="stats-value">{{ published_posts }}</div>
+            <div class="stats-label">Published</div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <div class="stats-value">{{ draft_posts }}</div>
+            <div class="stats-label">Drafts</div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stats-value">{{ featured_posts }}</div>
+            <div class="stats-label">Featured</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Create New Post
+                    </a>
+                    <a href="{% url 'blog:post_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>
+                        Manage Posts
+                    </a>
+                    <a href="{% url 'blog:category_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tags me-2"></i>
+                        Manage Categories
+                    </a>
+                    <a href="{% url 'blog:comment_list' %}" class="btn btn-outline-success">
+                        <i class="fas fa-comments me-2"></i>
+                        Comments {% if pending_comments %}({{ pending_comments }} pending){% endif %}
+                    </a>
+                    <a href="{% url 'blog:banner_management' %}" class="btn btn-outline-info">
+                        <i class="fas fa-image me-2"></i>
+                        Banner Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Posts -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Posts
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_posts %}
+                    {% for post in recent_posts %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'blog:post_detail' post.slug %}" class="text-dark text-decoration-none" target="_blank">
+                                        {{ post.title|truncatechars:50 }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    {{ post.created_at|date:"M d, Y" }} •
+                                    {% if post.status == 'published' %}
+                                        <span class="badge bg-success">Published</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Draft</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No posts yet.</p>
+                {% endif %}
+            </div>
+            {% if recent_posts %}
+                <div class="card-footer">
+                    <a href="{% url 'blog:post_list' %}" class="btn btn-sm btn-link">View All Posts</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Content Overview -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Content Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-folder text-warning me-2"></i>
+                    <strong>{{ categories_count }}</strong> Categories
+                </div>
+                <div class="mb-3">
+                    <i class="fas fa-hashtag text-info me-2"></i>
+                    <strong>{{ tags_count }}</strong> Tags
+                </div>
+                <div class="">
+                    <i class="fas fa-envelope text-secondary me-2"></i>
+                    <strong>{{ pending_comments }}</strong> Pending Comments
+                </div>
+                {% if pending_comments > 0 %}
+                    <div class="mt-3">
+                        <a href="{% url 'blog:comment_list' %}?status=pending" class="btn btn-sm btn-warning">
+                            Review Comments
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,942 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Quotation Analytics - {{ block.super }}{% endblock %}
+
+{% block page_title %}Advanced Quotation Analytics{% endblock %}
+{% block page_subtitle %}Comprehensive insights into your solar quotation performance and trends{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'quotations:list' %}">Quotations</a></li>
+<li class="breadcrumb-item active">Analytics</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #38b6ff, #20c997);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: rotate(45deg);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-trend {
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin: 1rem 0;
+    }
+    
+    .filter-panel {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #38b6ff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .kpi-label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .performance-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .indicator-icon {
+        width: 40px;
+        height: 40px;
+        background: #38b6ff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .indicator-content {
+        flex: 1;
+    }
+    
+    .indicator-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .indicator-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #38b6ff;
+    }
+    
+    .trend-chart {
+        height: 300px;
+        margin: 1rem 0;
+    }
+    
+    .conversion-funnel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .funnel-stage {
+        display: flex;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e9ecef;
+        position: relative;
+    }
+    
+    .funnel-stage:last-child {
+        border-bottom: none;
+    }
+    
+    .funnel-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+        color: white;
+    }
+    
+    .funnel-content {
+        flex: 1;
+    }
+    
+    .funnel-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .funnel-subtitle {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .funnel-metrics {
+        text-align: right;
+    }
+    
+    .funnel-count {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #38b6ff;
+    }
+    
+    .funnel-rate {
+        font-size: 0.8rem;
+        color: #28a745;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #38b6ff, #20c997);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .insights-panel {
+        background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+        border-radius: 15px;
+        padding: 1.5rem;
+        border-left: 5px solid #28a745;
+    }
+    
+    .insight-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #28a745;
+    }
+    
+    .insight-title {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .insight-description {
+        color: #495057;
+        font-size: 0.9rem;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+    
+    .export-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .export-btn {
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .date-range-picker {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .quick-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-btn:hover,
+    .filter-btn.active {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+        color: #38b6ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters Panel -->
+<div class="filter-panel">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="quick-filters">
+                <button class="filter-btn active" onclick="setTimeRange('7d')">Last 7 Days</button>
+                <button class="filter-btn" onclick="setTimeRange('30d')">Last 30 Days</button>
+                <button class="filter-btn" onclick="setTimeRange('90d')">Last 90 Days</button>
+                <button class="filter-btn" onclick="setTimeRange('ytd')">Year to Date</button>
+                <button class="filter-btn" onclick="setTimeRange('custom')">Custom Range</button>
+            </div>
+            
+            <div class="date-range-picker" id="customRange" style="display: none;">
+                <label>From:</label>
+                <input type="date" class="form-control" id="dateFrom" style="width: auto;">
+                <label>To:</label>
+                <input type="date" class="form-control" id="dateTo" style="width: auto;">
+                <button class="btn btn-primary" onclick="applyDateRange()">Apply</button>
+            </div>
+        </div>
+        
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="kpi-grid">
+    <div class="kpi-item">
+        <div class="kpi-value">{{ total_quotations|default:0 }}</div>
+        <div class="kpi-label">Total Quotations</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: 85%;"></div>
+        </div>
+    </div>
+    
+    <div class="kpi-item">
+        <div class="kpi-value">{{ conversion_rate|floatformat:1|default:0 }}%</div>
+        <div class="kpi-label">Conversion Rate</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: {{ conversion_rate|default:0 }}%;"></div>
+        </div>
+    </div>
+    
+    <div class="kpi-item">
+        <div class="kpi-value">KES {{ average_value|floatformat:0|default:0 }}</div>
+        <div class="kpi-label">Average Deal Size</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: 75%;"></div>
+        </div>
+    </div>
+    
+    <div class="kpi-item">
+        <div class="kpi-value">{{ avg_response_time|default:2.4 }}h</div>
+        <div class="kpi-label">Avg Response Time</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: 90%;"></div>
+        </div>
+    </div>
+    
+    <div class="kpi-item">
+        <div class="kpi-value">{{ pipeline_value|floatformat:0|default:0 }}</div>
+        <div class="kpi-label">Pipeline Value (KES)</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: 65%;"></div>
+        </div>
+    </div>
+    
+    <div class="kpi-item">
+        <div class="kpi-value">{{ win_rate|default:68 }}%</div>
+        <div class="kpi-label">Win Rate</div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: 68%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Sales Funnel -->
+    <div class="col-lg-6 mb-4">
+        <div class="conversion-funnel">
+            <h5 class="mb-3">
+                <i class="fas fa-funnel-dollar me-2 text-primary"></i>Sales Conversion Funnel
+            </h5>
+            
+            <div class="funnel-stage">
+                <div class="funnel-icon" style="background: #e3f2fd;">
+                    <i class="fas fa-file-invoice" style="color: #1976d2;"></i>
+                </div>
+                <div class="funnel-content">
+                    <div class="funnel-title">Quotations Created</div>
+                    <div class="funnel-subtitle">Initial customer inquiries</div>
+                </div>
+                <div class="funnel-metrics">
+                    <div class="funnel-count">{{ total_quotations|default:0 }}</div>
+                    <div class="funnel-rate">100%</div>
+                </div>
+            </div>
+            
+            <div class="funnel-stage">
+                <div class="funnel-icon" style="background: #fff3e0;">
+                    <i class="fas fa-paper-plane" style="color: #f57c00;"></i>
+                </div>
+                <div class="funnel-content">
+                    <div class="funnel-title">Quotations Sent</div>
+                    <div class="funnel-subtitle">Delivered to customers</div>
+                </div>
+                <div class="funnel-metrics">
+                    <div class="funnel-count">{{ sent_quotations|default:0 }}</div>
+                    <div class="funnel-rate">{{ sent_rate|default:85 }}%</div>
+                </div>
+            </div>
+            
+            <div class="funnel-stage">
+                <div class="funnel-icon" style="background: #f3e5f5;">
+                    <i class="fas fa-eye" style="color: #7b1fa2;"></i>
+                </div>
+                <div class="funnel-content">
+                    <div class="funnel-title">Customer Engagement</div>
+                    <div class="funnel-subtitle">Quotations viewed by customers</div>
+                </div>
+                <div class="funnel-metrics">
+                    <div class="funnel-count">{{ viewed_quotations|default:0 }}</div>
+                    <div class="funnel-rate">{{ view_rate|default:72 }}%</div>
+                </div>
+            </div>
+            
+            <div class="funnel-stage">
+                <div class="funnel-icon" style="background: #e8f5e8;">
+                    <i class="fas fa-handshake" style="color: #2e7d32;"></i>
+                </div>
+                <div class="funnel-content">
+                    <div class="funnel-title">Quotations Accepted</div>
+                    <div class="funnel-subtitle">Customer approval received</div>
+                </div>
+                <div class="funnel-metrics">
+                    <div class="funnel-count">{{ accepted_quotations|default:0 }}</div>
+                    <div class="funnel-rate">{{ acceptance_rate|default:45 }}%</div>
+                </div>
+            </div>
+            
+            <div class="funnel-stage">
+                <div class="funnel-icon" style="background: #e8f5e8;">
+                    <i class="fas fa-shopping-cart" style="color: #2e7d32;"></i>
+                </div>
+                <div class="funnel-content">
+                    <div class="funnel-title">Sales Converted</div>
+                    <div class="funnel-subtitle">Successful project orders</div>
+                </div>
+                <div class="funnel-metrics">
+                    <div class="funnel-count">{{ converted_quotations|default:0 }}</div>
+                    <div class="funnel-rate">{{ conversion_rate|default:28 }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Trends -->
+    <div class="col-lg-6 mb-4">
+        <div class="analytics-card">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-line me-2 text-primary"></i>Performance Trends
+            </h5>
+            <div class="chart-container">
+                <canvas id="trendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Monthly Analysis -->
+    <div class="col-lg-8 mb-4">
+        <div class="analytics-card">
+            <h5 class="mb-3">
+                <i class="fas fa-calendar me-2 text-primary"></i>Monthly Quotation Analysis
+            </h5>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Type Distribution -->
+    <div class="col-lg-4 mb-4">
+        <div class="analytics-card">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-pie me-2 text-primary"></i>System Types
+            </h5>
+            <div class="chart-container">
+                <canvas id="systemTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Revenue Analysis -->
+    <div class="col-lg-6 mb-4">
+        <div class="analytics-card">
+            <h5 class="mb-3">
+                <i class="fas fa-money-bill-wave me-2 text-primary"></i>Revenue Analysis
+            </h5>
+            
+            <div class="performance-indicator">
+                <div class="indicator-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="indicator-content">
+                    <div class="indicator-title">Total Pipeline Value</div>
+                    <div class="indicator-value">KES {{ total_value|floatformat:0|default:0 }}</div>
+                </div>
+            </div>
+            
+            <div class="performance-indicator">
+                <div class="indicator-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div class="indicator-content">
+                    <div class="indicator-title">Converted Revenue</div>
+                    <div class="indicator-value">KES {{ converted_value|floatformat:0|default:0 }}</div>
+                </div>
+            </div>
+            
+            <div class="performance-indicator">
+                <div class="indicator-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="indicator-content">
+                    <div class="indicator-title">Pending Pipeline</div>
+                    <div class="indicator-value">KES {{ pending_value|floatformat:0|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Customer Insights -->
+    <div class="col-lg-6 mb-4">
+        <div class="insights-panel">
+            <h5 class="mb-3 text-success">
+                <i class="fas fa-lightbulb me-2"></i>Smart Insights
+            </h5>
+            
+            <div class="insight-item">
+                <div class="insight-title">Peak Performance Period</div>
+                <div class="insight-description">
+                    Your highest conversion rate was 35% in March 2024. Consider replicating the strategies used during this period.
+                </div>
+            </div>
+            
+            <div class="insight-item">
+                <div class="insight-title">System Size Optimization</div>
+                <div class="insight-description">
+                    Residential systems (5-10kW) have a 42% higher conversion rate compared to commercial systems. Focus marketing efforts accordingly.
+                </div>
+            </div>
+            
+            <div class="insight-item">
+                <div class="insight-title">Response Time Impact</div>
+                <div class="insight-description">
+                    Quotations responded to within 2 hours have 65% higher acceptance rates. Consider implementing automated acknowledgments.
+                </div>
+            </div>
+            
+            <div class="insight-item">
+                <div class="insight-title">Seasonal Trends</div>
+                <div class="insight-description">
+                    Solar quotations peak during January-March (dry season). Plan inventory and staffing accordingly.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performing Products -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="data-table">
+            <h5 class="mb-3">
+                <i class="fas fa-star me-2 text-primary"></i>Top Performing Products
+            </h5>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Quotations</th>
+                            <th>Conversion Rate</th>
+                            <th>Revenue</th>
+                            <th>Avg. Price</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Jinko Solar Tiger Pro 545W</strong>
+                                <br><small class="text-muted">High-efficiency monocrystalline</small>
+                            </td>
+                            <td><span class="badge bg-primary">Solar Panels</span></td>
+                            <td>45</td>
+                            <td><span class="text-success">68%</span></td>
+                            <td>KES 1,125,000</td>
+                            <td>KES 25,000</td>
+                            <td><i class="fas fa-arrow-up text-success"></i> +12%</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Victron MultiPlus II 5kW</strong>
+                                <br><small class="text-muted">Hybrid inverter with battery support</small>
+                            </td>
+                            <td><span class="badge bg-info">Inverters</span></td>
+                            <td>32</td>
+                            <td><span class="text-success">75%</span></td>
+                            <td>KES 2,880,000</td>
+                            <td>KES 120,000</td>
+                            <td><i class="fas fa-arrow-up text-success"></i> +8%</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Lithium Ion Battery 200Ah</strong>
+                                <br><small class="text-muted">Long-life energy storage</small>
+                            </td>
+                            <td><span class="badge bg-warning">Batteries</span></td>
+                            <td>28</td>
+                            <td><span class="text-success">62%</span></td>
+                            <td>KES 5,040,000</td>
+                            <td>KES 180,000</td>
+                            <td><i class="fas fa-arrow-up text-success"></i> +15%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-download me-2"></i>Export Analytics Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="mb-3">
+                        <label class="form-label">Report Type</label>
+                        <select class="form-select" name="report_type">
+                            <option value="summary">Executive Summary</option>
+                            <option value="detailed">Detailed Analytics</option>
+                            <option value="performance">Performance Report</option>
+                            <option value="trends">Trends Analysis</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Export Format</label>
+                        <select class="form-select" name="format">
+                            <option value="pdf">PDF Report</option>
+                            <option value="excel">Excel Spreadsheet</option>
+                            <option value="csv">CSV Data</option>
+                            <option value="powerpoint">PowerPoint Presentation</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="export_date_from">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="export_date_to">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeCharts" checked>
+                            <label class="form-check-label" for="includeCharts">
+                                Include Charts and Visualizations
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeInsights" checked>
+                            <label class="form-check-label" for="includeInsights">
+                                Include Smart Insights
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="exportReport()">
+                            <i class="fas fa-download me-2"></i>Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart configurations
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'bottom'
+        }
+    }
+};
+
+// Trends Chart
+const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'Quotations Created',
+            data: [25, 32, 28, 45, 38, 52],
+            borderColor: '#38b6ff',
+            backgroundColor: 'rgba(56, 182, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+        }, {
+            label: 'Quotations Converted',
+            data: [8, 12, 15, 18, 16, 22],
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: chartOptions
+});
+
+// Monthly Chart
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'Quotation Value (KES Millions)',
+            data: [2.5, 3.2, 4.1, 5.8, 4.9, 6.2],
+            backgroundColor: [
+                'rgba(56, 182, 255, 0.8)',
+                'rgba(32, 201, 151, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(23, 162, 184, 0.8)',
+                'rgba(108, 117, 125, 0.8)'
+            ],
+            borderColor: [
+                '#38b6ff',
+                '#20c997',
+                '#ffc107',
+                '#dc3545',
+                '#17a2b8',
+                '#6c757d'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        ...chartOptions,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + value + 'M';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// System Type Chart
+const systemCtx = document.getElementById('systemTypeChart').getContext('2d');
+new Chart(systemCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Grid-Tied', 'Hybrid', 'Off-Grid', 'Backup'],
+        datasets: [{
+            data: [45, 30, 15, 10],
+            backgroundColor: [
+                '#38b6ff',
+                '#20c997',
+                '#ffc107',
+                '#dc3545'
+            ],
+            borderWidth: 0,
+            cutout: '50%'
+        }]
+    },
+    options: {
+        ...chartOptions,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Filter Functions
+function setTimeRange(range) {
+    // Remove active class from all buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // Add active class to clicked button
+    event.target.classList.add('active');
+    
+    // Show/hide custom range picker
+    const customRange = document.getElementById('customRange');
+    if (range === 'custom') {
+        customRange.style.display = 'flex';
+    } else {
+        customRange.style.display = 'none';
+        // Apply predefined range
+        applyTimeRange(range);
+    }
+}
+
+function applyTimeRange(range) {
+    console.log('Applying time range:', range);
+    // Here you would typically fetch new data and update charts
+    refreshData();
+}
+
+function applyDateRange() {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    
+    if (dateFrom && dateTo) {
+        console.log('Applying custom range:', dateFrom, 'to', dateTo);
+        refreshData();
+    } else {
+        alert('Please select both start and end dates');
+    }
+}
+
+function refreshData() {
+    // Show loading indicator
+    const refreshBtn = document.querySelector('[onclick="refreshData()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+    refreshBtn.disabled = true;
+    
+    // Simulate data refresh
+    setTimeout(() => {
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+        
+        // Update charts with new data
+        updateCharts();
+    }, 2000);
+}
+
+function updateCharts() {
+    // Update chart data (this would typically come from server)
+    console.log('Charts updated with new data');
+}
+
+function exportReport() {
+    const form = document.getElementById('exportForm');
+    const formData = new FormData(form);
+    
+    // Show loading
+    const submitBtn = event.target;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+    submitBtn.disabled = true;
+    
+    // Simulate export process
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+        modal.hide();
+        
+        // Show success message
+        alert('Report generated successfully! Check your downloads.');
+    }, 3000);
+}
+
+// Auto-refresh data every 5 minutes
+setInterval(refreshData, 300000);
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

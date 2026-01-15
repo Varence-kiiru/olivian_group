@@ -1,0 +1,200 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:core_contactmessage_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; <a href="{% url 'admin:core_contactmessage_change' original.pk %}">{{ original }}</a>
+    &rsaquo; {% trans 'Send Response' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module aligned">
+    <!-- Contact Message Summary -->
+    <div class="form-row">
+        <h2>Contact Message Details</h2>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p><strong>From:</strong> {{ contact_message.full_name }} ({{ contact_message.email }})</p>
+            <p><strong>Phone:</strong> {{ contact_message.phone }}</p>
+            <p><strong>Inquiry Type:</strong> {{ contact_message.get_inquiry_type_display }}</p>
+            <p><strong>Property Type:</strong> {{ contact_message.get_property_type_display }}</p>
+            {% if contact_message.location %}
+            <p><strong>Location:</strong> {{ contact_message.location }}</p>
+            {% endif %}
+            {% if contact_message.monthly_bill %}
+            <p><strong>Monthly Bill:</strong> KES {{ contact_message.monthly_bill|floatformat:2 }}</p>
+            {% endif %}
+            <p><strong>Submitted:</strong> {{ contact_message.submitted_at }}</p>
+            
+            <div style="margin-top: 15px;">
+                <strong>Original Message:</strong>
+                <div style="background: white; padding: 10px; border: 1px solid #ddd; border-radius: 3px; margin-top: 5px; white-space: pre-wrap;">{{ contact_message.message }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response History -->
+    {% if contact_message.admin_notes %}
+    <div class="form-row">
+        <h2>Response History</h2>
+        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+            <pre style="white-space: pre-wrap; font-family: inherit;">{{ contact_message.admin_notes }}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Response Form -->
+    <form method="post" id="contactmessage_form">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div>
+                <label class="required" for="id_response_message">Response Message:</label>
+                <textarea name="response_message" id="id_response_message" cols="80" rows="10" class="vLargeTextField" required 
+                         placeholder="Enter your response to {{ contact_message.first_name }}..."></textarea>
+                <p class="help">This message will be sent to {{ contact_message.email }} from info@olivian.co.ke</p>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <h3>Email Preview Information</h3>
+            <ul>
+                <li><strong>To:</strong> {{ contact_message.email }}</li>
+                <li><strong>From:</strong> info@olivian.co.ke</li>
+                <li><strong>Subject:</strong> Re: Your {{ contact_message.get_inquiry_type_display }} Inquiry - The Olivian Group Limited</li>
+                <li><strong>Template:</strong> Professional HTML email with company branding</li>
+            </ul>
+        </div>
+
+        <!-- Quick Response Templates -->
+        <div class="form-row">
+            <h3>Quick Response Templates</h3>
+            <div style="margin-bottom: 10px;">
+                <button type="button" onclick="insertTemplate('general')" class="default">General Thank You</button>
+                <button type="button" onclick="insertTemplate('quotation')" class="default">Quotation Request</button>
+                <button type="button" onclick="insertTemplate('installation')" class="default">Installation Inquiry</button>
+                <button type="button" onclick="insertTemplate('maintenance')" class="default">Maintenance Request</button>
+            </div>
+        </div>
+
+        <div class="submit-row">
+            <input type="submit" value="Send Response Email" class="default" />
+            <a href="{% url 'admin:core_contactmessage_change' contact_message.pk %}" class="button cancel-link">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Quick response templates
+const templates = {
+    general: `Dear {{ contact_message.first_name }},
+
+Thank you for your inquiry about solar energy solutions. We're excited to help you harness the power of the sun!
+
+Our team has reviewed your message and we'll be in touch shortly with more information tailored to your specific needs.
+
+In the meantime, feel free to explore our website for more information about our services and completed projects.
+
+Best regards,
+The Olivian Group Team`,
+
+    quotation: `Dear {{ contact_message.first_name }},
+
+Thank you for your interest in getting a solar quotation from Olivian Group.
+
+Based on your inquiry, our technical team will prepare a customized quotation for your {{ contact_message.get_property_type_display|lower }} property{% if contact_message.location %} in {{ contact_message.location }}{% endif %}.
+
+We'll need to schedule a brief site visit to ensure accurate sizing and provide you with the most competitive pricing. Our team will contact you within 24 hours to arrange a convenient time.
+
+You can also use our online calculator at https://olivian.co.ke/calculator/ for an immediate estimate.
+
+Best regards,
+The Olivian Group Sales Team`,
+
+    installation: `Dear {{ contact_message.first_name }},
+
+Thank you for your installation inquiry. We appreciate your interest in our professional solar installation services.
+
+Our experienced installation team will review your requirements and provide you with:
+- Detailed installation process overview
+- Timeline and scheduling options
+- Technical specifications for your system
+- Warranty and maintenance information
+
+We'll contact you within 24 hours to discuss your installation needs in detail.
+
+Best regards,
+The Olivian Group Installation Team`,
+
+    maintenance: `Dear {{ contact_message.first_name }},
+
+Thank you for contacting us regarding maintenance services for your solar system.
+
+Our maintenance team will be in touch to schedule a comprehensive system inspection. This includes:
+- Performance analysis and optimization
+- Cleaning and component inspection
+- Preventive maintenance recommendations
+- Any necessary repairs or upgrades
+
+We'll contact you within 24 hours to schedule a convenient service appointment.
+
+Best regards,
+The Olivian Group Maintenance Team`
+};
+
+function insertTemplate(templateType) {
+    const textarea = document.getElementById('id_response_message');
+    const template = templates[templateType];
+    if (template) {
+        textarea.value = template;
+        textarea.focus();
+    }
+}
+
+// Auto-resize textarea
+document.getElementById('id_response_message').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+</script>
+
+<style>
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row h2, .form-row h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.default {
+    margin-right: 10px;
+    margin-bottom: 5px;
+}
+
+.submit-row {
+    padding: 12px 14px;
+    margin: 0 0 20px;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.cancel-link {
+    margin-left: 10px;
+}
+
+pre {
+    font-size: 12px;
+    line-height: 1.4;
+}
+</style>
+{% endblock %}

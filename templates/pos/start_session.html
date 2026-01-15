@@ -1,0 +1,268 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Start POS Session - {{ block.super }}{% endblock %}
+
+{% block page_title %}Start POS Session{% endblock %}
+{% block page_subtitle %}Initialize a new point of sale session{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Start Session</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .session-info {
+        background: linear-gradient(135deg, #38b6ff 0%, #2196F3 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        opacity: 0.9;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+    
+    .cash-register-icon {
+        font-size: 4rem;
+        color: #38b6ff;
+        opacity: 0.1;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    
+    .btn-start-session {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        padding: 1rem 3rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: transform 0.2s ease;
+    }
+    
+    .btn-start-session:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    }
+    
+    .register-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .register-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+
+    .current-sessions {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .session-item {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Session Information -->
+        <div class="session-info position-relative">
+            <i class="fas fa-cash-register cash-register-icon"></i>
+            <h4 class="mb-4">
+                <i class="fas fa-play-circle me-2"></i>Session Information
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">Cashier</span>
+                        <span class="info-value">{{ request.user.get_full_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Date</span>
+                        <span class="info-value">{{ today|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">Time</span>
+                        <span class="info-value">{{ now|date:"H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Location</span>
+                        <span class="info-value">Main Store</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Active Sessions -->
+        {% if active_sessions %}
+        <div class="current-sessions">
+            <h5 class="mb-3">
+                <i class="fas fa-clock me-2"></i>Active Sessions
+            </h5>
+            {% for session in active_sessions %}
+            <div class="session-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Session #{{ session.session_number }}</strong>
+                    <br>
+                    <small class="text-muted">
+                        Started: {{ session.start_time|date:"M d, Y H:i" }} | 
+                        Cashier: {{ session.cashier.get_full_name }}
+                    </small>
+                </div>
+                <div>
+                    <a href="{% url 'pos:terminal' session.terminal.id %}?session={{ session.id }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-arrow-right me-1"></i>Continue
+                    </a>
+                    <button class="btn btn-outline-danger btn-sm ms-2" onclick="alert('End session feature coming soon!')">
+                        <i class="fas fa-stop me-1"></i>End
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Start New Session Form -->
+        <div class="session-card position-relative">
+            <i class="fas fa-cash-register cash-register-icon"></i>
+            
+            <h4 class="mb-4">
+                <i class="fas fa-plus-circle me-2"></i>Start New Session
+            </h4>
+            
+            <form method="post" id="sessionForm">
+                {% csrf_token %}
+                
+                <!-- Cash Register Selection -->
+                <div class="form-floating mb-4">
+                    <select class="form-select register-select" id="terminal" name="terminal" required>
+                        <option value="">Choose a register...</option>
+                        {% for register in registers %}
+                        <option value="{{ register.id }}">
+                            {{ register.name }} - {{ register.store.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label for="terminal">
+                        <i class="fas fa-desktop me-2"></i>Cash Register
+                    </label>
+                </div>
+                
+                <!-- Opening Cash Amount -->
+                <div class="form-floating mb-4">
+                    <input type="number" class="form-control" id="opening_cash" name="opening_cash" 
+                           step="0.01" min="0" value="1000.00" required>
+                    <label for="opening_cash">
+                        <i class="fas fa-money-bill-wave me-2"></i>Opening Cash Amount (KES)
+                    </label>
+                </div>
+                
+                <!-- Session Notes -->
+                <div class="form-floating mb-4">
+                    <textarea class="form-control" id="opening_notes" name="opening_notes" 
+                              style="height: 100px" placeholder="Any notes for this session..."></textarea>
+                    <label for="opening_notes">
+                        <i class="fas fa-sticky-note me-2"></i>Session Notes (Optional)
+                    </label>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="text-center mt-5">
+                    <button type="submit" class="btn btn-start-session text-white me-3">
+                        <i class="fas fa-play me-2"></i>Start Session
+                    </button>
+                    <a href="{% url 'pos:main' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to POS
+                    </a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Session Guidelines -->
+        <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-info-circle me-2"></i>Session Guidelines</h6>
+            <ul class="mb-0">
+                <li>Verify the opening cash amount by counting the register drawer</li>
+                <li>Ensure all equipment is working properly before starting</li>
+                <li>Remember to end your session when your shift is complete</li>
+                <li>Keep your session secure and do not share access with others</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('sessionForm').addEventListener('submit', function(e) {
+    // Validate form before submission
+    const terminal = document.getElementById('terminal').value;
+    const openingCash = document.getElementById('opening_cash').value;
+    
+    if (!terminal) {
+        e.preventDefault();
+        alert('Please select a cash register');
+        return;
+    }
+    
+    if (parseFloat(openingCash) < 0) {
+        e.preventDefault();
+        alert('Opening cash amount cannot be negative');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting Session...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

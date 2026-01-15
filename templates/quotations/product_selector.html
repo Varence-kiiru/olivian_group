@@ -1,0 +1,879 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Product Selector - {{ block.super }}{% endblock %}
+
+{% block page_title %}Solar Product Selector{% endblock %}
+{% block page_subtitle %}Configure your solar system with our intelligent product selection tool{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'quotations:list' %}">Quotations</a></li>
+<li class="breadcrumb-item active">Product Selector</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-selector {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .category-tab {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+    
+    .category-tab:hover {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+    }
+    
+    .category-tab.active {
+        border-color: #38b6ff;
+        background: linear-gradient(135deg, #38b6ff, #20c997);
+        color: white;
+    }
+    
+    .category-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .category-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .category-subtitle {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+    
+    .product-card {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .product-card:hover {
+        border-color: #38b6ff;
+        box-shadow: 0 4px 12px rgba(56, 182, 255, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .product-card.selected {
+        border-color: #38b6ff;
+        background: #e3f2fd;
+    }
+    
+    .product-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        object-fit: cover;
+        margin-bottom: 1rem;
+    }
+    
+    .product-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+    }
+    
+    .product-specs {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .product-price {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #38b6ff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .product-warranty {
+        font-size: 0.8rem;
+        color: #28a745;
+        background: #e8f5e8;
+        padding: 0.25rem 0.5rem;
+        border-radius: 5px;
+        display: inline-block;
+    }
+    
+    .selection-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #28a745;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .product-card.selected .selection-badge {
+        opacity: 1;
+    }
+    
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .quantity-btn {
+        background: #38b6ff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .quantity-input {
+        width: 60px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 0.25rem;
+    }
+    
+    .system-preview {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .system-summary {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #38b6ff;
+    }
+    
+    .compatibility-indicator {
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .compatible {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .warning {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+    
+    .incompatible {
+        background: #ffebee;
+        color: #c62828;
+    }
+    
+    .filter-bar {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .configuration-step {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .step-number {
+        width: 40px;
+        height: 40px;
+        background: #38b6ff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .step-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .recommendation-badge {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    
+    .search-input {
+        padding-left: 3rem;
+        border-radius: 25px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .search-input:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="productSelectorApp">
+    <!-- System Requirements Input -->
+    {%verbatim%}
+    <div class="configuration-step">
+        <div class="step-header">
+            <div class="step-number">1</div>
+            <div class="step-title">System Requirements</div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">System Capacity (kW)</label>
+                <input type="number" class="form-control" v-model="systemRequirements.capacity" 
+                       @input="updateRecommendations" min="1" max="1000" step="0.5">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">System Type</label>
+                <select class="form-select" v-model="systemRequirements.type" @change="updateRecommendations">
+                    <option value="grid_tied">Grid-Tied</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="off_grid">Off-Grid</option>
+                    <option value="backup">Backup Power</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Installation Type</label>
+                <select class="form-select" v-model="systemRequirements.installation" @change="updateRecommendations">
+                    <option value="roof_mount">Roof Mount</option>
+                    <option value="ground_mount">Ground Mount</option>
+                    <option value="carport">Solar Carport</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Budget Range (KES)</label>
+                <select class="form-select" v-model="systemRequirements.budget" @change="updateRecommendations">
+                    <option value="budget">Budget (< 500K)</option>
+                    <option value="standard">Standard (500K - 2M)</option>
+                    <option value="premium">Premium (2M+)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Categories -->
+    <div class="configuration-step">
+        <div class="step-header">
+            <div class="step-number">2</div>
+            <div class="step-title">Select Components</div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-2 col-6 mb-3" v-for="category in productCategories" :key="category.id">
+                <div class="category-tab" :class="{ active: activeCategory === category.id }" 
+                     @click="setActiveCategory(category.id)">
+                    <i :class="category.icon" class="category-icon"></i>
+                    <div class="category-title">{{ category.name }}</div>
+                    <div class="category-subtitle">{{ category.count }} products</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="filter-bar">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="form-control search-input" 
+                               placeholder="Search products..." v-model="searchQuery">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" v-model="filters.brand">
+                        <option value="">All Brands</option>
+                        <option value="jinko">Jinko Solar</option>
+                        <option value="longi">Longi Solar</option>
+                        <option value="victron">Victron Energy</option>
+                        <option value="fronius">Fronius</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" v-model="filters.efficiency">
+                        <option value="">All Efficiency</option>
+                        <option value="high">High (>20%)</option>
+                        <option value="medium">Medium (18-20%)</option>
+                        <option value="standard">Standard (<18%)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" v-model="filters.warranty">
+                        <option value="">All Warranty</option>
+                        <option value="25">25+ Years</option>
+                        <option value="20">20-25 Years</option>
+                        <option value="15">15-20 Years</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="row">
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4" v-for="product in filteredProducts" :key="product.id">
+                <div class="product-card" :class="{ selected: isSelected(product) }" 
+                     @click="toggleProduct(product)">
+                    <div class="selection-badge">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    
+                    <img :src="product.image || '/static/images/default-product.png'" 
+                         :alt="product.name" class="product-image">
+                    
+                    <div class="product-title">{{ product.name }}</div>
+                    
+                    <div class="product-specs">
+                        <div v-if="product.specifications.power">{{ product.specifications.power }}W</div>
+                        <div v-if="product.specifications.efficiency">{{ product.specifications.efficiency }}% Efficiency</div>
+                        <div v-if="product.specifications.voltage">{{ product.specifications.voltage }}V</div>
+                        <div v-if="product.specifications.capacity">{{ product.specifications.capacity }}Ah</div>
+                    </div>
+                    
+                    <div class="product-price">
+                        KES {{ formatNumber(product.price) }}
+                        <div class="text-muted" style="font-size: 0.8rem;">
+                            per {{ product.unit || 'piece' }}
+                        </div>
+                    </div>
+                    
+                    <div class="product-warranty">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        {{ product.warranty }} warranty
+                    </div>
+                    
+                    <div v-if="isSelected(product)" class="quantity-control">
+                        <button class="quantity-btn" @click.stop="decreaseQuantity(product)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" class="quantity-input" 
+                               :value="getQuantity(product)" 
+                               @input="updateQuantity(product, $event.target.value)"
+                               @click.stop min="1">
+                        <button class="quantity-btn" @click.stop="increaseQuantity(product)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="compatibility-indicator" 
+                         :class="getCompatibilityClass(product)">
+                        <i :class="getCompatibilityIcon(product)"></i>
+                        {{ getCompatibilityText(product) }}
+                    </div>
+                    
+                    <div v-if="product.recommended" class="mt-2">
+                        <span class="recommendation-badge">
+                            <i class="fas fa-star me-1"></i>Recommended
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Preview -->
+    <div class="system-preview">
+        <h5 class="mb-3">
+            <i class="fas fa-cog me-2 text-primary"></i>System Configuration Preview
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="system-summary">
+                    <h6>Selected Components</h6>
+                    <div v-if="selectedProducts.length === 0" class="text-muted">
+                        No components selected yet
+                    </div>
+                    <div v-else>
+                        <div v-for="item in selectedProducts" :key="item.product.id" class="summary-item">
+                            <div>
+                                <strong>{{ item.product.name }}</strong>
+                                <div class="text-muted">{{ item.quantity }} × KES {{ formatNumber(item.product.price) }}</div>
+                            </div>
+                            <div class="text-primary fw-bold">
+                                KES {{ formatNumber(item.total) }}
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <div><strong>Subtotal</strong></div>
+                            <div>KES {{ formatNumber(systemTotals.subtotal) }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div><strong>Installation (15%)</strong></div>
+                            <div>KES {{ formatNumber(systemTotals.installation) }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div><strong>VAT (16%)</strong></div>
+                            <div>KES {{ formatNumber(systemTotals.vat) }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div><strong>Total System Cost</strong></div>
+                            <div>KES {{ formatNumber(systemTotals.total) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="system-summary">
+                    <h6>System Performance</h6>
+                    <div class="summary-item">
+                        <div>Total Capacity</div>
+                        <div>{{ systemPerformance.capacity }}kW</div>
+                    </div>
+                    <div class="summary-item">
+                        <div>Est. Monthly Generation</div>
+                        <div>{{ systemPerformance.generation }}kWh</div>
+                    </div>
+                    <div class="summary-item">
+                        <div>System Efficiency</div>
+                        <div>{{ systemPerformance.efficiency }}%</div>
+                    </div>
+                    <div class="summary-item">
+                        <div>Payback Period</div>
+                        <div>{{ systemPerformance.payback }} years</div>
+                    </div>
+                </div>
+                
+                <div class="system-summary">
+                    <h6>Compatibility Check</h6>
+                    <div v-for="check in compatibilityChecks" :key="check.component" 
+                         class="compatibility-indicator" :class="check.status">
+                        <i :class="check.icon"></i>
+                        {{ check.message }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-outline-secondary" @click="resetConfiguration">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                    <button class="btn btn-outline-primary" @click="saveConfiguration">
+                        <i class="fas fa-save me-2"></i>Save Configuration
+                    </button>
+                    <button class="btn btn-primary" @click="generateQuotation" :disabled="selectedProducts.length === 0">
+                        <i class="fas fa-file-invoice me-2"></i>Generate Quotation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {%endverbatim%}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            systemRequirements: {
+                capacity: 5,
+                type: 'grid_tied',
+                installation: 'roof_mount',
+                budget: 'standard'
+            },
+            activeCategory: 'panels',
+            searchQuery: '',
+            filters: {
+                brand: '',
+                efficiency: '',
+                warranty: ''
+            },
+            selectedProducts: [],
+            productCategories: [
+                { id: 'panels', name: 'Solar Panels', icon: 'fas fa-solar-panel', count: 24 },
+                { id: 'inverters', name: 'Inverters', icon: 'fas fa-microchip', count: 12 },
+                { id: 'batteries', name: 'Batteries', icon: 'fas fa-battery-full', count: 8 },
+                { id: 'mounting', name: 'Mounting', icon: 'fas fa-tools', count: 16 },
+                { id: 'cables', name: 'Cables', icon: 'fas fa-plug', count: 20 },
+                { id: 'accessories', name: 'Accessories', icon: 'fas fa-cogs', count: 35 }
+            ],
+            products: {
+                panels: [
+                    {
+                        id: 1,
+                        name: 'Jinko Solar Tiger Pro 545W',
+                        price: 25000,
+                        specifications: { power: 545, efficiency: 21.2, voltage: 41.8 },
+                        warranty: '25 years',
+                        brand: 'jinko',
+                        recommended: true,
+                        category: 'panels'
+                    },
+                    {
+                        id: 2,
+                        name: 'Longi Solar LR5-72HIH 540W',
+                        price: 24500,
+                        specifications: { power: 540, efficiency: 20.9, voltage: 41.5 },
+                        warranty: '25 years',
+                        brand: 'longi',
+                        category: 'panels'
+                    }
+                ],
+                inverters: [
+                    {
+                        id: 3,
+                        name: 'Victron MultiPlus II 5kW',
+                        price: 120000,
+                        specifications: { power: 5000, efficiency: 95.5, voltage: 48 },
+                        warranty: '5 years',
+                        brand: 'victron',
+                        recommended: true,
+                        category: 'inverters'
+                    },
+                    {
+                        id: 4,
+                        name: 'Fronius Primo 5.0-1',
+                        price: 95000,
+                        specifications: { power: 5000, efficiency: 96.1, voltage: 230 },
+                        warranty: '5 years',
+                        brand: 'fronius',
+                        category: 'inverters'
+                    }
+                ],
+                batteries: [
+                    {
+                        id: 5,
+                        name: 'Victron Lithium 200Ah',
+                        price: 180000,
+                        specifications: { capacity: 200, voltage: 12.8, cycles: 5000 },
+                        warranty: '8 years',
+                        brand: 'victron',
+                        recommended: true,
+                        category: 'batteries'
+                    }
+                ],
+                mounting: [
+                    {
+                        id: 6,
+                        name: 'Roof Mount Kit - 10 Panels',
+                        price: 45000,
+                        specifications: { panels: 10, material: 'Aluminum', wind_rating: '200km/h' },
+                        warranty: '10 years',
+                        brand: 'generic',
+                        category: 'mounting'
+                    }
+                ],
+                cables: [
+                    {
+                        id: 7,
+                        name: 'DC Cable 4mm² (Per Meter)',
+                        price: 450,
+                        unit: 'meter',
+                        specifications: { gauge: '4mm²', rating: '30A', insulation: 'XLPE' },
+                        warranty: '20 years',
+                        brand: 'generic',
+                        category: 'cables'
+                    }
+                ],
+                accessories: [
+                    {
+                        id: 8,
+                        name: 'DC Combiner Box 4-String',
+                        price: 15000,
+                        specifications: { strings: 4, rating: '32A', protection: 'IP65' },
+                        warranty: '5 years',
+                        brand: 'generic',
+                        category: 'accessories'
+                    }
+                ]
+            }
+        };
+    },
+    computed: {
+        filteredProducts() {
+            let products = this.products[this.activeCategory] || [];
+            
+            // Search filter
+            if (this.searchQuery) {
+                products = products.filter(p => 
+                    p.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                );
+            }
+            
+            // Brand filter
+            if (this.filters.brand) {
+                products = products.filter(p => p.brand === this.filters.brand);
+            }
+            
+            // Efficiency filter
+            if (this.filters.efficiency) {
+                products = products.filter(p => {
+                    const eff = p.specifications.efficiency;
+                    if (!eff) return true;
+                    switch (this.filters.efficiency) {
+                        case 'high': return eff > 20;
+                        case 'medium': return eff >= 18 && eff <= 20;
+                        case 'standard': return eff < 18;
+                        default: return true;
+                    }
+                });
+            }
+            
+            return products;
+        },
+        systemTotals() {
+            const subtotal = this.selectedProducts.reduce((sum, item) => sum + item.total, 0);
+            const installation = subtotal * 0.15;
+            const vat = (subtotal + installation) * 0.16;
+            const total = subtotal + installation + vat;
+            
+            return { subtotal, installation, vat, total };
+        },
+        systemPerformance() {
+            const panels = this.selectedProducts.filter(item => 
+                item.product.category === 'panels'
+            );
+            const capacity = panels.reduce((sum, item) => 
+                sum + ((item.product.specifications.power || 0) * item.quantity / 1000), 0
+            );
+            
+            return {
+                capacity: capacity.toFixed(1),
+                generation: (capacity * 120).toFixed(0), // Rough estimate
+                efficiency: 85,
+                payback: 6.5
+            };
+        },
+        compatibilityChecks() {
+            const checks = [];
+            
+            const hasInverter = this.selectedProducts.some(item => 
+                item.product.category === 'inverters'
+            );
+            const hasPanels = this.selectedProducts.some(item => 
+                item.product.category === 'panels'
+            );
+            const hasMounting = this.selectedProducts.some(item => 
+                item.product.category === 'mounting'
+            );
+            
+            checks.push({
+                component: 'Inverter',
+                status: hasInverter ? 'compatible' : 'warning',
+                icon: hasInverter ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle',
+                message: hasInverter ? 'Inverter selected' : 'No inverter selected'
+            });
+            
+            checks.push({
+                component: 'Panels',
+                status: hasPanels ? 'compatible' : 'warning',
+                icon: hasPanels ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle',
+                message: hasPanels ? 'Solar panels selected' : 'No solar panels selected'
+            });
+            
+            checks.push({
+                component: 'Mounting',
+                status: hasMounting ? 'compatible' : 'warning',
+                icon: hasMounting ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle',
+                message: hasMounting ? 'Mounting system selected' : 'No mounting system selected'
+            });
+            
+            return checks;
+        }
+    },
+    methods: {
+        setActiveCategory(categoryId) {
+            this.activeCategory = categoryId;
+        },
+        isSelected(product) {
+            return this.selectedProducts.some(item => item.product.id === product.id);
+        },
+        toggleProduct(product) {
+            const existingIndex = this.selectedProducts.findIndex(item => 
+                item.product.id === product.id
+            );
+            
+            if (existingIndex > -1) {
+                this.selectedProducts.splice(existingIndex, 1);
+            } else {
+                this.selectedProducts.push({
+                    product: product,
+                    quantity: 1,
+                    total: product.price
+                });
+            }
+        },
+        getQuantity(product) {
+            const item = this.selectedProducts.find(item => item.product.id === product.id);
+            return item ? item.quantity : 0;
+        },
+        updateQuantity(product, quantity) {
+            const item = this.selectedProducts.find(item => item.product.id === product.id);
+            if (item) {
+                item.quantity = parseInt(quantity) || 1;
+                item.total = item.quantity * product.price;
+            }
+        },
+        increaseQuantity(product) {
+            const item = this.selectedProducts.find(item => item.product.id === product.id);
+            if (item) {
+                item.quantity++;
+                item.total = item.quantity * product.price;
+            }
+        },
+        decreaseQuantity(product) {
+            const item = this.selectedProducts.find(item => item.product.id === product.id);
+            if (item && item.quantity > 1) {
+                item.quantity--;
+                item.total = item.quantity * product.price;
+            }
+        },
+        getCompatibilityClass(product) {
+            // Simplified compatibility logic
+            if (product.recommended) return 'compatible';
+            return 'warning';
+        },
+        getCompatibilityIcon(product) {
+            if (product.recommended) return 'fas fa-check-circle';
+            return 'fas fa-info-circle';
+        },
+        getCompatibilityText(product) {
+            if (product.recommended) return 'Highly Compatible';
+            return 'Compatible';
+        },
+        updateRecommendations() {
+            // Update product recommendations based on system requirements
+            console.log('Updating recommendations for:', this.systemRequirements);
+        },
+        formatNumber(num) {
+            return new Intl.NumberFormat().format(num);
+        },
+        resetConfiguration() {
+            this.selectedProducts = [];
+        },
+        saveConfiguration() {
+            localStorage.setItem('solarConfiguration', JSON.stringify({
+                requirements: this.systemRequirements,
+                products: this.selectedProducts,
+                totals: this.systemTotals
+            }));
+            alert('Configuration saved!');
+        },
+        generateQuotation() {
+            if (this.selectedProducts.length === 0) {
+                alert('Please select at least one product.');
+                return;
+            }
+            
+            // Navigate to quotation creation with selected products
+            const config = {
+                requirements: this.systemRequirements,
+                products: this.selectedProducts,
+                totals: this.systemTotals
+            };
+            
+            // Store in localStorage and redirect
+            localStorage.setItem('quotationProducts', JSON.stringify(config));
+            window.location.href = '/quotations/create/?from=selector';
+        }
+    },
+    mounted() {
+        // Load saved configuration if exists
+        const saved = localStorage.getItem('solarConfiguration');
+        if (saved) {
+            const config = JSON.parse(saved);
+            this.systemRequirements = config.requirements || this.systemRequirements;
+            this.selectedProducts = config.products || [];
+        }
+    }
+}).mount('#productSelectorApp');
+</script>
+{% endblock %}

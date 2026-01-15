@@ -1,0 +1,358 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}My Account - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, {{ company.primary_color|default:"#38b6ff" }} 0%, #2c8fd6 100%);
+        color: white;
+        padding: 120px 0 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar">
+                    {% if user.first_name %}{{ user.first_name.0|upper }}{% elif user.username %}{{ user.username.0|upper }}{% else %}U{% endif %}
+                </div>
+            </div>
+            <div class="col">
+                <h1 class="mb-1">{{ user.get_full_name|default:user.username }}</h1>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-user me-2"></i>{{ user.get_role_display }}
+                    {% if user.company_name %}
+                        <span class="ms-3"><i class="fas fa-building me-2"></i>{{ user.company_name }}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-12 mb-4">
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-primary text-white mx-auto">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <h3 class="text-primary mb-1">{{ customer_stats.quotations }}</h3>
+                            <p class="text-muted mb-0">Quotations</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-success text-white mx-auto">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <h3 class="text-success mb-1">{{ customer_stats.projects }}</h3>
+                            <p class="text-muted mb-0">Projects</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-warning text-white mx-auto">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <h3 class="text-warning mb-1">{{ customer_stats.orders }}</h3>
+                            <p class="text-muted mb-0">Orders</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-info text-white mx-auto">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h3 class="text-info mb-1">
+                                {% if user.email_verified %}
+                                    <i class="fas fa-check text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i>
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Email Verified</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>Profile Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control" name="first_name" 
+                                       value="{{ user.first_name }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" class="form-control" name="last_name" 
+                                       value="{{ user.last_name }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" name="email" 
+                                       value="{{ user.email }}" required>
+                                {% if user.email_verified %}
+                                    <div class="form-text text-success">
+                                        <i class="fas fa-check-circle me-1"></i>Email verified
+                                    </div>
+                                {% else %}
+                                    <div class="form-text text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Email not verified
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" name="phone" 
+                                       value="{{ user.phone|default:'' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" name="address" rows="3">{{ user.address|default:'' }}</textarea>
+                        </div>
+                        
+                        {% if user.customer_type == 'business' %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Company Name</label>
+                                    <input type="text" class="form-control" value="{{ user.company_name }}" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tax Number</label>
+                                    <input type="text" class="form-control" value="{{ user.tax_number }}" readonly>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Change Password -->
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lock me-2"></i>Change Password
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="passwordForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-control" name="current_password" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" class="form-control" name="new_password" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" name="confirm_password" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Account Summary -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Account Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="profile-avatar mx-auto mb-3" 
+                             style="width: 60px; height: 60px; font-size: 1.5rem; background: {{ company.primary_color|default:'#38b6ff' }};">
+                            {% if user.first_name %}{{ user.first_name.0|upper }}{% elif user.username %}{{ user.username.0|upper }}{% else %}U{% endif %}
+                        </div>
+                        <h6>{{ user.get_full_name|default:user.username }}</h6>
+                        <p class="text-muted small">{{ user.get_role_display }}</p>
+                    </div>
+                    
+                    <div class="border-top pt-3">
+                        <div class="row text-center g-3">
+                            <div class="col-6">
+                                <div class="small text-muted">Member Since</div>
+                                <div class="fw-bold">{{ user.date_joined|date:"M Y" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted">Customer Type</div>
+                                <div class="fw-bold">{{ user.get_customer_type_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'quotations:create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Request Quotation
+                        </a>
+                        <a href="{% url 'products:list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-solar-panel me-2"></i>Browse Products
+                        </a>
+                        <a href="{% url 'core:contact' %}" class="btn btn-outline-success">
+                            <i class="fas fa-headset me-2"></i>Contact Support
+                        </a>
+                        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Password form validation (same as before)
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const newPassword = this.querySelector('[name="new_password"]').value;
+    const confirmPassword = this.querySelector('[name="confirm_password"]').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long!');
+        return;
+    }
+    
+    // Submit form
+    const formData = new FormData(this);
+    
+    fetch('/accounts/change-password/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Password changed successfully!');
+            this.reset();
+        } else {
+            alert(data.message || 'Error changing password!');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error changing password!');
+    });
+});
+</script>
+{% endblock %}

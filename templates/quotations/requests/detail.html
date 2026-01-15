@@ -1,0 +1,428 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ quotation_request.customer_name }} - Quotation Request Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .request-detail-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .request-detail-header h1 {
+        margin-bottom: 0.5rem;
+        font-size: 2.5rem;
+    }
+
+    .request-status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-new { background: #ff6b6b; color: white; }
+    .status-contacted { background: #ffd93d; color: #333; }
+    .status-reviewed { background: #6bcf7f; color: white; }
+    .status-quotation_created { background: #4ecdc4; color: white; }
+    .status-completed { background: #45b7d1; color: white; }
+
+    .detail-section {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .detail-section h3 {
+        color: #333;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #666;
+    }
+
+    .info-value {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 120px;
+    }
+
+    .btn-primary { background: #007bff; color: white; }
+    .btn-primary:hover { background: #0056b3; transform: translateY(-1px); }
+
+    .btn-success { background: #28a745; color: white; }
+    .btn-success:hover { background: #1e7e34; transform: translateY(-1px); }
+
+    .btn-warning { background: #ffc107; color: #333; }
+    .btn-warning:hover { background: #e0a800; transform: translateY(-1px); }
+
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover { background: #545b62; transform: translateY(-1px); }
+
+    .requirements-display {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid #007bff;
+    }
+
+    .requirements-display h4 {
+        margin-bottom: 1rem;
+        color: #007bff;
+    }
+
+    .requirements-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .requirements-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .requirements-list li:last-child {
+        border-bottom: none;
+    }
+
+    .system-match-indicator {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .match-high { background: #d4edda; color: #155724; }
+    .match-medium { background: #fff3cd; color: #856404; }
+    .match-low { background: #f8d7da; color: #721c24; }
+
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .request-detail-header {
+            padding: 1.5rem;
+        }
+
+        .request-detail-header h1 {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Request Header -->
+    <div class="request-detail-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1><i class="fas fa-clipboard-list me-3"></i>{{ quotation_request.customer_name }}</h1>
+                <p class="mb-2">Quotation Request #{{ quotation_request.id }}</p>
+                <small>Submitted {{ quotation_request.created_at|date:"M d, Y" }} at {{ quotation_request.created_at|time:"H:i" }}</small>
+            </div>
+            <div class="text-end">
+                <span class="request-status-badge status-{{ quotation_request.status }}">
+                    {{ quotation_request.get_status_display }}
+                </span>
+                {% if quotation_request.assigned_to %}
+                <div class="mt-2">
+                    <small><i class="fas fa-user me-1"></i>Assigned to: {{ quotation_request.assigned_to.get_full_name }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        {% if quotation_request.status == 'new' %}
+        <form method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_to_me">
+            <button type="submit" class="btn-action btn-primary">
+                <i class="fas fa-user-plus me-1"></i>Assign to Me
+            </button>
+        </form>
+        {% endif %}
+
+        <form method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_status">
+            <div class="d-inline-block">
+                <select name="status" class="form-select" style="width: auto; display: inline-block; margin-right: 0.5rem;">
+                    {% for choice in quotation_request.get_status_choices %}
+                    <option value="{{ choice.0 }}" {% if choice.0 == quotation_request.status %}selected{% endif %}>
+                        {{ choice.1 }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-action btn-warning">
+                    <i class="fas fa-save me-1"></i>Update Status
+                </button>
+            </div>
+        </form>
+
+        {% if quotation_request.status in 'new,reviewed,contacted' %}
+        <a href="{% url 'quotations:create_from_request' quotation_request.pk %}" class="btn-action btn-success">
+            <i class="fas fa-plus-circle me-1"></i>Create Quotation
+        </a>
+        {% endif %}
+
+        {% if quotation_request.created_quotation %}
+        <a href="{% url 'quotations:detail' quotation_request.created_quotation.quotation_number %}" class="btn-action btn-secondary" target="_blank">
+            <i class="fas fa-eye me-1"></i>View Quotation
+        </a>
+        {% endif %}
+
+        <a href="{% url 'quotations:requests_list' %}" class="btn-action btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Requests
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Main Details -->
+        <div class="col-lg-8">
+            <!-- Customer Information -->
+            <div class="detail-section">
+                <h3><i class="fas fa-user me-2"></i>Customer Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">{{ quotation_request.customer_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ quotation_request.email }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value">{{ quotation_request.phone }}</span>
+                    </div>
+                    {% if quotation_request.company_name %}
+                    <div class="info-item">
+                        <span class="info-label">Company:</span>
+                        <span class="info-value">{{ quotation_request.company_name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- System Requirements -->
+            <div class="detail-section">
+                <h3><i class="fas fa-cogs me-2"></i>System Requirements</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">System Type:</span>
+                        <span class="info-value">
+                            {{ quotation_request.get_system_type_display }}
+                            <span class="system-match-indicator match-medium">Match: Medium</span>
+                        </span>
+                    </div>
+                    {% if quotation_request.estimated_budget %}
+                    <div class="info-item">
+                        <span class="info-label">Estimated Budget:</span>
+                        <span class="info-value">KES {{ quotation_request.estimated_budget|floatformat:0 }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <span class="info-label">Urgency:</span>
+                        <span class="info-value">{{ quotation_request.get_urgency_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Roof Access:</span>
+                        <span class="info-value">{{ quotation_request.get_roof_access_display }}</span>
+                    </div>
+                </div>
+
+                {% if quotation_request.system_requirements %}
+                <div class="requirements-display">
+                    <h4><i class="fas fa-list-check me-2"></i>Detailed Requirements</h4>
+                    <div class="requirements-text">
+                        <pre style="white-space: pre-line; font-family: inherit; margin: 0;">{{ quotation_request.system_requirements }}</pre>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Customer Notes -->
+            {% if quotation_request.customer_notes %}
+            <div class="detail-section">
+                <h3><i class="fas fa-sticky-note me-2"></i>Customer Notes</h3>
+                <p>{{ quotation_request.customer_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Information -->
+        <div class="col-lg-4">
+            <!-- Location & Property -->
+            <div class="detail-section">
+                <h3><i class="fas fa-map-marker-alt me-2"></i>Location & Property</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Location:</span>
+                        <span class="info-value">{{ quotation_request.location }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Property Type:</span>
+                        <span class="info-value">{{ quotation_request.get_property_type_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Timeline -->
+            <div class="detail-section">
+                <h3><i class="fas fa-clock me-2"></i>Processing Timeline</h3>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h5>Request Submitted</h5>
+                            <p>{{ quotation_request.created_at|date:"M d, Y" }} at {{ quotation_request.created_at|time:"H:i" }}</p>
+                        </div>
+                    </div>
+
+                    {% if quotation_request.status != 'new' %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h5>Status Updated to {{ quotation_request.get_status_display }}</h5>
+                            <p>{{ quotation_request.updated_at|date:"M d, Y" }} at {{ quotation_request.updated_at|time:"H:i" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if quotation_request.created_quotation %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h5>Quotation Created</h5>
+                            <p>Quotation {{ quotation_request.created_quotation.quotation_number }} generated</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Contact Actions -->
+            <div class="detail-section">
+                <h3><i class="fas fa-phone me-2"></i>Contact Actions</h3>
+                <div class="d-grid gap-2">
+                    <a href="tel:{{ quotation_request.phone }}" class="btn btn-outline-primary">
+                        <i class="fas fa-phone me-2"></i>Call Customer
+                    </a>
+                    <a href="mailto:{{ quotation_request.email }}" class="btn btn-outline-success">
+                        <i class="fas fa-envelope me-2"></i>Send Email
+                    </a>
+                    {% if quotation_request.phone %}
+                    <a href="https://wa.me/{{ quotation_request.phone|slice:'1:' }}" class="btn btn-outline-secondary" target="_blank">
+                        <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -18px;
+        top: 5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-content h5 {
+        margin-bottom: 5px;
+        color: #333;
+    }
+
+    .timeline-content p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}

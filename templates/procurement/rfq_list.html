@@ -1,0 +1,330 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Request for Quotations - {{ block.super }}{% endblock %}
+
+{% block page_title %}Request for Quotation Management{% endblock %}
+{% block page_subtitle %}Manage RFQs and track supplier quotations{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Request for Quotations</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .rfq-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .rfq-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .rfq-card.draft { border-left-color: #6c757d; }
+    .rfq-card.sent { border-left-color: #007bff; }
+    .rfq-card.received { border-left-color: #ffc107; }
+    .rfq-card.evaluated { border-left-color: #28a745; }
+    .rfq-card.awarded { border-left-color: #17a2b8; }
+    .rfq-card.cancelled { border-left-color: #dc3545; }
+    .rfq-card.default { border-left-color: #38b6ff; }
+    
+    .rfq-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #38b6ff;
+    }
+    
+    .rfq-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-sent { background: #cce5ff; color: #004085; }
+    .status-received { background: #fff3cd; color: #856404; }
+    .status-evaluated { background: #d4edda; color: #155724; }
+    .status-awarded { background: #d1ecf1; color: #0c5460; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .rfq-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .deadline-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .deadline-urgent { background: #f8d7da; color: #721c24; }
+    .deadline-soon { background: #fff3cd; color: #856404; }
+    .deadline-normal { background: #d4edda; color: #155724; }
+    
+    .response-count {
+        background: #38b6ff;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-file-contract me-2"></i>Request for Quotations
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'procurement:rfq_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create RFQ
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="RFQ number, title, description...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if current_status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="sent" {% if current_status == 'sent' %}selected{% endif %}>Sent</option>
+                <option value="received" {% if current_status == 'received' %}selected{% endif %}>Responses Received</option>
+                <option value="evaluated" {% if current_status == 'evaluated' %}selected{% endif %}>Evaluated</option>
+                <option value="awarded" {% if current_status == 'awarded' %}selected{% endif %}>Awarded</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="deadline" class="form-label">Deadline</label>
+            <select class="form-select" id="deadline" name="deadline">
+                <option value="">All Deadlines</option>
+                <option value="overdue" {% if current_deadline == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="urgent" {% if current_deadline == 'urgent' %}selected{% endif %}>Due in 3 days</option>
+                <option value="week" {% if current_deadline == 'week' %}selected{% endif %}>Due this week</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="category" class="form-label">Category</label>
+            <select class="form-select" id="category" name="category">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">Date From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- RFQ Grid -->
+<div class="row">
+    {% for rfq in rfqs %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="rfq-card {{ rfq.status }}">
+            <!-- RFQ Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="rfq-number">
+                        <a href="{% url 'procurement:rfq_detail' rfq.pk %}" class="text-decoration-none">
+                            {{ rfq.rfq_number }}
+                        </a>
+                    </div>
+                    <h6 class="mb-1">{{ rfq.title }}</h6>
+                    {% if rfq.category %}
+                        <div class="rfq-meta">{{ rfq.category.name }}</div>
+                    {% endif %}
+                </div>
+                <div class="text-end">
+                    <span class="rfq-status status-{{ rfq.status }}">{{ rfq.get_status_display }}</span>
+                    {% if rfq.response_count > 0 %}
+                        <div class="mt-1">
+                            <span class="response-count">{{ rfq.response_count }} responses</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- RFQ Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="rfq-meta mb-1">Issue Date</div>
+                    <div class="small">{{ rfq.issue_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="rfq-meta mb-1">Deadline</div>
+                    {% if rfq.submission_deadline %}
+                        <div class="small">{{ rfq.submission_deadline|date:"M d, Y" }}</div>
+                        {% if rfq.days_until_deadline <= 0 %}
+                            <span class="deadline-badge deadline-urgent">Overdue</span>
+                        {% elif rfq.days_until_deadline <= 3 %}
+                            <span class="deadline-badge deadline-urgent">{{ rfq.days_until_deadline }} days left</span>
+                        {% elif rfq.days_until_deadline <= 7 %}
+                            <span class="deadline-badge deadline-soon">{{ rfq.days_until_deadline }} days left</span>
+                        {% else %}
+                            <span class="deadline-badge deadline-normal">{{ rfq.days_until_deadline }} days left</span>
+                        {% endif %}
+                    {% else %}
+                        <div class="small text-muted">Not set</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Description -->
+            {% if rfq.description %}
+            <div class="mb-3">
+                <div class="rfq-meta mb-1">Description</div>
+                <div class="small">{{ rfq.description|truncatechars:100 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Vendor Info -->
+            <div class="mb-3">
+                <div class="rfq-meta mb-1">Vendors Invited</div>
+                <div class="small">{{ rfq.vendors_count }} vendors</div>
+                {% if rfq.status == 'received' or rfq.status == 'evaluated' %}
+                    <div class="small text-muted">{{ rfq.response_count }} responses received</div>
+                {% endif %}
+            </div>
+            
+            <!-- Creation Info -->
+            <div class="mb-3">
+                <div class="rfq-meta mb-1">Created</div>
+                <div class="small">{{ rfq.created_at|date:"M d, Y H:i" }}</div>
+                {% if rfq.created_by %}
+                    <div class="small text-muted">by {{ rfq.created_by.get_full_name|default:rfq.created_by.username }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'procurement:rfq_detail' rfq.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                {% if rfq.status == 'draft' %}
+                <a href="{% url 'procurement:rfq_edit' rfq.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% endif %}
+                {% if rfq.status == 'received' %}
+                <button class="btn btn-outline-success btn-sm" onclick="alert('Evaluate feature coming soon!')">
+                    <i class="fas fa-chart-line me-1"></i>Evaluate
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No RFQs found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_deadline or current_category %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by creating your first request for quotation.
+                {% endif %}
+            </p>
+            <a href="{% url 'procurement:rfq_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create RFQ
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="RFQ pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_deadline %}&deadline={{ current_deadline }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_deadline %}&deadline={{ current_deadline }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_deadline %}&deadline={{ current_deadline }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_deadline %}&deadline={{ current_deadline }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

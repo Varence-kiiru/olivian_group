@@ -1,0 +1,352 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Bank - {{ object.name }}{% else %}Add Bank{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Bank{% else %}Add Bank{% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    {% if object %}Update bank institution details{% else %}Add a new banking institution{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:bank_list' %}">Banks</a></li>
+<li class="breadcrumb-item active">
+    {% if object %}Edit {{ object.name }}{% else %}Add Bank{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .bank-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .bank-logo-preview {
+        width: 80px;
+        height: 80px;
+        background: var(--primary-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .btn-action {
+        min-width: 120px;
+    }
+    
+    .contact-preview {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+        min-height: 100px;
+        font-family: monospace;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+    
+    <div class="form-card">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i>
+                Basic Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label required">Bank Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.code.id_for_label }}" class="form-label required">Bank Code</label>
+                        {{ form.code }}
+                        {% if form.code.help_text %}
+                            <div class="form-help">{{ form.code.help_text }}</div>
+                        {% endif %}
+                        {% if form.code.errors %}
+                            <div class="text-danger small">{{ form.code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.swift_code.id_for_label }}" class="form-label">SWIFT/BIC Code</label>
+                        {{ form.swift_code }}
+                        {% if form.swift_code.help_text %}
+                            <div class="form-help">{{ form.swift_code.help_text }}</div>
+                        {% endif %}
+                        {% if form.swift_code.errors %}
+                            <div class="text-danger small">{{ form.swift_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.central_bank_code.id_for_label }}" class="form-label">Central Bank Code</label>
+                        {{ form.central_bank_code }}
+                        {% if form.central_bank_code.help_text %}
+                            <div class="form-help">{{ form.central_bank_code.help_text }}</div>
+                        {% endif %}
+                        {% if form.central_bank_code.errors %}
+                            <div class="text-danger small">{{ form.central_bank_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-address-book"></i>
+                Contact Information
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.contact_info.id_for_label }}" class="form-label">Contact Information</label>
+                        {{ form.contact_info }}
+                        <div class="form-help">Include phone numbers, addresses, website, etc.</div>
+                        {% if form.contact_info.errors %}
+                            <div class="text-danger small">{{ form.contact_info.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Preview</label>
+                    <div class="contact-preview" id="contact-preview">
+                        {{ form.contact_info.value|default:"Contact information will appear here..." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-cog"></i>
+                Settings
+            </div>
+            
+            <div class="form-check mb-3">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                    Active
+                </label>
+                <div class="form-help">Enable this bank for use in the system</div>
+                {% if form.is_active.errors %}
+                    <div class="text-danger small">{{ form.is_active.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Preview Section -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-eye"></i>
+                Preview
+            </div>
+            
+            <div class="bank-preview">
+                <div class="row align-items-start">
+                    <div class="col-md-2">
+                        <div class="bank-logo-preview" id="preview-logo">
+                            {{ form.code.value|slice:":2"|upper|default:"BK" }}
+                        </div>
+                    </div>
+                    <div class="col-md-10">
+                        <h6 class="mb-1">
+                            <span id="preview-name">{{ form.name.value|default:"Bank Name" }}</span>
+                            <span class="badge bg-secondary ms-2" id="preview-code">{{ form.code.value|default:"CODE" }}</span>
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="small text-muted mb-1">SWIFT Code</div>
+                                <div class="small font-monospace" id="preview-swift">
+                                    {{ form.swift_code.value|default:"Not provided" }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted mb-1">CBK Code</div>
+                                <div class="small font-monospace" id="preview-cbk">
+                                    {{ form.central_bank_code.value|default:"Not provided" }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <div class="small text-muted mb-1">Status</div>
+                            <span class="badge" id="preview-status">
+                                {% if form.is_active.value %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'financial:bank_list' %}" class="btn btn-outline-secondary btn-action">
+            <i class="fas fa-arrow-left me-2"></i>Cancel
+        </a>
+        
+        <div class="d-flex gap-2">
+            {% if object %}
+                <a href="{% url 'financial:bank_detail' object.pk %}" class="btn btn-outline-info btn-action">
+                    <i class="fas fa-eye me-2"></i>View
+                </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="fas fa-save me-2"></i>
+                {% if object %}Update{% else %}Create{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form fields
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    const codeField = document.getElementById('{{ form.code.id_for_label }}');
+    const swiftField = document.getElementById('{{ form.swift_code.id_for_label }}');
+    const cbkField = document.getElementById('{{ form.central_bank_code.id_for_label }}');
+    const contactField = document.getElementById('{{ form.contact_info.id_for_label }}');
+    const activeField = document.getElementById('{{ form.is_active.id_for_label }}');
+    
+    // Preview elements
+    const previewName = document.getElementById('preview-name');
+    const previewCode = document.getElementById('preview-code');
+    const previewLogo = document.getElementById('preview-logo');
+    const previewSwift = document.getElementById('preview-swift');
+    const previewCbk = document.getElementById('preview-cbk');
+    const previewStatus = document.getElementById('preview-status');
+    const contactPreview = document.getElementById('contact-preview');
+    
+    function updatePreview() {
+        const name = nameField.value || 'Bank Name';
+        const code = codeField.value || 'CODE';
+        const swift = swiftField.value || 'Not provided';
+        const cbk = cbkField.value || 'Not provided';
+        const contact = contactField.value || 'Contact information will appear here...';
+        const isActive = activeField.checked;
+        
+        previewName.textContent = name;
+        previewCode.textContent = code;
+        previewLogo.textContent = code.slice(0, 2).toUpperCase() || 'BK';
+        previewSwift.textContent = swift;
+        previewCbk.textContent = cbk;
+        contactPreview.textContent = contact;
+        
+        // Update status badge
+        previewStatus.textContent = isActive ? 'Active' : 'Inactive';
+        previewStatus.className = isActive ? 'badge bg-success' : 'badge bg-danger';
+    }
+    
+    // Add event listeners
+    [nameField, codeField, swiftField, cbkField, contactField].forEach(field => {
+        if (field) {
+            field.addEventListener('input', updatePreview);
+        }
+    });
+    
+    if (activeField) {
+        activeField.addEventListener('change', updatePreview);
+    }
+    
+    // Convert codes to uppercase
+    [codeField, swiftField, cbkField].forEach(field => {
+        if (field) {
+            field.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                updatePreview();
+            });
+        }
+    });
+    
+    // Initial update
+    updatePreview();
+});
+</script>
+{% endblock %}

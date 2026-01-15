@@ -1,0 +1,105 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="padding: 30px 0;">
+    <h1 style="color: {{ primary_color }}; font-size: 28px; margin-bottom: 20px;">
+        Welcome to the Team!
+    </h1>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        Hello {{ user_name }},
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        Welcome to {{ company_name }}! Your staff account has been created and you're now part of our team. Below are your login credentials and important information about your account:
+    </p>
+    
+    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: {{ primary_color }}; margin-bottom: 15px; font-size: 18px;">
+            <i class="fas fa-id-card" style="margin-right: 10px;"></i>Your Account Details
+        </h3>
+        
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Username:</td>
+                <td style="padding: 8px 0; font-family: monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px;">{{ username }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Temporary Password:</td>
+                <td style="padding: 8px 0; font-family: monospace; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border: 1px solid #ffeaa7;">{{ temporary_password }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Role:</td>
+                <td style="padding: 8px 0;">{{ role }}</td>
+            </tr>
+            {% if employee_id %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Employee ID:</td>
+                <td style="padding: 8px 0;">{{ employee_id }}</td>
+            </tr>
+            {% endif %}
+            {% if department %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Department:</td>
+                <td style="padding: 8px 0;">{{ department }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+        <p style="font-size: 14px; line-height: 1.6; margin: 0; color: #856404;">
+            <strong>🔐 Important Security Notice:</strong> Please change your password immediately after your first login for security reasons. You can do this from your profile settings.
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ login_url }}" 
+           style="display: inline-block; background-color: {{ primary_color }}; color: white; 
+                  text-decoration: none; padding: 15px 30px; border-radius: 5px; 
+                  font-weight: bold; font-size: 16px;">
+            Log In to Your Account
+        </a>
+    </div>
+    
+    <p style="font-size: 14px; line-height: 1.6; margin-bottom: 20px; color: #666;">
+        If the button above doesn't work, copy and paste this link into your browser:
+        <br>
+        <a href="{{ login_url }}" style="color: {{ primary_color }}; word-break: break-all;">
+            {{ login_url }}
+        </a>
+    </p>
+    
+    <h3 style="color: {{ primary_color }}; font-size: 18px; margin: 30px 0 15px 0;">
+        Next Steps:
+    </h3>
+    
+    <ol style="font-size: 16px; line-height: 1.6; margin-bottom: 20px; padding-left: 20px;">
+        <li>Log in using the credentials provided above</li>
+        <li>Change your password in your profile settings</li>
+        <li>Complete your profile information</li>
+        <li>Familiarize yourself with your dashboard and tools</li>
+        <li>Contact your supervisor if you have any questions</li>
+    </ol>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        As a {{ role }}, you'll have access to various tools and features relevant to your position. Explore your dashboard to see what's available to you.
+    </p>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="font-size: 14px; color: #888; margin-bottom: 10px;">
+            Need help getting started? Contact us:
+        </p>
+        <p style="font-size: 14px; color: #888; margin: 5px 0;">
+            📧 Email: {{ company_email }}
+        </p>
+        <p style="font-size: 14px; color: #888; margin: 5px 0;">
+            📞 Phone: {{ company_phone }}
+        </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-top: 30px; text-align: center; color: {{ primary_color }};">
+        Welcome to the {{ company_name }} family! 🎉
+    </p>
+</div>
+{% endblock %}

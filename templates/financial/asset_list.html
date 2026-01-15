@@ -1,0 +1,399 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Fixed Assets - {{ block.super }}{% endblock %}
+
+{% block page_title %}Fixed Asset Management{% endblock %}
+{% block page_subtitle %}Track and manage company fixed assets and depreciation{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial Controls</a></li>
+<li class="breadcrumb-item active">Fixed Assets</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .asset-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .asset-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .asset-card.equipment { border-left-color: #007bff; }
+    .asset-card.vehicle { border-left-color: #28a745; }
+    .asset-card.building { border-left-color: #ffc107; }
+    .asset-card.furniture { border-left-color: #6f42c1; }
+    .asset-card.technology { border-left-color: #fd7e14; }
+    .asset-card.default { border-left-color: #38b6ff; }
+    
+    .asset-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .depreciation-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .depreciation-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+    
+    .depreciation-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+        transition: width 0.3s ease;
+    }
+    
+    .asset-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active { background: #d4edda; color: #155724; }
+    .status-disposed { background: #f8d7da; color: #721c24; }
+    .status-maintenance { background: #fff3cd; color: #856404; }
+    .status-deprecated { background: #e2e3e5; color: #383d41; }
+    
+    .asset-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .summary-cards {
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid transparent;
+    }
+    
+    .summary-total { border-left-color: #38b6ff; }
+    .summary-depreciation { border-left-color: #ffc107; }
+    .summary-net { border-left-color: #28a745; }
+    .summary-count { border-left-color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-tools me-2"></i>Fixed Assets
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="alert('Add Asset feature coming soon!')">
+            <i class="fas fa-plus me-2"></i>Add Fixed Asset
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row summary-cards">
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-total">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="asset-meta mb-1">Total Asset Value</div>
+                    <div class="asset-value" style="color: #38b6ff;">KES {{ total_asset_value|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-chart-line fa-2x" style="color: #38b6ff;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-depreciation">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="asset-meta mb-1">Total Depreciation</div>
+                    <div class="asset-value text-warning">KES {{ total_depreciation|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-chart-line-down fa-2x text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-net">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="asset-meta mb-1">Net Book Value</div>
+                    <div class="asset-value text-success">KES {{ net_book_value|floatformat:2|default:"0.00" }}</div>
+                </div>
+                <i class="fas fa-balance-scale fa-2x text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="summary-card summary-count">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="asset-meta mb-1">Total Assets</div>
+                    <div class="asset-value text-muted">{{ total_assets|default:"0" }}</div>
+                </div>
+                <i class="fas fa-tools fa-2x text-muted"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Asset name, description, serial number...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="category" class="form-label">Category</label>
+            <select class="form-select" id="category" name="category">
+                <option value="">All Categories</option>
+                <option value="equipment" {% if current_category == 'equipment' %}selected{% endif %}>Equipment</option>
+                <option value="vehicle" {% if current_category == 'vehicle' %}selected{% endif %}>Vehicle</option>
+                <option value="building" {% if current_category == 'building' %}selected{% endif %}>Building</option>
+                <option value="furniture" {% if current_category == 'furniture' %}selected{% endif %}>Furniture</option>
+                <option value="technology" {% if current_category == 'technology' %}selected{% endif %}>Technology</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="location" class="form-label">Location</label>
+            <select class="form-select" id="location" name="location">
+                <option value="">All Locations</option>
+                {% for location in locations %}
+                <option value="{{ location.id }}" {% if current_location == location.id|stringformat:"s" %}selected{% endif %}>
+                    {{ location.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option>
+                <option value="disposed" {% if current_status == 'disposed' %}selected{% endif %}>Disposed</option>
+                <option value="maintenance" {% if current_status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                <option value="deprecated" {% if current_status == 'deprecated' %}selected{% endif %}>Deprecated</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="purchase_year" class="form-label">Purchase Year</label>
+            <select class="form-select" id="purchase_year" name="purchase_year">
+                <option value="">All Years</option>
+                {% for year in purchase_years %}
+                <option value="{{ year }}" {% if current_year == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Assets Grid -->
+<div class="row">
+    {% for asset in assets %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="asset-card {{ asset.category|default:'default' }}">
+            <!-- Asset Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'financial:asset_detail' asset.pk %}" class="text-decoration-none">
+                            {{ asset.asset_name }}
+                        </a>
+                    </h6>
+                    <div class="asset-meta">
+                        {{ asset.get_category_display|default:"Equipment" }} • {{ asset.asset_tag|default:"No Tag" }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    {% if asset.status == 'active' %}
+                        <span class="asset-status status-active">Active</span>
+                    {% elif asset.status == 'disposed' %}
+                        <span class="asset-status status-disposed">Disposed</span>
+                    {% elif asset.status == 'maintenance' %}
+                        <span class="asset-status status-maintenance">Maintenance</span>
+                    {% else %}
+                        <span class="asset-status status-deprecated">Deprecated</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Asset Values -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="asset-meta mb-1">Purchase Cost</div>
+                    <div class="fw-bold h6 mb-0">KES {{ asset.purchase_cost|floatformat:2 }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="asset-meta mb-1">Current Value</div>
+                    <div class="fw-bold h6 mb-0 text-success">KES {{ asset.current_value|floatformat:2 }}</div>
+                </div>
+            </div>
+            
+            <!-- Asset Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="asset-meta mb-1">Purchase Date</div>
+                    <div class="small">{{ asset.purchase_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="asset-meta mb-1">Location</div>
+                    <div class="small">{{ asset.location.name|default:"Not Assigned" }}</div>
+                </div>
+            </div>
+            
+            <!-- Depreciation Info -->
+            <div class="depreciation-info">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="asset-meta">Depreciation</span>
+                    <span class="small fw-bold">{{ asset.depreciation_percentage|floatformat:1 }}%</span>
+                </div>
+                <div class="depreciation-bar">
+                    <div class="depreciation-progress" style="width: {{ asset.depreciation_percentage }}%"></div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="small text-muted">Accumulated: KES {{ asset.accumulated_depreciation|floatformat:2 }}</span>
+                    <span class="small text-muted">Useful Life: {{ asset.useful_life_years }} years</span>
+                </div>
+            </div>
+            
+            <!-- Serial Number & Description -->
+            {% if asset.serial_number %}
+            <div class="mt-2">
+                <div class="asset-meta mb-1">Serial Number</div>
+                <div class="small font-monospace">{{ asset.serial_number }}</div>
+            </div>
+            {% endif %}
+            
+            {% if asset.description %}
+            <div class="mt-2">
+                <div class="asset-meta mb-1">Description</div>
+                <div class="small">{{ asset.description|truncatewords:10 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'financial:asset_detail' asset.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <button class="btn btn-outline-success btn-sm" onclick="alert('Depreciate feature coming soon!')">
+                    <i class="fas fa-calculator me-1"></i>Depreciate
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="alert('Edit feature coming soon!')">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No fixed assets found</h5>
+            <p class="text-muted">
+                {% if current_search or current_category or current_location or current_status %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by adding your first fixed asset.
+                {% endif %}
+            </p>
+            <button class="btn btn-primary" onclick="alert('Add Asset feature coming soon!')">
+                <i class="fas fa-plus me-2"></i>Add Fixed Asset
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Assets pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_year %}&purchase_year={{ current_year }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_year %}&purchase_year={{ current_year }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_year %}&purchase_year={{ current_year }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_year %}&purchase_year={{ current_year }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

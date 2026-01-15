@@ -1,0 +1,1076 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Expense Requests - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block page_title %}Expense Requests{% endblock %}
+{% block page_subtitle %}Manage and approve budget expense requests{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="/budget/">Budget</a></li>
+<li class="breadcrumb-item active">Expense Requests</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .expense-card {
+        border: 1px solid #e3e6f0;
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+        transition: var(--transition);
+    }
+    
+    .expense-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+    
+    .expense-card.urgent {
+        border-left: 4px solid var(--danger-color);
+    }
+    
+    .expense-card.pending {
+        border-left: 4px solid var(--warning-color);
+    }
+    
+    .expense-card.approved {
+        border-left: 4px solid var(--success-color);
+    }
+    
+    .expense-card.rejected {
+        border-left: 4px solid var(--danger-color);
+        opacity: 0.8;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-approved {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .status-under_review {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+    
+    .priority-badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    
+    .priority-high {
+        background: var(--danger-color);
+        color: white;
+    }
+    
+    .priority-medium {
+        background: var(--warning-color);
+        color: white;
+    }
+    
+    .priority-low {
+        background: var(--info-color);
+        color: white;
+    }
+    
+    .expense-amount {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .expense-meta {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .approval-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .filter-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stats-overview {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .bulk-actions {
+        background: white;
+        border: 1px solid #e3e6f0;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    
+    .expense-attachment {
+        display: inline-block;
+        margin-right: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .attachment-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+    
+    .attachment-link:hover {
+        text-decoration: underline;
+    }
+    
+    .comment-section {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .comment-item {
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.5rem 0;
+    }
+    
+    .comment-item:last-child {
+        border-bottom: none;
+    }
+    
+    .timeline-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .timeline-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 0.8rem;
+    }
+    
+    .timeline-icon.completed {
+        background: var(--success-color);
+        color: white;
+    }
+    
+    .timeline-icon.current {
+        background: var(--warning-color);
+        color: white;
+    }
+    
+    .timeline-icon.pending {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    
+    @media (max-width: 768px) {
+        .expense-card .row {
+            flex-direction: column;
+        }
+        
+        .approval-buttons {
+            margin-top: 1rem;
+            justify-content: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-overview">
+    <div class="row text-center">
+        <div class="col-md-3">
+            <h3 class="mb-1">{{ total_requests|default:"24" }}</h3>
+            <p class="mb-0 opacity-75">Total Requests</p>
+        </div>
+        <div class="col-md-3">
+            <h3 class="mb-1">{{ pending_requests|default:"8" }}</h3>
+            <p class="mb-0 opacity-75">Pending Approval</p>
+        </div>
+        <div class="col-md-3">
+            <h3 class="mb-1">{{ company.default_currency|default:"KES" }} {{ pending_amount|default:"485,600"|floatformat:0 }}</h3>
+            <p class="mb-0 opacity-75">Pending Amount</p>
+        </div>
+        <div class="col-md-3">
+            <h3 class="mb-1">{{ urgent_requests|default:"3" }}</h3>
+            <p class="mb-0 opacity-75">Urgent Requests</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="filter-card">
+    <div class="row align-items-center">
+        <div class="col-md-2">
+            <label for="status-filter" class="form-label mb-0">Status</label>
+            <select class="form-select form-select-sm" id="status-filter">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="under_review">Under Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="priority-filter" class="form-label mb-0">Priority</label>
+            <select class="form-select form-select-sm" id="priority-filter">
+                <option value="">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="budget-filter" class="form-label mb-0">Budget</label>
+            <select class="form-select form-select-sm" id="budget-filter">
+                <option value="">All Budgets</option>
+                <option value="1">Solar Installation Q1</option>
+                <option value="2">Marketing Campaign</option>
+                <option value="3">Equipment Purchase</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="search-requests" class="form-label mb-0">Search</label>
+            <input type="text" class="form-control form-control-sm" id="search-requests" 
+                   placeholder="Search requests...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label mb-0">&nbsp;</label>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm" onclick="refreshRequests()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-success btn-sm" onclick="exportRequests()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="toggleBulkActions()">
+                            <i class="fas fa-check-square me-2"></i>Bulk Actions
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="showSettings()">
+                            <i class="fas fa-cog me-2"></i>Settings
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="bulk-actions" id="bulk-actions">
+    <div class="row align-items-center">
+        <div class="col-md-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select-all">
+                <label class="form-check-label" for="select-all">
+                    Select All (<span id="selected-count">0</span>)
+                </label>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="btn-group">
+                <button class="btn btn-success btn-sm" onclick="bulkApprove()">
+                    <i class="fas fa-check me-1"></i>Approve Selected
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="bulkReject()">
+                    <i class="fas fa-times me-1"></i>Reject Selected
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="bulkReview()">
+                    <i class="fas fa-eye me-1"></i>Mark for Review
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="bulkExport()">
+                    <i class="fas fa-download me-1"></i>Export Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Requests List -->
+<div class="row">
+    <div class="col-12">
+        <div id="expense-requests-container">
+            <!-- Urgent Expense Request -->
+            <div class="expense-card urgent" data-id="1" data-status="pending" data-priority="high">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="form-check">
+                                <input class="form-check-input request-checkbox" type="checkbox" value="1">
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-2">Emergency Generator Repair</h5>
+                                <span class="priority-badge priority-high">HIGH</span>
+                                <span class="status-badge status-pending ms-2">Pending</span>
+                            </div>
+                            <div class="expense-meta">
+                                <i class="fas fa-user me-1"></i>Requested by: <strong>Mike Johnson</strong>
+                                <i class="fas fa-calendar-alt me-1 ms-3"></i>Jan 29, 2024
+                                <i class="fas fa-building me-1 ms-3"></i>Solar Installation Q1
+                            </div>
+                            <p class="mt-2 mb-2">Emergency repair of backup generator at Westlands site. Critical for maintaining power during installation process.</p>
+                            <div class="expense-attachment">
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-paperclip me-1"></i>repair_quote.pdf
+                                </a>
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-camera me-1"></i>damage_photos.zip
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="expense-amount">{{ company.default_currency|default:"KES" }} 85,600</div>
+                            <small class="text-muted">+ {{ company.default_currency|default:"KES" }} 13,696 VAT</small>
+                            <div class="mt-1">
+                                <strong>Total: {{ company.default_currency|default:"KES" }} 99,296</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="approval-buttons">
+                                <button class="btn btn-success btn-sm" onclick="approveRequest(1)" title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectRequest(1)" title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="viewRequest(1)" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Due: 2 days</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Approval Timeline -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <small class="text-muted fw-bold">Approval Workflow:</small>
+                                <div class="mt-2">
+                                    <div class="timeline-step">
+                                        <div class="timeline-icon current">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div>
+                                            <strong>Mike Johnson</strong> (Requestor)
+                                            <br><small class="text-muted">Submitted on Jan 29, 2024</small>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-step">
+                                        <div class="timeline-icon pending">
+                                            <i class="fas fa-user-tie"></i>
+                                        </div>
+                                        <div>
+                                            <strong>John Doe</strong> (Budget Manager)
+                                            <br><small class="text-muted">Pending approval</small>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-step">
+                                        <div class="timeline-icon pending">
+                                            <i class="fas fa-user-check"></i>
+                                        </div>
+                                        <div>
+                                            <strong>Jane Smith</strong> (Operations Manager)
+                                            <br><small class="text-muted">Final approval</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary btn-sm w-100" onclick="addComment(1)">
+                                    <i class="fas fa-comment me-1"></i>Add Comment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Regular Expense Request -->
+            <div class="expense-card pending" data-id="2" data-status="under_review" data-priority="medium">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="form-check">
+                                <input class="form-check-input request-checkbox" type="checkbox" value="2">
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-2">Marketing Materials Printing</h5>
+                                <span class="priority-badge priority-medium">MEDIUM</span>
+                                <span class="status-badge status-under_review ms-2">Under Review</span>
+                            </div>
+                            <div class="expense-meta">
+                                <i class="fas fa-user me-1"></i>Requested by: <strong>Sarah Wilson</strong>
+                                <i class="fas fa-calendar-alt me-1 ms-3"></i>Jan 28, 2024
+                                <i class="fas fa-building me-1 ms-3"></i>Marketing Campaign 2024
+                            </div>
+                            <p class="mt-2 mb-2">Printing of brochures, business cards, and promotional materials for upcoming solar energy expo.</p>
+                            <div class="expense-attachment">
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-file-pdf me-1"></i>printing_quote.pdf
+                                </a>
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-image me-1"></i>design_mockups.pdf
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="expense-amount">KES 45,000</div>
+                            <small class="text-muted">+ KES 7,200 VAT</small>
+                            <div class="mt-1">
+                                <strong>Total: KES 52,200</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="approval-buttons">
+                                <button class="btn btn-success btn-sm" onclick="approveRequest(2)" title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectRequest(2)" title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="viewRequest(2)" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Due: 5 days</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="comment-section mt-3">
+                        <small class="text-muted fw-bold">Comments:</small>
+                        <div class="comment-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>John Doe</strong>
+                                <small class="text-muted">Jan 29, 10:30 AM</small>
+                            </div>
+                            <p class="mb-0">Please provide more details about the quantity needed and delivery timeline.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Approved Expense Request -->
+            <div class="expense-card approved" data-id="3" data-status="approved" data-priority="low">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="form-check">
+                                <input class="form-check-input request-checkbox" type="checkbox" value="3">
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-2">Office Supplies Purchase</h5>
+                                <span class="priority-badge priority-low">LOW</span>
+                                <span class="status-badge status-approved ms-2">Approved</span>
+                            </div>
+                            <div class="expense-meta">
+                                <i class="fas fa-user me-1"></i>Requested by: <strong>David Brown</strong>
+                                <i class="fas fa-calendar-alt me-1 ms-3"></i>Jan 26, 2024
+                                <i class="fas fa-building me-1 ms-3"></i>Solar Installation Q1
+                                <i class="fas fa-check-circle me-1 ms-3 text-success"></i>Approved by: Jane Smith
+                            </div>
+                            <p class="mt-2 mb-2">Monthly office supplies including stationery, printing paper, and basic equipment maintenance items.</p>
+                            <div class="expense-attachment">
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-receipt me-1"></i>supplies_invoice.pdf
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="expense-amount text-success">KES 12,500</div>
+                            <small class="text-muted">+ KES 2,000 VAT</small>
+                            <div class="mt-1">
+                                <strong>Total: KES 14,500</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="approval-buttons">
+                                <button class="btn btn-outline-success btn-sm" disabled title="Already Approved">
+                                    <i class="fas fa-check"></i> Approved
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="viewRequest(3)" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-success">Approved</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rejected Expense Request -->
+            <div class="expense-card rejected" data-id="4" data-status="rejected" data-priority="medium">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="form-check">
+                                <input class="form-check-input request-checkbox" type="checkbox" value="4">
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-2">Luxury Conference Room Upgrade</h5>
+                                <span class="priority-badge priority-medium">MEDIUM</span>
+                                <span class="status-badge status-rejected ms-2">Rejected</span>
+                            </div>
+                            <div class="expense-meta">
+                                <i class="fas fa-user me-1"></i>Requested by: <strong>Tom Anderson</strong>
+                                <i class="fas fa-calendar-alt me-1 ms-3"></i>Jan 24, 2024
+                                <i class="fas fa-building me-1 ms-3"></i>Operations Budget
+                                <i class="fas fa-times-circle me-1 ms-3 text-danger"></i>Rejected by: John Doe
+                            </div>
+                            <p class="mt-2 mb-2">Upgrade conference room with high-end furniture and latest AV equipment for client presentations.</p>
+                            <div class="expense-attachment">
+                                <a href="#" class="attachment-link">
+                                    <i class="fas fa-file-pdf me-1"></i>furniture_catalog.pdf
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="expense-amount text-danger">KES 180,000</div>
+                            <small class="text-muted">+ KES 28,800 VAT</small>
+                            <div class="mt-1">
+                                <strong>Total: KES 208,800</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="approval-buttons">
+                                <button class="btn btn-outline-danger btn-sm" disabled title="Rejected">
+                                    <i class="fas fa-times"></i> Rejected
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="viewRequest(4)" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-danger">Rejected</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rejection Reason -->
+                    <div class="comment-section mt-3">
+                        <small class="text-danger fw-bold">Rejection Reason:</small>
+                        <div class="comment-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>John Doe</strong>
+                                <small class="text-muted">Jan 25, 2:15 PM</small>
+                            </div>
+                            <p class="mb-0">Request exceeds allocated budget for office improvements. Please consider more cost-effective alternatives or defer to next quarter.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Load More Button -->
+        <div class="text-center mt-4">
+            <button class="btn btn-outline-primary" onclick="loadMoreRequests()">
+                <i class="fas fa-plus me-2"></i>Load More Requests
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal fade" id="approvalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Approve Expense Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="approvalForm">
+                    <input type="hidden" id="approval-request-id">
+                    <div class="mb-3">
+                        <label for="approval-comment" class="form-label">Approval Comment</label>
+                        <textarea class="form-control" id="approval-comment" rows="3" 
+                                  placeholder="Add any comments or conditions for approval..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="send-notification">
+                            <label class="form-check-label" for="send-notification">
+                                Send email notification to requestor
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmApproval()">
+                    <i class="fas fa-check me-2"></i>Approve Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Expense Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rejectionForm">
+                    <input type="hidden" id="rejection-request-id">
+                    <div class="mb-3">
+                        <label for="rejection-reason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejection-reason" rows="3" required
+                                  placeholder="Please provide a clear reason for rejection..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejection-suggestions" class="form-label">Suggestions (Optional)</label>
+                        <textarea class="form-control" id="rejection-suggestions" rows="2" 
+                                  placeholder="Any suggestions for improvement or alternatives..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="allow-resubmission" checked>
+                            <label class="form-check-label" for="allow-resubmission">
+                                Allow resubmission with modifications
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmRejection()">
+                    <i class="fas fa-times me-2"></i>Reject Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <p class="mb-0">Processing request...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    setupEventHandlers();
+    setupFilters();
+    updateSelectedCount();
+});
+
+function setupEventHandlers() {
+    // Checkbox handlers
+    $('#select-all').on('change', function() {
+        $('.request-checkbox').prop('checked', $(this).is(':checked'));
+        updateSelectedCount();
+    });
+    
+    $('.request-checkbox').on('change', function() {
+        updateSelectedCount();
+        
+        // Update select all checkbox
+        const totalCheckboxes = $('.request-checkbox').length;
+        const checkedCheckboxes = $('.request-checkbox:checked').length;
+        $('#select-all').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // Filter handlers
+    $('#status-filter, #priority-filter, #budget-filter').on('change', function() {
+        filterRequests();
+    });
+    
+    $('#search-requests').on('keyup', function() {
+        filterRequests();
+    });
+    
+    // Auto-refresh every 2 minutes
+    setInterval(refreshRequests, 120000);
+}
+
+function setupFilters() {
+    // Initialize filter state from URL parameters if any
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('status')) {
+        $('#status-filter').val(urlParams.get('status'));
+    }
+    if (urlParams.get('priority')) {
+        $('#priority-filter').val(urlParams.get('priority'));
+    }
+    
+    // Apply initial filters
+    filterRequests();
+}
+
+function filterRequests() {
+    const status = $('#status-filter').val().toLowerCase();
+    const priority = $('#priority-filter').val().toLowerCase();
+    const budget = $('#budget-filter').val();
+    const search = $('#search-requests').val().toLowerCase();
+    
+    $('.expense-card').each(function() {
+        const card = $(this);
+        const cardStatus = card.data('status');
+        const cardPriority = card.data('priority');
+        const cardText = card.text().toLowerCase();
+        
+        let show = true;
+        
+        // Status filter
+        if (status && cardStatus !== status) {
+            show = false;
+        }
+        
+        // Priority filter
+        if (priority && cardPriority !== priority) {
+            show = false;
+        }
+        
+        // Search filter
+        if (search && !cardText.includes(search)) {
+            show = false;
+        }
+        
+        card.toggle(show);
+    });
+    
+    updateVisibleCount();
+}
+
+function updateSelectedCount() {
+    const count = $('.request-checkbox:checked').length;
+    $('#selected-count').text(count);
+    $('#bulk-actions').toggle(count > 0);
+}
+
+function updateVisibleCount() {
+    const visibleCount = $('.expense-card:visible').length;
+    // Update UI to show visible count if needed
+}
+
+function toggleBulkActions() {
+    const bulkActions = $('#bulk-actions');
+    bulkActions.toggle();
+    
+    if (bulkActions.is(':visible')) {
+        $('#select-all').prop('checked', false);
+        $('.request-checkbox').prop('checked', false);
+        updateSelectedCount();
+    }
+}
+
+function approveRequest(requestId) {
+    $('#approval-request-id').val(requestId);
+    $('#approvalModal').modal('show');
+}
+
+function rejectRequest(requestId) {
+    $('#rejection-request-id').val(requestId);
+    $('#rejectionModal').modal('show');
+}
+
+function viewRequest(requestId) {
+    window.location.href = `/budget/expenses/${requestId}/`;
+}
+
+function confirmApproval() {
+    const requestId = $('#approval-request-id').val();
+    const comment = $('#approval-comment').val();
+    const sendNotification = $('#send-notification').is(':checked');
+    
+    $('#loadingModal').modal('show');
+    $('#approvalModal').modal('hide');
+    
+    $.ajax({
+        url: `/api/expense-requests/${requestId}/approve/`,
+        method: 'POST',
+        data: {
+            comment: comment,
+            send_notification: sendNotification,
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            $('#loadingModal').modal('hide');
+            showToast('Request approved successfully', 'success');
+            refreshRequests();
+        },
+        error: function(xhr) {
+            $('#loadingModal').modal('hide');
+            const errorMsg = xhr.responseJSON?.message || 'Error approving request';
+            showToast(errorMsg, 'error');
+        }
+    });
+}
+
+function confirmRejection() {
+    const requestId = $('#rejection-request-id').val();
+    const reason = $('#rejection-reason').val();
+    const suggestions = $('#rejection-suggestions').val();
+    const allowResubmission = $('#allow-resubmission').is(':checked');
+    
+    if (!reason.trim()) {
+        showToast('Please provide a rejection reason', 'error');
+        return;
+    }
+    
+    $('#loadingModal').modal('show');
+    $('#rejectionModal').modal('hide');
+    
+    $.ajax({
+        url: `/api/expense-requests/${requestId}/reject/`,
+        method: 'POST',
+        data: {
+            reason: reason,
+            suggestions: suggestions,
+            allow_resubmission: allowResubmission,
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            $('#loadingModal').modal('hide');
+            showToast('Request rejected successfully', 'success');
+            refreshRequests();
+        },
+        error: function(xhr) {
+            $('#loadingModal').modal('hide');
+            const errorMsg = xhr.responseJSON?.message || 'Error rejecting request';
+            showToast(errorMsg, 'error');
+        }
+    });
+}
+
+function addComment(requestId) {
+    const comment = prompt('Enter your comment:');
+    if (comment && comment.trim()) {
+        $.ajax({
+            url: `/api/expense-requests/${requestId}/comment/`,
+            method: 'POST',
+            data: {
+                comment: comment,
+                csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                showToast('Comment added successfully', 'success');
+                refreshRequests();
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Error adding comment';
+                showToast(errorMsg, 'error');
+            }
+        });
+    }
+}
+
+function bulkApprove() {
+    const selectedIds = getSelectedRequestIds();
+    if (selectedIds.length === 0) {
+        showToast('Please select requests to approve', 'warning');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to approve ${selectedIds.length} selected request(s)?`)) {
+        bulkAction('approve', selectedIds);
+    }
+}
+
+function bulkReject() {
+    const selectedIds = getSelectedRequestIds();
+    if (selectedIds.length === 0) {
+        showToast('Please select requests to reject', 'warning');
+        return;
+    }
+    
+    const reason = prompt('Enter rejection reason for selected requests:');
+    if (reason && reason.trim()) {
+        bulkAction('reject', selectedIds, { reason: reason });
+    }
+}
+
+function bulkReview() {
+    const selectedIds = getSelectedRequestIds();
+    if (selectedIds.length === 0) {
+        showToast('Please select requests to mark for review', 'warning');
+        return;
+    }
+    
+    bulkAction('review', selectedIds);
+}
+
+function bulkExport() {
+    const selectedIds = getSelectedRequestIds();
+    if (selectedIds.length === 0) {
+        showToast('Please select requests to export', 'warning');
+        return;
+    }
+    
+    const params = new URLSearchParams();
+    selectedIds.forEach(id => params.append('ids', id));
+    
+    window.open(`/api/expense-requests/export/?${params.toString()}`, '_blank');
+}
+
+function bulkAction(action, requestIds, extraData = {}) {
+    $('#loadingModal').modal('show');
+    
+    $.ajax({
+        url: `/api/expense-requests/bulk-${action}/`,
+        method: 'POST',
+        data: {
+            request_ids: requestIds,
+            ...extraData,
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            $('#loadingModal').modal('hide');
+            showToast(`Bulk ${action} completed successfully`, 'success');
+            refreshRequests();
+            
+            // Clear selections
+            $('.request-checkbox').prop('checked', false);
+            $('#select-all').prop('checked', false);
+            updateSelectedCount();
+        },
+        error: function(xhr) {
+            $('#loadingModal').modal('hide');
+            const errorMsg = xhr.responseJSON?.message || `Error performing bulk ${action}`;
+            showToast(errorMsg, 'error');
+        }
+    });
+}
+
+function getSelectedRequestIds() {
+    const ids = [];
+    $('.request-checkbox:checked').each(function() {
+        ids.push($(this).val());
+    });
+    return ids;
+}
+
+function refreshRequests() {
+    window.location.reload();
+}
+
+function exportRequests() {
+    window.open('/api/expense-requests/export/', '_blank');
+}
+
+function loadMoreRequests() {
+    // Implementation for pagination
+    showToast('Loading more requests...', 'info');
+    
+    // This would typically load more requests via AJAX
+    setTimeout(() => {
+        showToast('No more requests to load', 'info');
+    }, 1000);
+}
+
+function showSettings() {
+    // Show settings modal or navigate to settings page
+    alert('Settings functionality would be implemented here');
+}
+
+function showToast(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                     type === 'error' ? 'alert-danger' : 
+                     type === 'warning' ? 'alert-warning' : 'alert-info';
+    
+    const iconClass = type === 'success' ? 'fa-check-circle' : 
+                     type === 'error' ? 'fa-exclamation-triangle' : 
+                     type === 'warning' ? 'fa-exclamation-circle' : 'fa-info-circle';
+    
+    const toast = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+            <i class="fas ${iconClass} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        toast.alert('close');
+    }, 5000);
+}
+
+// CSRF Token setup for AJAX
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+        }
+    }
+});
+</script>
+{% endblock %}

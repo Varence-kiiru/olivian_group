@@ -1,0 +1,355 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Staff Profile{% endblock %}
+{% block page_subtitle %}Manage your account information and work details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Profile Summary Card -->
+    <div class="col-12 mb-4">
+        <div class="card bg-gradient-primary text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="user-avatar bg-white text-primary" 
+                             style="width: 80px; height: 80px; font-size: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                            {% if user.first_name %}{{ user.first_name.0|upper }}{% elif user.username %}{{ user.username.0|upper }}{% else %}U{% endif %}
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h2 class="mb-1">{{ user.get_full_name|default:user.username }}</h2>
+                        <p class="mb-1 opacity-75">
+                            <i class="fas fa-id-badge me-2"></i>{{ user.get_role_display }}
+                            {% if department_info.employee_id != 'Not assigned' %}
+                                <span class="ms-3">ID: {{ department_info.employee_id }}</span>
+                            {% endif %}
+                        </p>
+                        <p class="mb-0 opacity-75">
+                            <i class="fas fa-building me-2"></i>{{ department_info.department }}
+                            {% if department_info.hire_date %}
+                                <span class="ms-3"><i class="fas fa-calendar me-2"></i>Since {{ department_info.hire_date|date:"M Y" }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-auto">
+                        {% if department_info.is_active_employee %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i>Active Employee
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning fs-6">
+                                <i class="fas fa-pause-circle me-1"></i>Inactive
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Row -->
+    <div class="col-12 mb-4">
+        <div class="row g-3">
+            <div class="col-md-3 col-sm-6">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-file-alt fa-2x mb-3"></i>
+                        <h3 class="mb-1">{{ staff_stats.created_quotations }}</h3>
+                        <p class="mb-0 opacity-75">Quotations Created</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-sm-6">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-project-diagram fa-2x mb-3"></i>
+                        <h3 class="mb-1">{{ staff_stats.managed_projects }}</h3>
+                        <p class="mb-0 opacity-75">Projects Managed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-sm-6">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar fa-2x mb-3"></i>
+                        <h3 class="mb-1">
+                            {% if department_info.hire_date %}
+                                {{ department_info.hire_date|timesince|truncatewords:1 }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </h3>
+                        <p class="mb-0 opacity-75">Years of Service</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 col-sm-6">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x mb-3"></i>
+                        <h3 class="mb-1">{{ user.get_role_display|truncatewords:1 }}</h3>
+                        <p class="mb-0 opacity-75">Role Level</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>Profile Information
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name" 
+                                   value="{{ user.first_name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" 
+                                   value="{{ user.last_name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" name="email" 
+                                   value="{{ user.email }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" 
+                                   value="{{ user.phone|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <textarea class="form-control" name="address" rows="3">{{ user.address|default:'' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Role</label>
+                            <input type="text" class="form-control" value="{{ user.get_role_display }}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" value="{{ department_info.employee_id }}" readonly>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department" 
+                               value="{{ user.department|default:'' }}" 
+                               placeholder="e.g., Sales, Technical, Administration">
+                        <div class="form-text">You can update your department information</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lock me-2"></i>Change Password
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="passwordForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-control" name="current_password" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" name="new_password" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-key me-2"></i>Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Employee Information -->
+    <div class="col-lg-4">
+        <!-- Employee Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-id-card me-2"></i>Employee Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Employee ID</label>
+                    <div class="fw-bold">{{ department_info.employee_id }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Department</label>
+                    <div class="fw-bold">{{ department_info.department }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Role</label>
+                    <div class="fw-bold">{{ user.get_role_display }}</div>
+                </div>
+                
+                {% if department_info.hire_date %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Hire Date</label>
+                    <div class="fw-bold">{{ department_info.hire_date|date:"F d, Y" }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Account Status</label>
+                    <div>
+                        {% if department_info.is_active_employee %}
+                            <span class="badge bg-success">Active Employee</span>
+                        {% else %}
+                            <span class="badge bg-warning">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-0">
+                    <label class="form-label text-muted small">Member Since</label>
+                    <div class="fw-bold">{{ user.date_joined|date:"F Y" }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user.role in 'sales_person,sales_manager' %}
+                        <a href="{% url 'quotations:create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Quotation
+                        </a>
+                    {% endif %}
+                    
+                    {% if user.role in 'project_manager,manager,super_admin' %}
+                        <a href="{% url 'projects:list' %}" class="btn btn-success">
+                            <i class="fas fa-project-diagram me-2"></i>Manage Projects
+                        </a>
+                    {% endif %}
+                    
+                    {% if user.role in 'inventory_manager,manager,super_admin' %}
+                        <a href="{% url 'inventory:dashboard' %}" class="btn btn-info">
+                            <i class="fas fa-boxes me-2"></i>Inventory
+                        </a>
+                    {% endif %}
+                    
+                    {% if user.role in 'cashier,manager,super_admin' %}
+                        <a href="{% url 'pos:main' %}" class="btn btn-warning">
+                            <i class="fas fa-cash-register me-2"></i>POS Terminal
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    
+                    <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Password form validation
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const newPassword = this.querySelector('[name="new_password"]').value;
+    const confirmPassword = this.querySelector('[name="confirm_password"]').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long!');
+        return;
+    }
+    
+    // Submit form
+    const formData = new FormData(this);
+    
+    fetch('/accounts/change-password/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Password changed successfully!');
+            this.reset();
+        } else {
+            alert(data.message || 'Error changing password!');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error changing password!');
+    });
+});
+</script>
+{% endblock %}

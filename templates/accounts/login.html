@@ -1,0 +1,21 @@
+{% extends 'website/base.html' %}
+
+{% block content %}
+<script>
+    // Get current URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const isStaff = params.get('staff') === '1';
+    
+    // Redirect to appropriate login page
+    if (isStaff) {
+        window.location.href = "{% url 'accounts:login' %}?staff=1";
+    } else {
+        window.location.href = "{% url 'accounts:login' %}";
+    }
+</script>
+
+<!-- Fallback for no JavaScript -->
+<noscript>
+    <meta http-equiv="refresh" content="0; url={% url 'accounts:login' %}">
+</noscript>
+{% endblock %}

@@ -1,0 +1,971 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if project %}Edit {{ project.project_number }}{% else %}Create Project{% endif %} - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block page_name %}{% if project %}Edit Project{% else %}Create Project{% endif %}{% endblock %}
+{% block page_title %}{% if project %}Edit Project{% else %}Create New Project{% endif %}{% endblock %}
+{% block page_subtitle %}{% if project %}{{ project.project_number }} - {{ project.name }}{% else %}Enter project details and configuration{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'projects:list' %}">Projects</a></li>
+{% if project %}
+<li class="breadcrumb-item"><a href="{% url 'projects:detail' project.project_number %}">{{ project.project_number }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Create</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+        position: relative;
+    }
+    
+    .form-section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+    }
+    
+    .form-section-title i {
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .form-floating {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        border: 1px solid #ddd;
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .required-field {
+        color: var(--danger-color);
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .btn-group-toggle {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-toggle {
+        padding: 0.5rem 1rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        color: #666;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .btn-toggle.active {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .progress-section {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-slider {
+        margin: 1rem 0;
+    }
+    
+    .progress-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        text-align: center;
+    }
+    
+    .team-member {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        margin-bottom: 0.5rem;
+    }
+    
+    .team-avatar {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-weight: 600;
+    }
+    
+    .sticky-actions {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1.5rem;
+        border-top: 1px solid #e9ecef;
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        margin-top: 2rem;
+        z-index: 10;
+    }
+    
+    .tab-content {
+        padding: 1.5rem 0;
+    }
+    
+    .nav-pills .nav-link {
+        border-radius: var(--border-radius);
+        color: #666;
+        font-weight: 500;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .nav-pills .nav-link.active {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .error {
+        border-color: var(--danger-color) !important;
+    }
+    
+    .error-message {
+        color: var(--danger-color);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    /* File input styling */
+    input[type="file"] {
+        padding: 0.5rem;
+        border: 2px dashed #e9ecef;
+        border-radius: var(--border-radius);
+        background: #f8f9fa;
+        width: 100%;
+    }
+    
+    input[type="file"]:focus {
+        border-color: var(--primary-color);
+        background: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="projectForm">
+    {% csrf_token %}
+    
+    <!-- Navigation Pills -->
+    <div class="form-section">
+        <ul class="nav nav-pills" id="projectTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="basic-tab" data-bs-toggle="pill" data-bs-target="#basic" type="button">
+                    <i class="fas fa-info-circle me-1"></i> Basic Information
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="client-tab" data-bs-toggle="pill" data-bs-target="#client" type="button">
+                    <i class="fas fa-user me-1"></i> Client & Team
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="system-tab" data-bs-toggle="pill" data-bs-target="#system" type="button">
+                    <i class="fas fa-solar-panel me-1"></i> System Details
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="location-tab" data-bs-toggle="pill" data-bs-target="#location" type="button">
+                    <i class="fas fa-map-marker-alt me-1"></i> Location
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="timeline-tab" data-bs-toggle="pill" data-bs-target="#timeline" type="button">
+                    <i class="fas fa-calendar me-1"></i> Timeline & Progress
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="financial-tab" data-bs-toggle="pill" data-bs-target="#financial" type="button">
+                    <i class="fas fa-money-bill-wave me-1"></i> Financial
+                </button>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="tab-content">
+        <!-- Basic Information Tab -->
+        <div class="tab-pane fade show active" id="basic">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Basic Project Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ form.name.value|default:'' }}" placeholder="Project Name" required>
+                            <label for="name">Project Name <span class="required-field">*</span></label>
+                        </div>
+                        {% if form.name.errors %}
+                        <div class="error-message">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">Select Status</option>
+                                <option value="planning" {% if form.status.value == 'planning' %}selected{% endif %}>Planning</option>
+                                <option value="in_progress" {% if form.status.value == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="on_hold" {% if form.status.value == 'on_hold' %}selected{% endif %}>On Hold</option>
+                                <option value="completed" {% if form.status.value == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if form.status.value == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                            <label for="status">Project Status <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-floating">
+                    <textarea class="form-control" id="description" name="description" style="height: 100px" placeholder="Description">{{ form.description.value|default:'' }}</textarea>
+                    <label for="description">Project Description</label>
+                    <div class="form-help">Provide a detailed description of the project scope and objectives</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.featured_image.id_for_label }}" class="form-label">Featured Project Image</label>
+                            {{ form.featured_image }}
+                            <div class="form-help">Upload a main project image that will be displayed on the website</div>
+                            {% if form.featured_image.errors %}
+                            <div class="error-message">{{ form.featured_image.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {% if project and project.featured_image and project.featured_image.name %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Image</label>
+                            <div class="current-image-preview">
+                                <img src="{{ project.featured_image.url }}" alt="Current project image" 
+                                     style="max-width: 200px; max-height: 150px; border-radius: var(--border-radius); box-shadow: var(--shadow);"
+                                     onerror="console.error('Image failed to load:', this.src); this.parentElement.innerHTML='<div style=&quot;padding:20px;background:#f8f9fa;text-align:center;&quot;><i class=&quot;fas fa-exclamation-triangle text-warning&quot;></i><br>Image not found</div>';">
+                                <div class="mt-2">
+                                    <small class="text-muted">{{ project.featured_image.name }}</small>
+                                    <br>
+                                    <small class="text-info">URL: {{ project.featured_image.url }}</small>
+                                    <br>
+                                    <label class="form-check-label">
+                                        <input type="checkbox" name="featured_image-clear" id="id_featured_image-clear" class="form-check-input">
+                                        Clear current image
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Image</label>
+                            <div class="text-muted" style="padding: 20px; background: #f8f9fa; border-radius: var(--border-radius); text-align: center;">
+                                <i class="fas fa-image-slash"></i>
+                                <br>No image uploaded
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" id="project_type" name="project_type" required>
+                                <option value="">Select Type</option>
+                                <option value="residential" {% if form.project_type.value == 'residential' %}selected{% endif %}>Residential</option>
+                                <option value="commercial" {% if form.project_type.value == 'commercial' %}selected{% endif %}>Commercial</option>
+                                <option value="industrial" {% if form.project_type.value == 'industrial' %}selected{% endif %}>Industrial</option>
+                                <option value="utility" {% if form.project_type.value == 'utility' %}selected{% endif %}>Utility Scale</option>
+                            </select>
+                            <label for="project_type">Project Type <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" id="system_type" name="system_type" required>
+                                <option value="">Select System</option>
+                                <option value="grid_tied" {% if form.system_type.value == 'grid_tied' %}selected{% endif %}>Grid-Tied System</option>
+                                <option value="off_grid" {% if form.system_type.value == 'off_grid' %}selected{% endif %}>Off-Grid System</option>
+                                <option value="hybrid" {% if form.system_type.value == 'hybrid' %}selected{% endif %}>Hybrid System</option>
+                                <option value="backup" {% if form.system_type.value == 'backup' %}selected{% endif %}>Backup Power System</option>
+                            </select>
+                            <label for="system_type">System Type <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="">Select Priority</option>
+                                <option value="low" {% if form.priority.value == 'low' %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if form.priority.value == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if form.priority.value == 'high' %}selected{% endif %}>High</option>
+                                <option value="urgent" {% if form.priority.value == 'urgent' %}selected{% endif %}>Urgent</option>
+                            </select>
+                            <label for="priority">Priority Level</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {% if form.quotation %}
+                        <div class="form-floating">
+                            <select class="form-select" id="quotation" name="quotation">
+                                <option value="">Select Quotation (Optional)</option>
+                                {% for quotation in quotations %}
+                                <option value="{{ quotation.id }}" {% if form.quotation.value == quotation.id %}selected{% endif %}>
+                                    {{ quotation.quotation_number }} - {{ quotation.customer_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="quotation">Related Quotation</label>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Client & Team Tab -->
+        <div class="tab-pane fade" id="client">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-user"></i>
+                    Client Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="client" name="client" required>
+                                <option value="">Select Client</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}" {% if form.client.value == customer.id %}selected{% endif %}>
+                                    {{ customer.company_name|default:customer.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="client">Client <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="client_contact_person" name="client_contact_person" 
+                                   value="{{ form.client_contact_person.value|default:'' }}" placeholder="Contact Person">
+                            <label for="client_contact_person">Contact Person</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="email" class="form-control" id="client_email" name="client_email" 
+                                   value="{{ form.client_email.value|default:'' }}" placeholder="Email">
+                            <label for="client_email">Client Email</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="tel" class="form-control" id="client_phone" name="client_phone" 
+                                   value="{{ form.client_phone.value|default:'' }}" placeholder="Phone">
+                            <label for="client_phone">Client Phone</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-users"></i>
+                    Project Team
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="project_manager" name="project_manager">
+                                <option value="">Select Project Manager</option>
+                                {% for manager in project_managers %}
+                                <option value="{{ manager.id }}" {% if form.project_manager.value == manager.id or project.project_manager.id == manager.id %}selected{% endif %}>
+                                    {{ manager.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="project_manager">Project Manager</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="lead_technician" name="lead_technician">
+                                <option value="">Select Lead Technician</option>
+                                {% for tech in technicians %}
+                                <option value="{{ tech.id }}" {% if form.lead_technician.value == tech.id %}selected{% endif %}>
+                                    {{ tech.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="lead_technician">Lead Technician</label>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if form.installation_team %}
+                <div class="mb-3">
+                    <label class="form-label">Installation Team</label>
+                    <div class="form-help mb-2">Select team members for this project</div>
+                    {% for member in installation_team_members %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="installation_team" 
+                               value="{{ member.id }}" id="team_{{ member.id }}"
+                               {% if member.id in form.installation_team.value %}checked{% endif %}>
+                        <label class="form-check-label" for="team_{{ member.id }}">
+                            {{ member.get_full_name }} - {{ member.role }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- System Details Tab -->
+        <div class="tab-pane fade" id="system">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-solar-panel"></i>
+                    Solar System Configuration
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="system_capacity" name="system_capacity" 
+                                   step="0.01" value="{{ form.system_capacity.value|default:'' }}" placeholder="System Capacity" required>
+                            <label for="system_capacity">System Capacity (kW) <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="estimated_generation" name="estimated_generation" 
+                                   step="0.01" value="{{ form.estimated_generation.value|default:'' }}" placeholder="Estimated Generation" required>
+                            <label for="estimated_generation">Estimated Generation (kWh/month) <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="duration_days" name="duration_days" 
+                                   value="{{ form.duration_days.value|default:'' }}" placeholder="Duration">
+                            <label for="duration_days">Duration (Days)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="number_of_panels" name="number_of_panels" 
+                                   value="{{ form.number_of_panels.value|default:'' }}" placeholder="Number of Panels">
+                            <label for="number_of_panels">Number of Panels</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="panel_wattage" name="panel_wattage" 
+                                   value="{{ form.panel_wattage.value|default:'' }}" placeholder="Panel Wattage">
+                            <label for="panel_wattage">Panel Wattage (W)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="panel_type" name="panel_type" 
+                                   value="{{ form.panel_type.value|default:'' }}" placeholder="Panel Type">
+                            <label for="panel_type">Panel Type/Brand</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="inverter_type" name="inverter_type" 
+                                   value="{{ form.inverter_type.value|default:'' }}" placeholder="Inverter Type">
+                            <label for="inverter_type">Inverter Type/Brand</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="battery_capacity" name="battery_capacity" 
+                                   step="0.01" value="{{ form.battery_capacity.value|default:'' }}" placeholder="Battery Capacity">
+                            <label for="battery_capacity">Battery Capacity (kWh)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="battery_type" name="battery_type" 
+                                   value="{{ form.battery_type.value|default:'' }}" placeholder="Battery Type">
+                            <label for="battery_type">Battery Type/Brand</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-floating">
+                    <textarea class="form-control" id="additional_equipment" name="additional_equipment" 
+                              style="height: 80px" placeholder="Additional Equipment">{{ form.additional_equipment.value|default:'' }}</textarea>
+                    <label for="additional_equipment">Additional Equipment & Notes</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Location Tab -->
+        <div class="tab-pane fade" id="location">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Installation Location
+                </h5>
+                
+                <div class="form-floating mb-3">
+                    <textarea class="form-control" id="installation_address" name="installation_address" 
+                              style="height: 100px" placeholder="Installation Address" required>{{ form.installation_address.value|default:'' }}</textarea>
+                    <label for="installation_address">Installation Address <span class="required-field">*</span></label>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="city" name="city" 
+                                   value="{{ form.city.value|default:'' }}" placeholder="City" required>
+                            <label for="city">City <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="county" name="county" 
+                                   value="{{ form.county.value|default:'' }}" placeholder="County" required>
+                            <label for="county">County <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="latitude" name="latitude" 
+                                   value="{{ form.latitude.value|default:'' }}" placeholder="Latitude">
+                            <label for="latitude">Latitude (GPS)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="longitude" name="longitude" 
+                                   value="{{ form.longitude.value|default:'' }}" placeholder="Longitude">
+                            <label for="longitude">Longitude (GPS)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-floating">
+                    <textarea class="form-control" id="site_conditions" name="site_conditions" 
+                              style="height: 80px" placeholder="Site Conditions">{{ form.site_conditions.value|default:'' }}</textarea>
+                    <label for="site_conditions">Site Conditions & Access Notes</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Timeline & Progress Tab -->
+        <div class="tab-pane fade" id="timeline">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-calendar"></i>
+                    Project Timeline
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}">
+                            <label for="start_date">Start Date</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="target_completion" name="target_completion" 
+                                   value="{{ form.target_completion.value|date:'Y-m-d'|default:'' }}" required>
+                            <label for="target_completion">Target Completion <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="actual_completion" name="actual_completion" 
+                                   value="{{ form.actual_completion.value|date:'Y-m-d'|default:'' }}"
+                                   {% if form.status.value != 'completed' %}style="border-color: #ffc107;"{% endif %}>
+                            <label for="actual_completion">Actual Completion Date</label>
+                            <div class="form-help">Set only when project is actually completed</div>
+                            {% if form.actual_completion.errors %}
+                            <div class="error-message">{{ form.actual_completion.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-tasks"></i>
+                    Progress Tracking
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="progress-section">
+                            <label class="form-label">Project Completion Progress</label>
+                            <input type="range" class="form-range progress-slider" id="completion_percentage" 
+                                   name="completion_percentage" min="0" max="100" value="{{ form.completion_percentage.value|default:0 }}"
+                                   oninput="updateProgressValue('completion_percentage', this.value); checkAutoComplete(this.value);">
+                            <div class="progress-value" id="completion_percentage_value">{{ form.completion_percentage.value|default:0 }}%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <button type="button" class="btn btn-success w-100" onclick="markAsCompleted()" 
+                                    {% if form.status.value == 'completed' %}disabled{% endif %}>
+                                <i class="fas fa-check me-2"></i>Mark as Completed
+                            </button>
+                            <small class="text-muted mt-2 d-block">Sets progress to 100% and status to completed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Financial Tab -->
+        <div class="tab-pane fade" id="financial">
+            <div class="form-section">
+                <h5 class="form-section-title">
+                    <i class="fas fa-money-bill-wave"></i>
+                    Financial Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="contract_value" name="contract_value" 
+                                   step="0.01" value="{{ form.contract_value.value|default:'' }}" placeholder="Contract Value" required>
+                            <label for="contract_value">Contract Value (KES) <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="estimated_cost" name="estimated_cost" 
+                                   step="0.01" value="{{ form.estimated_cost.value|default:'' }}" placeholder="Estimated Cost" required>
+                            <label for="estimated_cost">Estimated Cost (KES) <span class="required-field">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="actual_cost" name="actual_cost" 
+                                   step="0.01" value="{{ form.actual_cost.value|default:project.actual_cost|default:'0' }}" placeholder="Actual Cost">
+                            <label for="actual_cost">Actual Cost (KES)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="amount_paid" name="amount_paid" 
+                                   step="0.01" value="{{ form.amount_paid.value|default:'' }}" placeholder="Amount Paid">
+                            <label for="amount_paid">Amount Paid (KES)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="payment_status" name="payment_status">
+                                <option value="">Select Payment Status</option>
+                                <option value="pending" {% if form.payment_status.value == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="partial" {% if form.payment_status.value == 'partial' %}selected{% endif %}>Partial Payment</option>
+                                <option value="paid" {% if form.payment_status.value == 'paid' %}selected{% endif %}>Fully Paid</option>
+                                <option value="overdue" {% if form.payment_status.value == 'overdue' %}selected{% endif %}>Overdue</option>
+                            </select>
+                            <label for="payment_status">Payment Status</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-floating">
+                    <textarea class="form-control" id="payment_notes" name="payment_notes" 
+                              style="height: 80px" placeholder="Payment Notes">{{ form.payment_notes.value|default:'' }}</textarea>
+                    <label for="payment_notes">Payment Notes</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sticky Action Buttons -->
+    <div class="sticky-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{% if project %}{% url 'projects:detail' project.project_number %}{% else %}{% url 'projects:list' %}{% endif %}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-primary me-2" onclick="saveDraft()">
+                    <i class="fas fa-save me-1"></i> Save Draft
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check me-1"></i> {% if project %}Update Project{% else %}Create Project{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateProgressValue(fieldName, value) {
+    document.getElementById(fieldName + '_value').textContent = value + '%';
+}
+
+function saveDraft() {
+    const form = document.getElementById('projectForm');
+    const formData = new FormData(form);
+    formData.append('is_draft', 'true');
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Draft saved successfully!');
+        } else {
+            alert('Error saving draft. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving draft. Please try again.');
+    });
+}
+
+// Form validation
+document.getElementById('projectForm').addEventListener('submit', function(e) {
+    const requiredFields = ['name', 'status'];
+    let isValid = true;
+    
+    requiredFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (field && !field.value.trim()) {
+            field.classList.add('error');
+            isValid = false;
+        } else if (field) {
+            field.classList.remove('error');
+        }
+    });
+    
+    // Debug: Check featured image
+    const imageField = document.getElementById('id_featured_image');
+    if (imageField) {
+        console.log('Featured image field:', imageField);
+        console.log('Featured image file:', imageField.files[0]);
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    } else {
+        console.log('Form is being submitted...');
+    }
+});
+
+// Auto-calculate system size based on panels
+const panelsField = document.getElementById('number_of_panels');
+const wattageField = document.getElementById('panel_wattage');
+
+if (panelsField) panelsField.addEventListener('input', calculateSystemSize);
+if (wattageField) wattageField.addEventListener('input', calculateSystemSize);
+
+function calculateSystemSize() {
+    const panelsField = document.getElementById('number_of_panels');
+    const wattageField = document.getElementById('panel_wattage');
+    const systemSizeField = document.getElementById('system_capacity');
+    
+    if (!panelsField || !wattageField || !systemSizeField) return;
+    
+    const panels = parseFloat(panelsField.value) || 0;
+    const wattage = parseFloat(wattageField.value) || 0;
+    const systemSize = (panels * wattage) / 1000; // Convert to kW
+    
+    if (systemSize > 0) {
+        systemSizeField.value = systemSize.toFixed(2);
+    }
+}
+
+// Initialize progress sliders
+document.addEventListener('DOMContentLoaded', function() {
+    const completionSlider = document.getElementById('completion_percentage');
+    if (completionSlider) {
+        updateProgressValue('completion_percentage', completionSlider.value);
+    }
+});
+
+// Auto-complete functions
+function checkAutoComplete(value) {
+    const statusField = document.getElementById('status');
+    const actualCompletionField = document.getElementById('actual_completion');
+    
+    if (value == 100) {
+        // Auto-set status to completed when progress reaches 100%
+        if (statusField && statusField.value !== 'completed') {
+            if (confirm('Set project status to "Completed" since progress is 100%?')) {
+                statusField.value = 'completed';
+                
+                // Auto-set actual completion date if not set
+                if (actualCompletionField && !actualCompletionField.value) {
+                    const today = new Date().toISOString().split('T')[0];
+                    actualCompletionField.value = today;
+                }
+            }
+        }
+    }
+}
+
+function markAsCompleted() {
+    const completionSlider = document.getElementById('completion_percentage');
+    const statusField = document.getElementById('status');
+    const actualCompletionField = document.getElementById('actual_completion');
+    
+    if (confirm('Mark this project as completed? This will set progress to 100% and status to completed.')) {
+        // Set progress to 100%
+        completionSlider.value = 100;
+        updateProgressValue('completion_percentage', 100);
+        
+        // Set status to completed
+        statusField.value = 'completed';
+        
+        // Set actual completion date to today if not set
+        if (!actualCompletionField.value) {
+            const today = new Date().toISOString().split('T')[0];
+            actualCompletionField.value = today;
+        }
+        
+        // Update field styling
+        actualCompletionField.style.borderColor = '#28a745';
+        
+        // Disable the button
+        event.target.disabled = true;
+        event.target.innerHTML = '<i class="fas fa-check me-2"></i>Completed';
+    }
+}
+
+// Add status change listener to handle actual completion date
+document.addEventListener('DOMContentLoaded', function() {
+    const statusField = document.getElementById('status');
+    const actualCompletionField = document.getElementById('actual_completion');
+    
+    if (statusField && actualCompletionField) {
+        statusField.addEventListener('change', function() {
+            if (this.value === 'completed') {
+                // Highlight the actual completion date field when status is set to completed
+                actualCompletionField.style.borderColor = '#ffc107';
+                actualCompletionField.focus();
+                
+                // Auto-set to today if not already set
+                if (!actualCompletionField.value) {
+                    const today = new Date().toISOString().split('T')[0];
+                    actualCompletionField.value = today;
+                }
+            } else {
+                // Reset border color if status is not completed
+                actualCompletionField.style.borderColor = '';
+            }
+        });
+        
+        // Make actual completion date more visible
+        actualCompletionField.addEventListener('focus', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        
+        actualCompletionField.addEventListener('blur', function() {
+            this.style.backgroundColor = '';
+        });
+    }
+    
+    // Add file input preview
+    const imageInput = document.getElementById('id_featured_image');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Show preview if there's space for it
+                    console.log('Image selected:', file.name, 'Size:', file.size);
+                    
+                    // Add visual feedback
+                    imageInput.style.borderColor = '#28a745';
+                    imageInput.style.backgroundColor = '#f8fff8';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

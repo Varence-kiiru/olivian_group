@@ -1,0 +1,830 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Create Quotation - {{ block.super }}{% endblock %}
+
+{% block page_title %}Create New Quotation{% endblock %}
+{% block page_subtitle %}Generate a professional solar system quotation{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'quotations:list' %}">Quotations</a></li>
+<li class="breadcrumb-item active">Create</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--primary-color);
+    }
+    
+    .item-row {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .item-row.new-item {
+        border-left-color: #28a745;
+        background: #f8fff8;
+    }
+    
+    .remove-item-btn {
+        color: #dc3545;
+        background: none;
+        border: none;
+        font-size: 1.1rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .add-item-btn {
+        border: 2px dashed var(--primary-color);
+        color: var(--primary-color);
+        background: none;
+        border-radius: 8px;
+        padding: 1rem;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .add-item-btn:hover {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .savings-preview {
+        background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+        border-radius: 10px;
+        padding: 1.5rem;
+        border-left: 4px solid #28a745;
+    }
+    
+    .total-section {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 10px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 90px;
+    }
+    
+    .form-floating .form-select {
+        padding-top: 1.625rem;
+        padding-bottom: 0.625rem;
+    }
+    
+    .product-info {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<!-- Universal Customer Modal CSS -->
+{% include "components/customer_modal_css.html" %}
+{% endblock %}
+
+{% block content %}
+<form method="post" id="quotationForm">
+    {% csrf_token %}
+
+    <!-- Show Assessment Summary if from requirements -->
+    {% if from_requirements %}
+    <div class="alert alert-success mb-4">
+        <h5 class="alert-heading">
+            <i class="fas fa-check-circle me-2"></i>Assessment Data Loaded
+        </h5>
+        <p class="mb-2">The following information has been extracted from the customer requirements assessment:</p>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Customer:</strong> {{ requirements_data.customer_name }}<br>
+                <strong>Email:</strong> {{ requirements_data.customer_email }}<br>
+                <strong>Phone:</strong> {{ requirements_data.customer_phone }}<br>
+                {% if requirements_data.customer_company %}<strong>Company:</strong> {{ requirements_data.customer_company }}<br>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <strong>Property Type:</strong> {{ requirements_data.property_type|title }}<br>
+                <strong>Roof Type:</strong> {{ requirements_data.roof_type|title }}<br>
+                <strong>Monthly Bill:</strong> KES {{ requirements_data.monthly_bill|floatformat:0 }}<br>
+                <strong>Monthly Consumption:</strong> {{ requirements_data.monthly_consumption }} kWh<br>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <!-- Customer Information -->
+            <div class="form-card">
+                <h5 class="section-title">
+                    <i class="fas fa-user me-2"></i>Customer Information
+                </h5>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <select class="form-select" name="customer" id="customer" required>
+                                <option value="">Select existing customer or create new</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.pk }}" 
+                                        data-name="{{ customer.name }}"
+                                        data-email="{{ customer.email }}"
+                                        data-phone="{{ customer.phone }}"
+                                        data-company="{{ customer.company_name }}"
+                                        data-consumption="{{ customer.monthly_consumption }}"
+                                        data-bill="{{ customer.average_monthly_bill }}"
+                                        data-property="{{ customer.property_type }}"
+                                        data-roof="{{ customer.roof_type }}"
+                                        data-roof-area="{{ customer.roof_area }}">
+                                    {{ customer.name }}{% if customer.company_name %} ({{ customer.company_name }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="customer">Customer</label>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="openQuotationCustomerModal()">
+                                <i class="fas fa-plus me-1"></i>Create New Customer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Customer Preview (Shown when existing customer selected) -->
+                <div id="customerPreview" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6>Customer Details:</h6>
+                        <div id="customerDetails"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Specifications -->
+            <div class="form-card">
+                <h5 class="section-title">
+                    <i class="fas fa-solar-panel me-2"></i>System Specifications
+                </h5>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" name="quotation_type" id="quotation_type" required>
+                                <option value="">Select Type</option>
+                                <option value="product_sale">Product Sale</option>
+                                <option value="installation">Installation Service</option>
+                                <option value="maintenance">Maintenance Contract</option>
+                                <option value="consultation">Consultation Service</option>
+                                <option value="custom_solution">Custom Solar Solution</option>
+                            </select>
+                            <label for="quotation_type">Quotation Type</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" name="system_type" id="system_type" required>
+                                <option value="">Select System Type</option>
+                                <option value="grid_tied">Grid-Tied System</option>
+                                <option value="off_grid">Off-Grid System</option>
+                                <option value="hybrid">Hybrid System</option>
+                                <option value="backup">Backup Power System</option>
+                            </select>
+                            <label for="system_type">System Type</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <select class="form-select" name="installation_complexity" id="installation_complexity">
+                                <option value="simple">Simple</option>
+                                <option value="moderate">Moderate</option>
+                                <option value="complex">Complex</option>
+                            </select>
+                            <label for="installation_complexity">Installation Complexity</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" name="system_capacity" id="system_capacity" step="0.01" required>
+                            <label for="system_capacity">System Capacity (kW)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" name="estimated_generation" id="estimated_generation" step="0.01">
+                            <label for="estimated_generation">Estimated Generation (kWh/month)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quotation Items -->
+            <div class="form-card">
+                <h5 class="section-title">
+                    <i class="fas fa-list me-2"></i>Quotation Items
+                </h5>
+                
+                <div id="quotationItems">
+                    <!-- Items will be added here dynamically -->
+                </div>
+                
+                <button type="button" class="add-item-btn" onclick="addQuotationItem()">
+                    <i class="fas fa-plus me-2"></i>Add Item
+                </button>
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="form-card">
+                <h5 class="section-title">
+                    <i class="fas fa-file-contract me-2"></i>Terms & Conditions
+                </h5>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" name="validity_days" id="validity_days" value="30">
+                            <label for="validity_days">Validity (Days)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" name="delivery_time" id="delivery_time" value="2-4 weeks">
+                            <label for="delivery_time">Delivery Time</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" name="payment_terms" id="payment_terms" style="height: 80px;">50% deposit, 50% on completion</textarea>
+                            <label for="payment_terms">Payment Terms</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" name="warranty_terms" id="warranty_terms" style="height: 80px;">25 years product warranty, 10 years installation warranty</textarea>
+                            <label for="warranty_terms">Warranty Terms</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" name="notes" id="notes" style="height: 100px;"></textarea>
+                            <label for="notes">Additional Notes (Optional)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Financial Summary -->
+            <div class="form-card total-section">
+                <h6 class="mb-3">Financial Summary</h6>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="subtotalDisplay">KES 0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Discount:</span>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" name="discount_percentage" id="discount_percentage" 
+                               value="0" step="0.01" max="100" onchange="calculateTotals()">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Discount Amount:</span>
+                    <span id="discountDisplay">KES 0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>VAT (16%):</span>
+                    <span id="vatDisplay">KES 0</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total Amount:</strong>
+                    <strong id="totalDisplay" class="text-primary">KES 0</strong>
+                </div>
+                
+                <input type="hidden" name="subtotal" id="subtotal" value="0">
+                <input type="hidden" name="discount_amount" id="discount_amount" value="0">
+                <input type="hidden" name="tax_amount" id="tax_amount" value="0">
+                <input type="hidden" name="total_amount" id="total_amount" value="0">
+            </div>
+
+            <!-- Savings Calculator -->
+            <div class="form-card savings-preview">
+                <h6 class="mb-3">
+                    <i class="fas fa-chart-line me-2 text-success"></i>Savings Preview
+                </h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="h6 text-success mb-0" id="monthlySavings">KES 0</div>
+                        <small class="text-muted">Monthly</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h6 text-success mb-0" id="annualSavings">KES 0</div>
+                        <small class="text-muted">Annual</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="h6 text-info mb-0" id="paybackPeriod">0 months</div>
+                        <small class="text-muted">Payback</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h6 text-info mb-0" id="roiPercentage">0%</div>
+                        <small class="text-muted">ROI</small>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="estimated_monthly_savings" id="estimated_monthly_savings" value="0">
+                <input type="hidden" name="estimated_annual_savings" id="estimated_annual_savings" value="0">
+                <input type="hidden" name="payback_period_months" id="payback_period_months" value="0">
+                <input type="hidden" name="roi_percentage" id="roi_percentage" value="0">
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="form-card">
+                <h6 class="mb-3">Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="loadTemplate()">
+                        <i class="fas fa-copy me-2"></i>Load Template
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="saveAsDraft()">
+                        <i class="fas fa-save me-2"></i>Save as Draft
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Create Quotation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Universal Customer Modal -->
+{% include "components/customer_modal.html" %}
+
+<!-- Template Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Load Quotation Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    {% for template in quotation_templates %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card template-card" onclick="selectTemplate('{{ template.pk }}')">
+                            <div class="card-body">
+                                <h6>{{ template.name }}</h6>
+                                <p class="small text-muted">{{ template.description }}</p>
+                                <span class="badge bg-primary">{{ template.get_system_type_display }}</span>
+                                <span class="badge bg-secondary">{{ template.system_capacity_range }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let itemCounter = 0;
+
+// Try to parse products data, fallback to empty object
+let products = {};
+try {
+    products = JSON.parse('{{ products_json|default:"{}"|escapejs }}' || '{}');
+} catch(e) {
+    products = {};
+}
+
+// Autofill from assessment if available
+function autofillFromAssessment() {
+    try {
+        const assessmentData = JSON.parse('{{ requirements_data|default:"{}"|escapejs }}' || '{}');
+
+        if (assessmentData && assessmentData.system_capacity) {
+            document.getElementById('system_capacity').value = assessmentData.system_capacity;
+            document.getElementById('quotation_type').value = 'custom_solution';
+            document.getElementById('installation_complexity').value = 'simple';
+
+            // Determine system type based on requirements
+            let systemType = 'grid_tied'; // default
+            if (assessmentData.property_type === 'industrial' ||
+                assessmentData.backup_needs === 'full') {
+                systemType = 'hybrid';
+            } else if (assessmentData.grid_connection === 'poor' ||
+                       assessmentData.grid_connection === 'none') {
+                systemType = 'off_grid';
+            }
+            document.getElementById('system_type').value = systemType;
+
+            // Calculate estimated generation
+            if (assessmentData.monthly_consumption) {
+                const generation = assessmentData.monthly_consumption * 0.85;
+                document.getElementById('estimated_generation').value = generation.toFixed(0);
+            }
+
+            // Add detailed notes from assessment
+            let notes = document.getElementById('notes').value;
+            if (notes) notes += '\n\n';
+            notes += `Customer Requirements Assessment Summary:
+
+PROPERTY DETAILS:
+- Property Type: ${assessmentData.property_type || 'Not specified'}
+- Building Age: ${assessmentData.building_age || 'Not specified'}
+- Floors: ${assessmentData.floors || 'Not specified'}
+- Roof Type: ${assessmentData.roof_type || 'Not specified'}
+- Roof Area: ${assessmentData.roof_area || 0} sq meters
+- Roof Orientation: ${assessmentData.roof_orientation || 'Not specified'}
+- Shading Issues: ${assessmentData.shading_issues ? assessmentData.shading_issues.join(', ') : 'None'}
+
+ENERGY ANALYSIS:
+- Monthly Bill: KES ${assessmentData.monthly_bill || 0}
+- Monthly Consumption: ${assessmentData.monthly_consumption || 0} kWh
+- Peak Usage: ${assessmentData.peak_usage_time || 'Not specified'}
+- Backup Needs: ${assessmentData.backup_needs || 'Not specified'}
+- Grid Connection: ${assessmentData.grid_connection || 'Not specified'}`;
+
+            document.getElementById('notes').value = notes;
+
+            // Calculate savings preview
+            if (assessmentData.monthly_bill && assessmentData.system_capacity) {
+                const monthlySavings = assessmentData.monthly_bill * 0.35;
+                const annualSavings = monthlySavings * 12;
+                const systemCost = 35000 * assessmentData.system_capacity;
+                const paybackMonths = Math.round(systemCost / monthlySavings);
+                const roi = ((annualSavings / systemCost) * 100).toFixed(1);
+
+                document.getElementById('monthlySavings').textContent = `KES ${monthlySavings.toLocaleString()}`;
+                document.getElementById('annualSavings').textContent = `KES ${annualSavings.toLocaleString()}`;
+                document.getElementById('paybackPeriod').textContent = `${paybackMonths} months`;
+                document.getElementById('roiPercentage').textContent = `${roi}%`;
+
+                // Set hidden inputs
+                document.getElementById('estimated_monthly_savings').value = monthlySavings;
+                document.getElementById('estimated_annual_savings').value = annualSavings;
+                document.getElementById('payback_period_months').value = paybackMonths;
+                document.getElementById('roi_percentage').value = roi;
+            }
+        }
+    } catch(e) {
+        console.warn('Could not parse assessment data:', e);
+    }
+}
+
+// Customer selection handling
+document.getElementById('customer').addEventListener('change', function() {
+    const value = this.value;
+    const newCustomerForm = document.getElementById('newCustomerForm');
+    const customerPreview = document.getElementById('customerPreview');
+    
+    if (value === 'new') {
+        newCustomerForm.style.display = 'block';
+        customerPreview.style.display = 'none';
+    } else if (value) {
+        const option = this.selectedOptions[0];
+        newCustomerForm.style.display = 'none';
+        customerPreview.style.display = 'block';
+        
+        // Populate customer preview
+        const details = `
+            <strong>${option.dataset.name}</strong><br>
+            ${option.dataset.company ? option.dataset.company + '<br>' : ''}
+            ${option.dataset.email} | ${option.dataset.phone}<br>
+            Monthly Consumption: ${option.dataset.consumption} kWh | 
+            Average Bill: KES ${option.dataset.bill}
+        `;
+        document.getElementById('customerDetails').innerHTML = details;
+        
+        // Calculate savings if system capacity is set
+        calculateSavings();
+    } else {
+        newCustomerForm.style.display = 'none';
+        customerPreview.style.display = 'none';
+    }
+});
+
+// Add quotation item
+function addQuotationItem() {
+    itemCounter++;
+    const itemsContainer = document.getElementById('quotationItems');
+    
+    const itemHtml = `
+        <div class="item-row new-item" id="item-${itemCounter}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="mb-0">Item #${itemCounter}</h6>
+                <button type="button" class="remove-item-btn" onclick="removeItem(${itemCounter})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <select class="form-control form-control-sm" name="items[${itemCounter}][product]" 
+                            onchange="populateProductInfo(${itemCounter}, this.value)">
+                        <option value="">Select Product (Optional)</option>
+                        {% for product in products %}
+                        <option value="{{ product.pk }}" 
+                                data-name="{{ product.name }}"
+                                data-price="{{ product.price }}"
+                                data-sku="{{ product.sku }}"
+                                data-description="{{ product.description }}">
+                            {{ product.name }} - KES {{ product.price|floatformat:0 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" class="form-control form-control-sm" 
+                           name="items[${itemCounter}][item_name]" 
+                           placeholder="Item Name" required>
+                </div>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-12">
+                    <textarea class="form-control form-control-sm" 
+                              name="items[${itemCounter}][description]" 
+                              placeholder="Item Description" rows="2"></textarea>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-3">
+                    <input type="number" class="form-control form-control-sm" 
+                           name="items[${itemCounter}][quantity]" 
+                           placeholder="Quantity" step="0.01" value="1" 
+                           onchange="calculateItemTotal(${itemCounter})" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" 
+                           name="items[${itemCounter}][unit]" 
+                           placeholder="Unit" value="pcs">
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control form-control-sm" 
+                           name="items[${itemCounter}][unit_price]" 
+                           placeholder="Unit Price" step="0.01" 
+                           onchange="calculateItemTotal(${itemCounter})" required>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">KES</span>
+                        <input type="number" class="form-control form-control-sm" 
+                               name="items[${itemCounter}][total_price]" 
+                               placeholder="Total" step="0.01" readonly>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-info" id="productInfo-${itemCounter}"></div>
+        </div>
+    `;
+    
+    itemsContainer.insertAdjacentHTML('beforeend', itemHtml);
+}
+
+// Remove quotation item
+function removeItem(itemId) {
+    document.getElementById(`item-${itemId}`).remove();
+    calculateTotals();
+}
+
+// Populate product information
+function populateProductInfo(itemId, productId) {
+    const productSelect = document.querySelector(`[name="items[${itemId}][product]"]`);
+    const itemNameInput = document.querySelector(`[name="items[${itemId}][item_name]"]`);
+    const descriptionInput = document.querySelector(`[name="items[${itemId}][description]"]`);
+    const unitPriceInput = document.querySelector(`[name="items[${itemId}][unit_price]"]`);
+    const productInfoDiv = document.getElementById(`productInfo-${itemId}`);
+    
+    if (productId) {
+        const option = productSelect.selectedOptions[0];
+        itemNameInput.value = option.dataset.name;
+        descriptionInput.value = option.dataset.description;
+        unitPriceInput.value = option.dataset.price;
+        
+        productInfoDiv.innerHTML = `<strong>SKU:</strong> ${option.dataset.sku}`;
+        
+        calculateItemTotal(itemId);
+    } else {
+        productInfoDiv.innerHTML = '';
+    }
+}
+
+// Calculate item total
+function calculateItemTotal(itemId) {
+    const quantityInput = document.querySelector(`[name="items[${itemId}][quantity]"]`);
+    const unitPriceInput = document.querySelector(`[name="items[${itemId}][unit_price]"]`);
+    const totalPriceInput = document.querySelector(`[name="items[${itemId}][total_price]"]`);
+    
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const unitPrice = parseFloat(unitPriceInput.value) || 0;
+    const total = quantity * unitPrice;
+    
+    totalPriceInput.value = total.toFixed(2);
+    calculateTotals();
+}
+
+// Calculate quotation totals
+function calculateTotals() {
+    let subtotal = 0;
+    
+    // Sum all item totals
+    document.querySelectorAll('[name$="[total_price]"]').forEach(input => {
+        subtotal += parseFloat(input.value) || 0;
+    });
+    
+    const discountPercentage = parseFloat(document.getElementById('discount_percentage').value) || 0;
+    const discountAmount = (subtotal * discountPercentage) / 100;
+    const taxableAmount = subtotal - discountAmount;
+    const vatAmount = (taxableAmount * 16) / 100; // 16% VAT
+    const totalAmount = subtotal - discountAmount + vatAmount;
+    
+    // Update displays
+    document.getElementById('subtotalDisplay').textContent = `KES ${subtotal.toLocaleString()}`;
+    document.getElementById('discountDisplay').textContent = `KES ${discountAmount.toLocaleString()}`;
+    document.getElementById('vatDisplay').textContent = `KES ${vatAmount.toLocaleString()}`;
+    document.getElementById('totalDisplay').textContent = `KES ${totalAmount.toLocaleString()}`;
+    
+    // Update hidden inputs
+    document.getElementById('subtotal').value = subtotal.toFixed(2);
+    document.getElementById('discount_amount').value = discountAmount.toFixed(2);
+    document.getElementById('tax_amount').value = vatAmount.toFixed(2);
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    
+    calculateSavings();
+}
+
+// Calculate savings
+function calculateSavings() {
+    const customerSelect = document.getElementById('customer');
+    const systemCapacity = parseFloat(document.getElementById('system_capacity').value) || 0;
+    const totalAmount = parseFloat(document.getElementById('total_amount').value) || 0;
+    
+    if (customerSelect.value && customerSelect.value !== 'new' && systemCapacity > 0) {
+        const option = customerSelect.selectedOptions[0];
+        const currentBill = parseFloat(option.dataset.bill) || 0;
+        
+        // Estimate monthly savings (rough calculation)
+        const estimatedGeneration = systemCapacity * 120; // kWh per month (approx)
+        const savingsPerKwh = currentBill / (parseFloat(option.dataset.consumption) || 1);
+        const monthlySavings = estimatedGeneration * savingsPerKwh * 0.8; // 80% self-consumption
+        const annualSavings = monthlySavings * 12;
+        
+        // Calculate payback period and ROI
+        const paybackMonths = totalAmount / monthlySavings;
+        const roiPercentage = (annualSavings / totalAmount) * 100;
+        
+        // Update displays
+        document.getElementById('monthlySavings').textContent = `KES ${monthlySavings.toLocaleString()}`;
+        document.getElementById('annualSavings').textContent = `KES ${annualSavings.toLocaleString()}`;
+        document.getElementById('paybackPeriod').textContent = `${Math.round(paybackMonths)} months`;
+        document.getElementById('roiPercentage').textContent = `${roiPercentage.toFixed(1)}%`;
+        
+        // Update hidden inputs
+        document.getElementById('estimated_monthly_savings').value = monthlySavings.toFixed(2);
+        document.getElementById('estimated_annual_savings').value = annualSavings.toFixed(2);
+        document.getElementById('payback_period_months').value = Math.round(paybackMonths);
+        document.getElementById('roi_percentage').value = roiPercentage.toFixed(2);
+        
+        // Auto-fill estimated generation
+        document.getElementById('estimated_generation').value = estimatedGeneration;
+    }
+}
+
+// System capacity change handler
+document.getElementById('system_capacity').addEventListener('input', calculateSavings);
+
+// Load template
+function loadTemplate() {
+    document.getElementById('templateModal').modal('show');
+}
+
+// Select template
+function selectTemplate(templateId) {
+    // This would load template data via AJAX
+    alert('Template loading functionality would be implemented here');
+}
+
+// Save as draft
+function saveAsDraft() {
+    const form = document.getElementById('quotationForm');
+    const statusInput = document.createElement('input');
+    statusInput.type = 'hidden';
+    statusInput.name = 'status';
+    statusInput.value = 'draft';
+    form.appendChild(statusInput);
+    form.submit();
+}
+
+// Initialize with one item
+document.addEventListener('DOMContentLoaded', function() {
+    addQuotationItem();
+
+    // Auto-fill from assessment data if available
+    {% if from_requirements %}autofillFromAssessment();{% endif %}
+});
+
+// Form validation
+document.getElementById('quotationForm').addEventListener('submit', function(e) {
+    const items = document.querySelectorAll('.item-row');
+    if (items.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one item to the quotation.');
+        return false;
+    }
+    
+    let hasValidItem = false;
+    items.forEach(item => {
+        const itemName = item.querySelector('[name$="[item_name]"]').value;
+        const quantity = item.querySelector('[name$="[quantity]"]').value;
+        const unitPrice = item.querySelector('[name$="[unit_price]"]').value;
+        
+        if (itemName && quantity && unitPrice) {
+            hasValidItem = true;
+        }
+    });
+    
+    if (!hasValidItem) {
+        e.preventDefault();
+        alert('Please fill in all required fields for at least one item.');
+        return false;
+    }
+});
+
+// Quotation Customer Modal
+function openQuotationCustomerModal() {
+    openCustomerModal({
+        targetSelectId: 'customer',
+        includeBusinessFields: true,
+        includeSolarFields: true,
+        onCustomerCreated: function(customer) {
+            // Refresh customer dropdown or add new customer option
+            const customerSelect = document.getElementById('customer');
+            if (customerSelect) {
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.display_name;
+                option.selected = true;
+                
+                // Add customer data attributes for quotation prefill
+                option.setAttribute('data-name', customer.name || '');
+                option.setAttribute('data-email', customer.email || '');
+                option.setAttribute('data-phone', customer.phone || '');
+                option.setAttribute('data-company', customer.company_name || '');
+                option.setAttribute('data-consumption', customer.monthly_consumption || '0');
+                option.setAttribute('data-bill', customer.average_monthly_bill || '0');
+                option.setAttribute('data-property', customer.property_type || 'residential');
+                option.setAttribute('data-roof', customer.roof_type || 'iron_sheets');
+                option.setAttribute('data-roof-area', customer.roof_area || '0');
+                
+                customerSelect.appendChild(option);
+                
+                // Trigger change event to update customer preview
+                customerSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+}
+</script>
+
+<!-- Universal Customer Modal JS -->
+{% include "components/customer_modal_js.html" %}
+{% endblock %}

@@ -1,0 +1,593 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Inventory Item - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:item_list' %}">Items</a></li>
+{% if object %}
+<li class="breadcrumb-item"><a href="{% url 'inventory:item_detail' object.pk %}">{{ object.product.name }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add Item</li>
+{% endif %}
+{% endblock %}
+
+{% block page_name %}{% if object %}Edit{% else %}Add{% endif %} Inventory Item{% endblock %}
+{% block page_title %}{% if object %}Edit{% else %}Add{% endif %} Inventory Item{% endblock %}
+{% block page_subtitle %}{% if object %}Update inventory item settings{% else %}Add new item to inventory{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .section-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+    
+    .section-title {
+        margin: 0;
+        color: #495057;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .section-description {
+        margin: 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .threshold-visual {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .threshold-bar {
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        margin: 1rem 0;
+    }
+    
+    .threshold-marker {
+        position: absolute;
+        top: 0;
+        width: 3px;
+        height: 100%;
+        background: #dc3545;
+        z-index: 2;
+    }
+    
+    .threshold-marker.reorder { background: #ffc107; }
+    .threshold-marker.max { background: #28a745; }
+    
+    .location-preview {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: var(--border-radius);
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .cost-section {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-save {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c8fd6 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .btn-save:hover {
+        background: linear-gradient(135deg, #2c8fd6 0%, #1976d2 100%);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .required-asterisk {
+        color: #dc3545;
+    }
+    
+    .product-selector {
+        border: 2px dashed #dee2e6;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        transition: border-color 0.2s;
+    }
+    
+    .product-selector:hover {
+        border-color: #38b6ff;
+    }
+    
+    .product-selected {
+        border-color: #28a745;
+        background: #f8fff9;
+    }
+    
+    .selected-product {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: white;
+        border-radius: var(--border-radius);
+        border: 1px solid #28a745;
+    }
+    
+    .product-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        margin-right: 1rem;
+    }
+    
+    .product-placeholder {
+        width: 60px;
+        height: 60px;
+        background: #e9ecef;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="inventoryItemForm">
+    {% csrf_token %}
+    {% if not object %}
+    <input type="hidden" name="product" id="selectedProductId">
+    {% endif %}
+    
+    <!-- Product Selection -->
+    {% if not object %}
+    <div class="form-section">
+        <div class="section-header">
+            <h5 class="section-title">Product Selection <span class="required-asterisk">*</span></h5>
+            <p class="section-description">Select the product to add to inventory</p>
+        </div>
+        <div class="card-body">
+            <div class="product-selector" id="productSelector">
+                <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                <h6>Select a Product</h6>
+                <p class="text-muted">Click to choose a product for inventory management</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productSelectModal">
+                    <i class="fas fa-plus me-2"></i>Choose Product
+                </button>
+            </div>
+            
+            <div id="selectedProductDisplay" style="display: none;">
+                <div class="selected-product">
+                    <div class="product-image-container"></div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold product-name"></div>
+                        <div class="text-muted product-category"></div>
+                        <code class="product-sku"></code>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changeProduct()">
+                        <i class="fas fa-edit me-1"></i>Change
+                    </button>
+                </div>
+            </div>
+            
+            <input type="hidden" name="product" id="selectedProductId" required>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Warehouse and Location -->
+    <div class="form-section">
+        <div class="section-header">
+            <h5 class="section-title">Warehouse & Location</h5>
+            <p class="section-description">Specify where this item will be stored</p>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Warehouse <span class="required-asterisk">*</span></label>
+                        <select name="{{ form.warehouse.name }}" id="{{ form.warehouse.id_for_label }}" class="form-select">
+                            {% for value, text in form.warehouse.field.choices %}
+                                <option value="{{ value }}" {% if form.warehouse.value == value %}selected{% endif %}>{{ text }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.warehouse.errors %}
+                            <div class="text-danger small">{{ form.warehouse.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-help">Select the warehouse where this item will be stored</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Bin Location</label>
+                        <input type="text" name="{{ form.bin_location.name }}" id="{{ form.bin_location.id_for_label }}" class="form-control" value="{{ form.bin_location.value|default:'' }}">
+                        {% if form.bin_location.errors %}
+                            <div class="text-danger small">{{ form.bin_location.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-help">Specific bin or area within the warehouse</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Row</label>
+                        <input type="text" name="{{ form.row.name }}" id="{{ form.row.id_for_label }}" class="form-control" value="{{ form.row.value|default:'' }}">
+                        {% if form.row.errors %}
+                            <div class="text-danger small">{{ form.row.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Shelf</label>
+                        <input type="text" name="{{ form.shelf.name }}" id="{{ form.shelf.id_for_label }}" class="form-control" value="{{ form.shelf.value|default:'' }}">
+                        {% if form.shelf.errors %}
+                            <div class="text-danger small">{{ form.shelf.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="location-preview" id="locationPreview">
+                <strong>Location Preview:</strong> <span id="locationDisplay"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Thresholds -->
+    <div class="form-section">
+        <div class="section-header">
+            <h5 class="section-title">Stock Thresholds</h5>
+            <p class="section-description">Set reorder points and maximum stock levels</p>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Reorder Point</label>
+                        <input type="number" name="{{ form.reorder_point.name }}" id="{{ form.reorder_point.id_for_label }}" class="form-control" value="{{ form.reorder_point.value|default:'' }}" min="0" step="1">
+                        {% if form.reorder_point.errors %}
+                            <div class="text-danger small">{{ form.reorder_point.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-help">Trigger reorder when stock reaches this level</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Safety Stock</label>
+                        <input type="number" name="{{ form.safety_stock.name }}" id="{{ form.safety_stock.id_for_label }}" class="form-control" value="{{ form.safety_stock.value|default:'' }}" min="0" step="1">
+                        {% if form.safety_stock.errors %}
+                            <div class="text-danger small">{{ form.safety_stock.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-help">Minimum buffer stock to maintain</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Maximum Stock</label>
+                        <input type="number" name="{{ form.maximum_stock.name }}" id="{{ form.maximum_stock.id_for_label }}" class="form-control" value="{{ form.maximum_stock.value|default:'' }}" min="0" step="1">
+                        {% if form.maximum_stock.errors %}
+                            <div class="text-danger small">{{ form.maximum_stock.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-help">Maximum quantity to stock</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="threshold-visual">
+                <label class="form-label">Threshold Visualization</label>
+                <div class="threshold-bar" id="thresholdBar">
+                    <div class="threshold-marker reorder" id="reorderMarker" title="Reorder Point"></div>
+                    <div class="threshold-marker max" id="maxMarker" title="Maximum Stock"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>0</span>
+                    <span id="reorderLabel">Reorder: 0</span>
+                    <span id="maxLabel">Max: 0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Stock (for existing items) -->
+    {% if object %}
+    <div class="form-section">
+        <div class="section-header">
+            <h5 class="section-title">Current Stock Information</h5>
+            <p class="section-description">Current stock levels and costing information</p>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label text-muted">Quantity on Hand</label>
+                        <div class="h5">{{ object.quantity_on_hand }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label text-muted">Available Quantity</label>
+                        <div class="h5">{{ object.available_quantity }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label text-muted">Allocated</label>
+                        <div class="h5">{{ object.quantity_allocated }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label text-muted">On Order</label>
+                        <div class="h5">{{ object.quantity_on_order }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cost-section">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Average Cost</label>
+                        <div class="h6">{{ company.default_currency|default:"KES" }} {{ object.average_cost|floatformat:2 }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Last Cost</label>
+                        <div class="h6">{{ company.default_currency|default:"KES" }} {{ object.last_cost|floatformat:2 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Form Actions -->
+    <div class="d-flex justify-content-between">
+        <a href="{% if object %}{% url 'inventory:item_detail' object.pk %}{% else %}{% url 'inventory:item_list' %}{% endif %}" class="btn btn-outline-secondary">
+            <i class="fas fa-times me-2"></i>Cancel
+        </a>
+        
+        <div>
+            {% if object %}
+            <a href="{% url 'inventory:item_detail' object.pk %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-eye me-2"></i>View Details
+            </a>
+            {% endif %}
+            <button type="submit" class="btn btn-save">
+                <i class="fas fa-save me-2"></i>{% if object %}Update Item{% else %}Create Item{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Product Selection Modal (for new items) -->
+{% if not object %}
+<div class="modal fade" id="productSelectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="productSearch" placeholder="Search products...">
+                </div>
+                <div id="productsList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Products will be loaded here via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update threshold visualization
+    updateThresholdVisualization();
+    
+    // Update location preview
+    updateLocationPreview();
+    
+    // Attach event listeners
+    ['reorder_point', 'safety_stock', 'maximum_stock'].forEach(field => {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.addEventListener('input', updateThresholdVisualization);
+        }
+    });
+    
+    ['warehouse', 'bin_location', 'row', 'shelf'].forEach(field => {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.addEventListener('change', updateLocationPreview);
+        }
+    });
+    
+    {% if not object %}
+    // Load products for selection
+    loadProducts();
+    
+    // Product search
+    document.getElementById('productSearch').addEventListener('input', function() {
+        loadProducts(this.value);
+    });
+    {% endif %}
+});
+
+function updateThresholdVisualization() {
+    const reorderPoint = parseFloat(document.querySelector('[name="reorder_point"]').value) || 0;
+    const maxStock = parseFloat(document.querySelector('[name="maximum_stock"]').value) || 100;
+    
+    if (maxStock > 0) {
+        const reorderPct = (reorderPoint / maxStock) * 100;
+        
+        document.getElementById('reorderMarker').style.left = `${Math.min(reorderPct, 100)}%`;
+        document.getElementById('reorderLabel').textContent = `Reorder: ${reorderPoint}`;
+        document.getElementById('maxLabel').textContent = `Max: ${maxStock}`;
+    }
+}
+
+function updateLocationPreview() {
+    const warehouse = document.querySelector('[name="warehouse"]').selectedOptions[0]?.text || '';
+    const binLocation = document.querySelector('[name="bin_location"]').value;
+    const row = document.querySelector('[name="row"]').value;
+    const shelf = document.querySelector('[name="shelf"]').value;
+    
+    let location = warehouse;
+    if (binLocation) location += ` → ${binLocation}`;
+    if (row) location += ` → Row ${row}`;
+    if (shelf) location += ` → Shelf ${shelf}`;
+    
+    const preview = document.getElementById('locationPreview');
+    const display = document.getElementById('locationDisplay');
+    
+    if (location && location !== warehouse) {
+        display.textContent = location;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+{% if not object %}
+function loadProducts(search = '') {
+    fetch(`/inventory/api/products/?search=${encodeURIComponent(search)}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('productsList');
+            container.innerHTML = '';
+            
+            data.results.forEach(product => {
+                const productDiv = document.createElement('div');
+                productDiv.className = 'product-item p-3 border rounded mb-2 cursor-pointer';
+                productDiv.style.cursor = 'pointer';
+                productDiv.onclick = () => selectProduct(product);
+                
+                productDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        ${product.image ? 
+                            `<img src="${product.image}" alt="${product.name}" class="product-image me-3">` :
+                            `<div class="product-placeholder me-3"><i class="fas fa-box"></i></div>`
+                        }
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${product.name}</div>
+                            <div class="text-muted">${product.category || 'No category'}</div>
+                            <code>${product.sku}</code>
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">Available</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(productDiv);
+            });
+            
+            if (data.results.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">No products found</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+        });
+}
+
+function selectProduct(product) {
+    document.getElementById('selectedProductId').value = product.id;
+    
+    const display = document.getElementById('selectedProductDisplay');
+    const selector = document.getElementById('productSelector');
+    
+    display.querySelector('.product-name').textContent = product.name;
+    display.querySelector('.product-category').textContent = product.category || 'No category';
+    display.querySelector('.product-sku').textContent = product.sku;
+    
+    const imageContainer = display.querySelector('.product-image-container');
+    if (product.image) {
+        imageContainer.innerHTML = `<img src="${product.image}" alt="${product.name}" class="product-image">`;
+    } else {
+        imageContainer.innerHTML = '<div class="product-placeholder"><i class="fas fa-box"></i></div>';
+    }
+    
+    selector.style.display = 'none';
+    display.style.display = 'block';
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('productSelectModal')).hide();
+}
+
+function changeProduct() {
+    document.getElementById('selectedProductId').value = '';
+    document.getElementById('productSelector').style.display = 'block';
+    document.getElementById('selectedProductDisplay').style.display = 'none';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('productSelectModal'));
+    modal.show();
+}
+{% endif %}
+
+// Form validation
+document.getElementById('inventoryItemForm').addEventListener('submit', function(e) {
+    {% if not object %}
+    if (!document.getElementById('selectedProductId').value) {
+        e.preventDefault();
+        alert('Please select a product first.');
+        return false;
+    }
+    {% endif %}
+    
+    const reorderPoint = parseFloat(document.querySelector('[name="reorder_point"]').value) || 0;
+    const maxStock = parseFloat(document.querySelector('[name="maximum_stock"]').value) || 0;
+    
+    if (reorderPoint >= maxStock) {
+        e.preventDefault();
+        alert('Reorder point must be less than maximum stock.');
+        return false;
+    }
+});
+</script>
+{% endblock %}

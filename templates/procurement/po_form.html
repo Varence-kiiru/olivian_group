@@ -1,0 +1,264 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Purchase Order{% else %}Create Purchase Order{% endif %} - {{ block.super }}{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Purchase Order{% else %}Create Purchase Order{% endif %}{% endblock %}
+{% block page_subtitle %}{% if form.instance.pk %}Update purchase order details{% else %}Create a new purchase order for procurement{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:po_list' %}">Purchase Orders</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Edit PO{% else %}Create PO{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #38b6ff;
+    }
+    
+    .section-title {
+        color: #38b6ff;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background-color: #38b6ff;
+        border-color: #38b6ff;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    .btn-secondary {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .action-buttons {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+    
+    .required-field {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="form-card">
+        <h5 class="section-title">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Basic Information
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.vendor.id_for_label }}" class="form-label">
+                        Vendor <span class="required-field">*</span>
+                    </label>
+                    {{ form.vendor }}
+                    {% if form.vendor.errors %}
+                        <div class="text-danger small mt-1">{{ form.vendor.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.po_number.id_for_label }}" class="form-label">
+                        PO Number <span class="required-field">*</span>
+                    </label>
+                    {{ form.po_number }}
+                    {% if form.po_number.errors %}
+                        <div class="text-danger small mt-1">{{ form.po_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.po_date.id_for_label }}" class="form-label">
+                        PO Date <span class="required-field">*</span>
+                    </label>
+                    {{ form.po_date }}
+                    {% if form.po_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.po_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.expected_delivery_date.id_for_label }}" class="form-label">
+                        Expected Delivery Date
+                    </label>
+                    {{ form.expected_delivery_date }}
+                    {% if form.expected_delivery_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.expected_delivery_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                        Status <span class="required-field">*</span>
+                    </label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.priority.id_for_label }}" class="form-label">
+                        Priority
+                    </label>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                        <div class="text-danger small mt-1">{{ form.priority.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Financial Information -->
+    <div class="form-card">
+        <h5 class="section-title">
+            <i class="fas fa-calculator me-2"></i>Financial Details
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="{{ form.subtotal.id_for_label }}" class="form-label">
+                        Subtotal (KES)
+                    </label>
+                    {{ form.subtotal }}
+                    {% if form.subtotal.errors %}
+                        <div class="text-danger small mt-1">{{ form.subtotal.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="{{ form.tax_amount.id_for_label }}" class="form-label">
+                        VAT Amount (16%)
+                    </label>
+                    {{ form.tax_amount }}
+                    {% if form.tax_amount.errors %}
+                        <div class="text-danger small mt-1">{{ form.tax_amount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="{{ form.total_amount.id_for_label }}" class="form-label">
+                        Total Amount (KES)
+                    </label>
+                    {{ form.total_amount }}
+                    {% if form.total_amount.errors %}
+                        <div class="text-danger small mt-1">{{ form.total_amount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Information -->
+    <div class="form-card">
+        <h5 class="section-title">
+            <i class="fas fa-info-circle me-2"></i>Additional Information
+        </h5>
+        
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}" class="form-label">
+                Description
+            </label>
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                Internal Notes
+            </label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+                <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.terms_and_conditions.id_for_label }}" class="form-label">
+                Terms & Conditions
+            </label>
+            {{ form.terms_and_conditions }}
+            {% if form.terms_and_conditions.errors %}
+                <div class="text-danger small mt-1">{{ form.terms_and_conditions.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="action-buttons text-end">
+        <a href="{% url 'procurement:po_list' %}" class="btn btn-secondary me-2">
+            <i class="fas fa-arrow-left me-2"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>
+            {% if form.instance.pk %}Update Purchase Order{% else %}Create Purchase Order{% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}

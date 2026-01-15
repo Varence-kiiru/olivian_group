@@ -1,0 +1,89 @@
+{% load static %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="alert alert-info">
+    <i class="fas fa-shield-alt me-2"></i>
+    <strong>Staff Portal Access</strong><br>
+    This area is restricted to authorized personnel only.
+</div>
+
+<form method="post" action="{% url 'accounts:login' %}?staff=1" id="staffLoginFormElement">
+    {% csrf_token %}
+    <input type="hidden" name="portal_type" value="staff">
+    
+    <div class="mb-3">
+        <label for="staff_username" class="form-label">
+            <i class="fas fa-user-tie me-2"></i>Staff Email or Username
+        </label>
+        <input type="text" class="form-control" name="username" id="staff_username" 
+               placeholder="Enter your staff email or username" required
+               autocomplete="username">
+    </div>
+    
+    <div class="mb-3">
+        <label for="staff_password" class="form-label">
+            <i class="fas fa-key me-2"></i>Password
+        </label>
+        <div class="input-group">
+            <input type="password" class="form-control" name="password" id="staff_password" 
+                   placeholder="Enter your password" required autocomplete="current-password">
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('staff_password')" tabindex="-1">
+                <i class="fas fa-eye" id="staff_passwordToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="remember_me" id="staff_remember_me">
+                <label class="form-check-label" for="staff_remember_me">
+                    Keep me signed in
+                </label>
+            </div>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'accounts:staff_password_reset' %}" class="text-decoration-none">
+                Forgot Password?
+            </a>
+        </div>
+    </div>
+    
+    <div class="d-grid gap-2 mb-3">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-sign-in-alt me-2"></i>Access Staff Portal
+        </button>
+    </div>
+    
+    <div class="text-center">
+        <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            For technical support, contact IT department
+        </small>
+    </div>
+</form>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + 'ToggleIcon');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>

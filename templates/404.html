@@ -1,0 +1,104 @@
+{% extends 'error_base.html' %}
+
+{% block title %}Page Not Found - The Olivian Group Limited{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top: 120px; min-height: 60vh; display: flex; align-items: center;">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="error-content">
+                    <h1 style="font-size: 8rem; font-weight: 800; color: var(--primary-color); margin-bottom: 0;">404</h1>
+                    <h2 class="mb-4">Page Not Found</h2>
+                    <p class="lead mb-4">Sorry, the page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.</p>
+                    
+                    <div class="d-flex justify-content-center gap-3 flex-wrap mb-5">
+                        <a href="{% url 'core:home' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-home me-2"></i>Go Home
+                        </a>
+                        <a href="{% url 'products:list' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-shopping-bag me-2"></i>Browse Products
+                        </a>
+                        <a href="{% url 'core:contact' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-envelope me-2"></i>Contact Us
+                        </a>
+                    </div>
+                    
+                    <!-- Search -->
+                    <div class="row justify-content-center">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Search for products or pages...">
+                                <button class="btn btn-primary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Popular Pages -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Popular Pages</h2>
+            <p class="section-subtitle">Here are some pages you might be looking for</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-solar-panel"></i>
+                        </div>
+                        <h5>Solar Products</h5>
+                        <p>Browse our complete range of solar panels, inverters, and batteries.</p>
+                        <a href="{% url 'products:list' %}" class="btn btn-outline-primary">View Products</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h5>Solar Calculator</h5>
+                        <p>Calculate your potential savings with our solar calculator tool.</p>
+                        <a href="/quotations/calculator/" class="btn btn-outline-primary">Calculate Now</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <h5>Our Services</h5>
+                        <p>Learn about our professional solar installation and maintenance services.</p>
+                        <a href="{% url 'core:services' %}" class="btn btn-outline-primary">View Services</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h5>Contact Us</h5>
+                        <p>Get in touch with our solar experts for personalized assistance.</p>
+                        <a href="{% url 'core:contact' %}" class="btn btn-outline-primary">Contact Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

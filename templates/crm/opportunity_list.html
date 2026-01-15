@@ -1,0 +1,301 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Opportunities - {{ block.super }}{% endblock %}
+
+{% block page_title %}Sales Opportunities{% endblock %}
+{% block page_subtitle %}Manage and track sales opportunities{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Opportunities</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .opportunity-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid var(--primary-color);
+        transition: transform 0.2s ease;
+    }
+    
+    .opportunity-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .opportunity-card.won { border-left-color: #28a745; }
+    .opportunity-card.lost { border-left-color: #dc3545; }
+    .opportunity-card.in-progress { border-left-color: #ffc107; }
+    .opportunity-card.qualified { border-left-color: #17a2b8; }
+    
+    .opportunity-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .opportunity-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-new { background: #cce5ff; color: #004085; }
+    .status-qualified { background: #b3e5fc; color: #006064; }
+    .status-proposal { background: #fff3cd; color: #856404; }
+    .status-negotiation { background: #f8d7da; color: #721c24; }
+    .status-won { background: #d4edda; color: #155724; }
+    .status-lost { background: #f5c6cb; color: #721c24; }
+    
+    .opportunity-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .probability-bar {
+        height: 4px;
+        background: #e9ecef;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .probability-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+        transition: width 0.3s ease;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-bullseye me-2"></i>Sales Opportunities
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'crm:opportunity_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Opportunity
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Opportunity name, company...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="stage" class="form-label">Stage</label>
+            <select class="form-select" id="stage" name="stage">
+                <option value="">All Stages</option>
+                <option value="new" {% if current_stage == 'new' %}selected{% endif %}>New</option>
+                <option value="qualified" {% if current_stage == 'qualified' %}selected{% endif %}>Qualified</option>
+                <option value="proposal" {% if current_stage == 'proposal' %}selected{% endif %}>Proposal</option>
+                <option value="negotiation" {% if current_stage == 'negotiation' %}selected{% endif %}>Negotiation</option>
+                <option value="won" {% if current_stage == 'won' %}selected{% endif %}>Won</option>
+                <option value="lost" {% if current_stage == 'lost' %}selected{% endif %}>Lost</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="assigned_to" class="form-label">Assigned To</label>
+            <select class="form-select" id="assigned_to" name="assigned_to">
+                <option value="">All Users</option>
+                {% for user in sales_users %}
+                <option value="{{ user.id }}" {% if current_assigned_to == user.id|stringformat:"s" %}selected{% endif %}>
+                    {{ user.get_full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="value_range" class="form-label">Value Range</label>
+            <select class="form-select" id="value_range" name="value_range">
+                <option value="">All Values</option>
+                <option value="0-10000" {% if current_value_range == '0-10000' %}selected{% endif %}>KES 0 - 10,000</option>
+                <option value="10000-50000" {% if current_value_range == '10000-50000' %}selected{% endif %}>KES 10K - 50K</option>
+                <option value="50000-100000" {% if current_value_range == '50000-100000' %}selected{% endif %}>KES 50K - 100K</option>
+                <option value="100000+" {% if current_value_range == '100000+' %}selected{% endif %}>KES 100K+</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Opportunities Grid -->
+<div class="row">
+    {% for opportunity in opportunities %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="opportunity-card {{ opportunity.stage }}">
+            <!-- Opportunity Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'crm:opportunity_detail' opportunity.pk %}" class="text-decoration-none">
+                            {{ opportunity.name }}
+                        </a>
+                    </h6>
+                    <div class="opportunity-meta">
+                        {{ opportunity.contact.company|default:"Individual Customer" }}
+                    </div>
+                </div>
+                <span class="opportunity-status status-{{ opportunity.stage }}">{{ opportunity.get_stage_display }}</span>
+            </div>
+            
+            <!-- Opportunity Value -->
+            <div class="mb-3">
+                <div class="opportunity-meta mb-1">Estimated Value</div>
+                <div class="opportunity-value">
+                    KES {{ opportunity.estimated_value|floatformat:0 }}
+                </div>
+            </div>
+            
+            <!-- Opportunity Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="opportunity-meta mb-1">Probability</div>
+                    <div class="small">{{ opportunity.probability }}%</div>
+                    <div class="probability-bar">
+                        <div class="probability-fill" style="width: {{ opportunity.probability }}%;"></div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="opportunity-meta mb-1">Expected Close</div>
+                    <div class="small">{{ opportunity.expected_close_date|date:"M d, Y" }}</div>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="mb-3">
+                <div class="opportunity-meta mb-1">Contact</div>
+                <div class="small">{{ opportunity.contact.name }}</div>
+                <div class="small text-muted">{{ opportunity.contact.email }}</div>
+            </div>
+            
+            <!-- Assigned Sales Person -->
+            <div class="mb-3">
+                <div class="opportunity-meta mb-1">Assigned To</div>
+                <div class="small">{{ opportunity.assigned_to.get_full_name|default:"Unassigned" }}</div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'crm:opportunity_detail' opportunity.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                <a href="{% url 'crm:opportunity_update' opportunity.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% if opportunity.stage != 'won' and opportunity.stage != 'lost' %}
+                <button class="btn btn-outline-success btn-sm" onclick="updateStage({{ opportunity.pk }}, 'won')">
+                    <i class="fas fa-trophy me-1"></i>Win
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-bullseye fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No opportunities found</h5>
+            <p class="text-muted">
+                {% if current_search or current_stage or current_assigned_to or current_value_range %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by creating your first sales opportunity.
+                {% endif %}
+            </p>
+            <a href="{% url 'crm:opportunity_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Opportunity
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Opportunities pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_stage %}&stage={{ current_stage }}{% endif %}{% if current_assigned_to %}&assigned_to={{ current_assigned_to }}{% endif %}{% if current_value_range %}&value_range={{ current_value_range }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_stage %}&stage={{ current_stage }}{% endif %}{% if current_assigned_to %}&assigned_to={{ current_assigned_to }}{% endif %}{% if current_value_range %}&value_range={{ current_value_range }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_stage %}&stage={{ current_stage }}{% endif %}{% if current_assigned_to %}&assigned_to={{ current_assigned_to }}{% endif %}{% if current_value_range %}&value_range={{ current_value_range }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_stage %}&stage={{ current_stage }}{% endif %}{% if current_assigned_to %}&assigned_to={{ current_assigned_to }}{% endif %}{% if current_value_range %}&value_range={{ current_value_range }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<script>
+function updateStage(opportunityId, newStage) {
+    if (confirm('Are you sure you want to mark this opportunity as ' + newStage + '?')) {
+        // Add AJAX call to update opportunity stage
+        alert('Stage update feature coming soon!');
+    }
+}
+</script>
+{% endblock %}

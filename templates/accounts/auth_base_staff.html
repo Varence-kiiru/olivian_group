@@ -1,0 +1,33 @@
+{% extends 'dashboard/base.html' %}
+{% comment %}
+Staff auth base template - uses dashboard base
+{% endcomment %}
+
+{% comment %}
+Common page structure for staff authentication pages
+{% endcomment %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        padding: 2rem 0;
+    }
+    .auth-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,396 @@
+{% extends 'website/base.html' %}
+{% load humanize %}
+
+{% block title %}Solar Quotation {{ quotation.quotation_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --primary-color: {{ company.primary_color|default:"#38b6ff" }};
+    --secondary-color: #ffffff;
+  }
+  
+  .quotation-header {
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+  }
+  
+  .company-logo {
+    max-height: 80px;
+    margin-bottom: 1rem;
+  }
+  
+  .quotation-card {
+    background: white;
+    border: 1px solid #e3e6f0;
+    border-radius: 15px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 2rem;
+  }
+  
+  .quotation-card-header {
+    background: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    border-radius: 15px 15px 0 0;
+    padding: 1.5rem;
+  }
+  
+  .quotation-card-body {
+    padding: 1.5rem;
+  }
+  
+  .status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+  
+  .status-draft { background: #ffeaa7; color: #2d3436; }
+  .status-sent { background: #74b9ff; color: white; }
+  .status-accepted { background: #00b894; color: white; }
+  .status-rejected { background: #fd79a8; color: white; }
+  
+  .system-specs {
+    background: #f8f9fc;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin: 1rem 0;
+  }
+  
+  .financial-summary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin: 1rem 0;
+  }
+  
+  .action-buttons {
+    position: sticky;
+    top: 20px;
+    z-index: 1000;
+  }
+  
+  @media print {
+    .action-buttons, .no-print {
+      display: none !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Quotation Header -->
+<div class="quotation-header">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        {% if company.logo %}
+          <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="company-logo">
+        {% endif %}
+        <h1 class="mb-0">Solar System Quotation</h1>
+        <p class="lead mb-0">{{ quotation.quotation_number }}</p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <span class="status-badge status-{{ quotation.status }}">
+          {{ quotation.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+      
+      <!-- Customer Information -->
+      <div class="quotation-card">
+        <div class="quotation-card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-user me-2"></i>Customer Information
+          </h5>
+        </div>
+        <div class="quotation-card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <strong>Name:</strong> {{ customer.name }}<br>
+              <strong>Email:</strong> {{ customer.email }}<br>
+              {% if customer.phone %}
+                <strong>Phone:</strong> {{ customer.phone }}<br>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              {% if customer.city %}
+                <strong>City:</strong> {{ customer.city }}<br>
+              {% endif %}
+              <strong>Property Type:</strong> {{ customer.get_property_type_display }}<br>
+              <strong>Monthly Consumption:</strong> {{ customer.monthly_consumption|floatformat:0 }} kWh<br>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Specifications -->
+      <div class="quotation-card">
+        <div class="quotation-card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-solar-panel me-2"></i>Solar System Specifications
+          </h5>
+        </div>
+        <div class="quotation-card-body">
+          <div class="system-specs">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>System Details</h6>
+                <strong>Capacity:</strong> {{ quotation.system_capacity }} kW<br>
+                <strong>Type:</strong> {{ quotation.get_system_type_display }}<br>
+                <strong>Monthly Generation:</strong> {{ quotation.estimated_generation|floatformat:0 }} kWh<br>
+                <strong>Installation:</strong> {{ quotation.get_installation_complexity_display }}<br>
+              </div>
+              <div class="col-md-6">
+                <h6>Performance Metrics</h6>
+                <strong>Monthly Savings:</strong> KES {{ quotation.estimated_monthly_savings|floatformat:0|intcomma }}<br>
+                <strong>Annual Savings:</strong> KES {{ quotation.estimated_annual_savings|floatformat:0|intcomma }}<br>
+                <strong>Payback Period:</strong> {% if quotation.payback_period_months %}{% widthratio quotation.payback_period_months 12 1 %}{% else %}0{% endif %} years<br>
+                <strong>ROI:</strong> {{ quotation.roi_percentage }}%<br>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Components -->
+      <div class="quotation-card">
+        <div class="quotation-card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>System Components
+          </h5>
+        </div>
+        <div class="quotation-card-body">
+          {% if quotation.items.all %}
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th>Description</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in quotation.items.all %}
+                  <tr>
+                    <td><strong>{{ item.item_name }}</strong></td>
+                    <td>{{ item.description|default:"" }}</td>
+                    <td class="text-center">{{ item.quantity|floatformat:0 }} {{ item.unit }}</td>
+                    <td class="text-end">KES {{ item.unit_price|floatformat:0|intcomma }}</td>
+                    <td class="text-end">KES {{ item.total_price|floatformat:0|intcomma }}</td>
+                  </tr>
+                  {% endfor %}
+                  <tr class="table-active">
+                    <td colspan="4" class="text-end"><strong>Subtotal (Ex-VAT):</strong></td>
+                    <td class="text-end"><strong>KES {{ quotation.subtotal|floatformat:0|intcomma }}</strong></td>
+                  </tr>
+                  {% if quotation.discount_amount %}
+                  <tr>
+                    <td colspan="4" class="text-end">Discount ({{ quotation.discount_percentage }}%):</td>
+                    <td class="text-end">- KES {{ quotation.discount_amount|floatformat:0|intcomma }}</td>
+                  </tr>
+                  {% endif %}
+                  <tr>
+                    <td colspan="4" class="text-end">VAT (16%):</td>
+                    <td class="text-end">KES {{ quotation.tax_amount|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr class="table-success">
+                    <td colspan="4" class="text-end"><strong>Total Amount:</strong></td>
+                    <td class="text-end"><strong>KES {{ quotation.total_amount|floatformat:0|intcomma }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>System components not available.</strong> This quotation was created without detailed component breakdown.
+              Please contact us for a detailed component list.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Financial Summary -->
+      <div class="quotation-card">
+        <div class="quotation-card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-calculator me-2"></i>Financial Summary
+          </h5>
+        </div>
+        <div class="quotation-card-body">
+          <div class="financial-summary">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-white">Investment</h6>
+                <div class="d-flex justify-content-between">
+                  <span>Subtotal:</span>
+                  <span>KES {{ quotation.subtotal|floatformat:0|intcomma }}</span>
+                </div>
+                {% if quotation.discount_amount %}
+                <div class="d-flex justify-content-between">
+                  <span>Discount:</span>
+                  <span>- KES {{ quotation.discount_amount|floatformat:0|intcomma }}</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between">
+                  <span>VAT (16%):</span>
+                  <span>KES {{ quotation.tax_amount|floatformat:0|intcomma }}</span>
+                </div>
+                <hr class="bg-white">
+                <div class="d-flex justify-content-between">
+                  <strong>Total Amount:</strong>
+                  <strong>KES {{ quotation.total_amount|floatformat:0|intcomma }}</strong>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-white">Returns</h6>
+                <div class="d-flex justify-content-between">
+                  <span>Monthly Savings:</span>
+                  <span>KES {{ quotation.estimated_monthly_savings|floatformat:0|intcomma }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Annual Savings:</span>
+                  <span>KES {{ quotation.estimated_annual_savings|floatformat:0|intcomma }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>25-Year Savings:</span>
+                  <span>KES {% widthratio quotation.estimated_annual_savings 1 25 %}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terms & Conditions -->
+      <div class="quotation-card">
+        <div class="quotation-card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-file-contract me-2"></i>Terms & Conditions
+          </h5>
+        </div>
+        <div class="quotation-card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <strong>Validity:</strong> Valid until {{ quotation.valid_until }}<br>
+              <strong>Payment Terms:</strong> {{ quotation.payment_terms }}<br>
+              <strong>Delivery Time:</strong> {{ quotation.delivery_time }}<br>
+            </div>
+            <div class="col-md-6">
+              <strong>Warranty:</strong><br>
+              <small>{{ quotation.warranty_terms }}</small>
+            </div>
+          </div>
+          
+          {% if quotation.notes %}
+          <hr>
+          <h6>Additional Notes:</h6>
+          <p class="text-muted">{{ quotation.notes|linebreaks }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Action Sidebar -->
+    <div class="col-lg-4">
+      <div class="action-buttons">
+        <div class="quotation-card no-print">
+          <div class="quotation-card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-tools me-2"></i>Actions
+            </h5>
+          </div>
+          <div class="quotation-card-body">
+            <div class="d-grid gap-2">
+              <a href="{% url 'quotations:customer_pdf' quotation.quotation_number %}" 
+                 class="btn btn-primary" target="_blank">
+                <i class="fas fa-file-pdf me-2"></i>Download PDF
+              </a>
+              
+              <button class="btn btn-success" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Quotation
+              </button>
+              
+              <a href="mailto:{{ company.email|default:'info@olivian.co.ke' }}?subject=Quotation {{ quotation.quotation_number }} - {{ customer.name }}" 
+                 class="btn btn-outline-primary">
+                <i class="fas fa-envelope me-2"></i>Contact Us
+              </a>
+              
+              <a href="tel:{{ company.phone|default:'+254-719-728-666' }}" 
+                 class="btn btn-outline-success">
+                <i class="fas fa-phone me-2"></i>Call Us
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company Contact Info -->
+        <div class="quotation-card no-print">
+          <div class="quotation-card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-building me-2"></i>Contact Information
+            </h5>
+          </div>
+          <div class="quotation-card-body">
+            <h6>{{ company.name|default:"The Olivian Group Limited" }}</h6>
+            {% if company.address %}
+              <p class="mb-2">{{ company.address }}</p>
+            {% endif %}
+            <p class="mb-1">
+              <i class="fas fa-phone me-2"></i>{{ company.phone|default:"+254-719-728-666" }}
+            </p>
+            <p class="mb-1">
+              <i class="fas fa-envelope me-2"></i>{{ company.email|default:"info@olivian.co.ke" }}
+            </p>
+            {% if company.website %}
+            <p class="mb-0">
+              <i class="fas fa-globe me-2"></i>
+              <a href="{{ company.website }}" target="_blank">{{ company.website }}</a>
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .no-print {
+    display: block;
+  }
+  
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    .container {
+      max-width: none !important;
+    }
+    
+    .quotation-card {
+      break-inside: avoid;
+      box-shadow: none;
+      border: 1px solid #ddd;
+    }
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,780 @@
+{% load static %}
+{% load core_extras %}
+{% load roles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if user.is_authenticated %}
+    <meta name="user-id" content="{{ user.id }}">
+    {% endif %}
+    <title>{% block title %}Dashboard - {{ company.name|default:"Olivian Group" }}{% endblock %}</title>
+
+    <!-- Favicon -->
+    {% if company.favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ company.favicon.url }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ company.favicon.url }}">
+    {% endif %}
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    {% if not DEBUG %}
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+
+    <!-- Apple Touch Icon for iOS -->
+    <link rel="apple-touch-icon" href="{% static 'images/logo-192.png' %}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Olivian ERP">
+
+    <!-- Theme Color for PWA -->
+    <meta name="theme-color" content="#38b6ff">
+    <meta name="msapplication-TileColor" content="#38b6ff">
+    {% endif %}
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/logo-32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/logo-16.png' %}">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+
+    <!-- Additional CSS moved to static/css/dashboard-extracted.css for maintainability -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link href="{% static 'css/dashboard-extracted.css' %}" rel="stylesheet">
+
+</head>
+<body>
+    <!-- CSRF Token for AJAX requests -->
+    {% csrf_token %}
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <a href="{% url 'accounts:dashboard' %}" class="brand-text">
+                {% if company.logo %}
+                    <img src="{{ company.logo.url }}" alt="{{ company.name }}">
+                {% endif %}
+                <span>{{ company.name|default:"Olivian Group"|truncatechars:15 }}</span>
+            </a>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="{% url 'accounts:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'sales_manager' 'sales_person' as can_view_crm %}
+            {% if can_view_crm %}
+            <div class="nav-section">
+                <div class="nav-section-title">Sales & CRM</div>
+                <a href="{% url 'crm:dashboard' %}" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>CRM Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#crmSubmenu" aria-expanded="false">
+                        <i class="fas fa-users-cog"></i>
+                        <span>Customer Management</span>
+                    </a>
+                    <div class="collapse" id="crmSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'crm:contact_list' %}" class="nav-link">
+                                <i class="fas fa-address-book"></i>
+                                <span>Contacts</span>
+                            </a>
+                            <a href="{% url 'crm:lead_source_list' %}" class="nav-link">
+                                <i class="fas fa-filter"></i>
+                                <span>Lead Sources</span>
+                            </a>
+                            <a href="{% url 'crm:company_list' %}" class="nav-link">
+                                <i class="fas fa-building"></i>
+                                <span>Companies</span>
+                            </a>
+                            <a href="{% url 'crm:lead_list' %}" class="nav-link">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Leads</span>
+                            </a>
+                            <a href="{% url 'crm:opportunity_list' %}" class="nav-link">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Opportunities</span>
+                            </a>
+                            <a href="{% url 'crm:activity_list' %}" class="nav-link">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Activities</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'crm:pipeline' %}" class="nav-link">
+                    <i class="fas fa-funnel-dollar"></i>
+                    <span>Sales Pipeline</span>
+                </a>
+                <a href="{% url 'crm:campaign_list' %}" class="nav-link">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Campaigns</span>
+                </a>
+                <a href="{% url 'crm:reports' %}" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>CRM Reports</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'sales_manager' 'sales_person' as can_view_quotations %}
+            {% if can_view_quotations %}
+            <div class="nav-section">
+                <div class="nav-section-title">Quotations & Sales</div>
+                <a href="{% url 'quotations:dashboard' %}" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Quotations Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#quotationsSubmenu" aria-expanded="false">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Quotation Management</span>
+                    </a>
+                    <div class="collapse" id="quotationsSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="/quotations/" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Quotations</span>
+                            </a>
+                            <a href="{% url 'quotations:customer_requirements' %}" class="nav-link">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Capture Requirements</span>
+                            </a>
+                            <a href="{% url 'quotations:product_selector' %}" class="nav-link">
+                                <i class="fas fa-solar-panel"></i>
+                                <span>Product Selector</span>
+                            </a>
+                            <a href="{% url 'quotations:builder' %}" class="nav-link">
+                                <i class="fas fa-tools"></i>
+                                <span>Quotation Builder</span>
+                            </a>
+                            <a href="{% url 'quotations:request_form' %}" class="nav-link">
+                                <i class="fas fa-calculator"></i>
+                                <span>Solar Calculator</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'quotations:enhanced_analytics' %}" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Sales Analytics</span>
+                </a>
+                <a href="{% url 'ecommerce:orders' %}" class="nav-link">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Customer Orders</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'cashier' as can_view_pos %}
+            {% if can_view_pos %}
+            <div class="nav-section">
+                <div class="nav-section-title">Point of Sale</div>
+                <a href="{% url 'pos:main' %}" class="nav-link">
+                    <i class="fas fa-cash-register"></i>
+                    <span>POS Terminal</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#posSubmenu" aria-expanded="false">
+                        <i class="fas fa-receipt"></i>
+                        <span>Sales Management</span>
+                    </a>
+                    <div class="collapse" id="posSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'pos:sale_list' %}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Sales</span>
+                            </a>
+                            <a href="/pos/receipt-management/" class="nav-link">
+                                <i class="fas fa-file-invoice"></i>
+                                <span>Receipt Management</span>
+                            </a>
+                            <a href="/pos/payment-processing/" class="nav-link">
+                                <i class="fas fa-credit-card"></i>
+                                <span>Payment Processing</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'pos:customer_list' %}" class="nav-link">
+                    <i class="fas fa-address-book"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="/pos/inventory-integration/" class="nav-link">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory Integration</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'project_manager' as can_view_budget %}
+            {% if can_view_budget %}
+            <div class="nav-section">
+                <div class="nav-section-title">Projects & Budget</div>
+                <a href="/projects/" class="nav-link">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Projects</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="{% url 'budget:list' %}" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#budgetSubmenu" aria-expanded="false">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Budget Management</span>
+                    </a>
+                    <div class="collapse" id="budgetSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'budget:list' %}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Budgets</span>
+                            </a>
+                            <a href="{% url 'budget:create' %}" class="nav-link">
+                                <i class="fas fa-plus"></i>
+                                <span>Create Budget</span>
+                            </a>
+                            <a href="{% url 'budget:category_list' %}" class="nav-link">
+                                <i class="fas fa-tags"></i>
+                                <span>Categories</span>
+                            </a>
+                            <a href="{% url 'budget:payment_schedule_list' %}" class="nav-link">
+                                <i class="fas fa-calendar-check"></i>
+                                <span>Payment Schedules</span>
+                            </a>
+                            <a href="{% url 'budget:expense_request_list' %}" class="nav-link">
+                                <i class="fas fa-receipt"></i>
+                                <span>Expense Requests</span>
+                            </a>
+                            <a href="{% url 'budget:approval_list' %}" class="nav-link">
+                                <i class="fas fa-gavel"></i>
+                                <span>Approvals</span>
+                            </a>
+                            <a href="{% url 'budget:revision_list' %}" class="nav-link">
+                                <i class="fas fa-edit"></i>
+                                <span>Revisions</span>
+                            </a>
+                            <a href="{% url 'budget:report_list' %}" class="nav-link">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Reports</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'inventory_manager' as can_view_inventory %}
+            {% if can_view_inventory %}
+            <div class="nav-section">
+                <div class="nav-section-title">Inventory</div>
+                <a href="{% url 'products:manage' %}" class="nav-link">
+                    <i class="fas fa-boxes"></i>
+                    <span>Products</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="{% url 'inventory:dashboard' %}" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#inventorySubmenu" aria-expanded="false">
+                        <i class="fas fa-warehouse"></i>
+                        <span>Inventory Management</span>
+                    </a>
+                    <div class="collapse" id="inventorySubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'inventory:dashboard' %}" class="nav-link">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>Inventory Dashboard</span>
+                            </a>
+                            <a href="{% url 'inventory:supplier_list' %}" class="nav-link">
+                                <i class="fas fa-handshake"></i>
+                                <span>Suppliers</span>
+                            </a>
+                            <a href="{% url 'inventory:warehouse_list' %}" class="nav-link">
+                                <i class="fas fa-warehouse"></i>
+                                <span>Warehouses</span>
+                            </a>
+                            <a href="{% url 'inventory:item_list' %}" class="nav-link">
+                                <i class="fas fa-boxes"></i>
+                                <span>Inventory Items</span>
+                            </a>
+                            <a href="{% url 'inventory:purchase_order_list' %}" class="nav-link">
+                                <i class="fas fa-file-invoice"></i>
+                                <span>Purchase Orders</span>
+                            </a>
+                            <a href="{% url 'inventory:movement_list' %}" class="nav-link">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span>Stock Movements</span>
+                            </a>
+                            <a href="{% url 'inventory:adjustment_list' %}" class="nav-link">
+                                <i class="fas fa-edit"></i>
+                                <span>Stock Adjustments</span>
+                            </a>
+                            <a href="{% url 'inventory:transfer_list' %}" class="nav-link">
+                                <i class="fas fa-truck"></i>
+                                <span>Stock Transfers</span>
+                            </a>
+                            <a href="{% url 'inventory:valuation_list' %}" class="nav-link">
+                                <i class="fas fa-calculator"></i>
+                                <span>Valuations</span>
+                            </a>
+                            <hr class="dropdown-divider">
+                            <a href="{% url 'inventory:supplier_create' %}" class="nav-link text-primary">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Supplier</span>
+                            </a>
+                            <a href="{% url 'inventory:warehouse_create' %}" class="nav-link text-primary">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Warehouse</span>
+                            </a>
+                            <a href="{% url 'inventory:purchase_order_create' %}" class="nav-link text-primary">
+                                <i class="fas fa-plus"></i>
+                                <span>New Purchase Order</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' 'inventory_manager' as can_view_procurement %}
+            {% if can_view_procurement %}
+            <div class="nav-section">
+                <div class="nav-section-title">Procurement</div>
+                <a href="{% url 'procurement:dashboard' %}" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#procurementSubmenu" aria-expanded="false">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Purchase Management</span>
+                    </a>
+                    <div class="collapse" id="procurementSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'procurement:requisition_list' %}" class="nav-link">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Purchase Requisitions</span>
+                            </a>
+                            <a href="{% url 'procurement:rfq_list' %}" class="nav-link">
+                                <i class="fas fa-question-circle"></i>
+                                <span>RFQs</span>
+                            </a>
+                            <a href="{% url 'procurement:po_list' %}" class="nav-link">
+                                <i class="fas fa-file-invoice"></i>
+                                <span>Purchase Orders</span>
+                            </a>
+                            <a href="{% url 'procurement:three_way_matching' %}" class="nav-link">
+                                <i class="fas fa-check-double"></i>
+                                <span>Three-Way Matching</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'procurement:vendor_list' %}" class="nav-link">
+                    <i class="fas fa-handshake"></i>
+                    <span>Vendors</span>
+                </a>
+                <a href="{% url 'procurement:supplier_performance' %}" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Supplier Performance</span>
+                </a>
+                <a href="{% url 'procurement:contract_management' %}" class="nav-link">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Contract Management</span>
+                </a>
+                <a href="{% url 'procurement:reports' %}" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' 'director' as can_view_blog %}
+            {% if can_view_blog %}
+            <div class="nav-section">
+                <div class="nav-section-title">Blog Management</div>
+                <a href="{% url 'blog:management_dashboard' %}" class="nav-link">
+                    <i class="fas fa-blog"></i>
+                    <span>Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#blogPostsSubmenu" aria-expanded="false">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Posts</span>
+                    </a>
+                    <div class="collapse" id="blogPostsSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'blog:post_list' %}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Posts</span>
+                            </a>
+                            <a href="{% url 'blog:post_create' %}" class="nav-link">
+                                <i class="fas fa-plus"></i>
+                                <span>Create Post</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#blogContentSubmenu" aria-expanded="false">
+                        <i class="fas fa-tags"></i>
+                        <span>Content</span>
+                    </a>
+                    <div class="collapse" id="blogContentSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'blog:category_list' %}" class="nav-link">
+                                <i class="fas fa-folder"></i>
+                                <span>Categories</span>
+                            </a>
+                            <a href="{% url 'blog:tag_list' %}" class="nav-link">
+                                <i class="fas fa-hashtag"></i>
+                                <span>Tags</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#blogEngagementSubmenu" aria-expanded="false">
+                        <i class="fas fa-users"></i>
+                        <span>Engagement</span>
+                    </a>
+                    <div class="collapse" id="blogEngagementSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'blog:comment_list' %}" class="nav-link">
+                                <i class="fas fa-comments"></i>
+                                <span>Comments</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'blog:banner_management' %}" class="nav-link">
+                    <i class="fas fa-image"></i>
+                    <span>Banners</span>
+                </a>
+            </div>
+            {% endif %}
+
+            {% has_any_role 'super_admin' 'manager' 'director' 'finance_manager' as can_view_finance %}
+            {% if can_view_finance %}
+            <div class="nav-section">
+                <div class="nav-section-title">Financial Controls</div>
+                <a href="{% url 'financial:dashboard' %}" class="nav-link">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Financial Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#financialAccountsSubmenu" aria-expanded="false">
+                        <i class="fas fa-university"></i>
+                        <span>Banking & Accounts</span>
+                    </a>
+                    <div class="collapse" id="financialAccountsSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'financial:account_list' %}" class="nav-link">
+                                <i class="fas fa-university"></i>
+                                <span>Bank Accounts</span>
+                            </a>
+                            <a href="{% url 'financial:transaction_list' %}" class="nav-link">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span>Transactions</span>
+                            </a>
+                            <a href="{% url 'financial:reconciliation_list' %}" class="nav-link">
+                                <i class="fas fa-balance-scale"></i>
+                                <span>Bank Reconciliation</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#financialManagementSubmenu" aria-expanded="false">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>Financial Management</span>
+                    </a>
+                    <div class="collapse" id="financialManagementSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="/financial/invoice-management/" class="nav-link">
+                                <i class="fas fa-file-invoice"></i>
+                                <span>Invoice Management</span>
+                            </a>
+                            <a href="/financial/payment-processing/" class="nav-link">
+                                <i class="fas fa-credit-card"></i>
+                                <span>Payment Processing</span>
+                            </a>
+                            <a href="/financial/expense-tracking/" class="nav-link">
+                                <i class="fas fa-receipt"></i>
+                                <span>Expense Tracking</span>
+                            </a>
+                            <a href="/financial/budget-analysis/" class="nav-link">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Budget Analysis</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'financial:asset_list' %}" class="nav-link">
+                    <i class="fas fa-building"></i>
+                    <span>Fixed Assets</span>
+                </a>
+                <a href="{% url 'financial:reports' %}" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Financial Reports</span>
+                </a>
+                <a href="{% url 'financial:audit_trail' %}" class="nav-link">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Audit Trail</span>
+                </a>
+            </div>
+            {% endif %}
+
+            {% has_any_role 'super_admin' 'manager' 'director' as can_view_newsletter %}
+            {% if can_view_newsletter %}
+            <div class="nav-section">
+                <div class="nav-section-title">Newsletter</div>
+                <a href="{% url 'core:newsletter_dashboard' %}" class="nav-link">
+                    <i class="fas fa-envelope"></i>
+                    <span>Dashboard</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#newsletterSubmenu" aria-expanded="false">
+                        <i class="fas fa-mail-bulk"></i>
+                        <span>Campaigns</span>
+                    </a>
+                    <div class="collapse" id="newsletterSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'core:newsletter_campaign_list' %}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Campaigns</span>
+                            </a>
+                            <a href="{% url 'core:newsletter_campaign_create' %}" class="nav-link">
+                                <i class="fas fa-plus"></i>
+                                <span>Create Campaign</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'core:newsletter_subscriber_list' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Subscribers</span>
+                </a>
+            </div>
+            {% endif %}
+
+            {% has_any_role 'super_admin' 'manager' 'director' 'sales_manager' 'sales_person' as can_view_service_areas %}
+            {% if can_view_service_areas %}
+            <div class="nav-section">
+                <div class="nav-section-title">Service Areas</div>
+                <a href="{% url 'core:service_area_list' %}" class="nav-link">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>Service Areas</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="collapse" data-bs-target="#serviceAreaSubmenu" aria-expanded="false">
+                        <i class="fas fa-cogs"></i>
+                        <span>Management</span>
+                    </a>
+                    <div class="collapse" id="serviceAreaSubmenu">
+                        <div class="dropdown-menu-nav">
+                            <a href="{% url 'core:service_area_list' %}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                <span>All Service Areas</span>
+                            </a>
+                            <a href="{% url 'core:service_area_create' %}" class="nav-link">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Service Area</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% has_any_role 'super_admin' 'manager' as can_view_system %}
+            {% if can_view_system %}
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="{% url 'accounts:all_users' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="{% url 'admin:index' %}" class="nav-link" target="_blank">
+                    <i class="fas fa-tools"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Communication</div>
+                <a href="{% url 'chat:dashboard' %}" class="nav-link">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat System</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Other</div>
+                <a href="{% url 'core:home' %}" class="nav-link" target="_blank">
+                    <i class="fas fa-globe"></i>
+                    <span>Website</span>
+                </a>
+                <a href="{% url 'core:staff_help' %}" class="nav-link">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help & Support</span>
+                </a>
+                <a href="{% url 'accounts:profile' %}" class="nav-link">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        {% block breadcrumb %}
+                        <li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+                        <li class="breadcrumb-item active">{% block page_name %}Home{% endblock %}</li>
+                        {% endblock %}
+                    </ol>
+                </nav>
+            </div>
+            
+            <div class="topbar-right">
+                <div class="dropdown">
+                    <button class="topbar-notification dropdown-toggle" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount">0</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown">
+                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <button class="btn btn-sm btn-link p-0" id="markAllRead">Mark all read</button>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div id="notificationList" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center py-3">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-footer text-center">
+                            <a href="{% url 'core:notifications' %}" class="btn btn-sm btn-primary">View All</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dropdown user-dropdown">
+                    <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <div class="user-avatar">
+                            {% if user.first_name %}{{ user.first_name.0|upper }}{% elif user.username %}{{ user.username.0|upper }}{% else %}U{% endif %}
+                        </div>
+                        <span>{{ user.get_full_name|default:user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                            <i class="fas fa-user me-2"></i>Profile
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/">
+                            <i class="fas fa-cog me-2"></i>Admin Settings
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Messages -->
+        <div class="system-messages">
+            {% if messages %}
+                {% for message in messages|filter_messages:user %}
+                    <div class="alert message-alert alert-{% firstof message.tags 'info' %} alert-dismissible fade show" role="alert">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle alert-icon"></i>
+                        {% elif message.tags == 'error' or message.tags == 'danger' %}
+                            <i class="fas fa-exclamation-triangle alert-icon"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-circle alert-icon"></i>
+                        {% elif message.tags == 'info' %}
+                            <i class="fas fa-info-circle alert-icon"></i>
+                        {% else %}
+                            <i class="fas fa-bell alert-icon"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Floating Chat Icon -->
+        <div class="floating-chat-icon" id="floatingChatIcon">
+            <a href="{% url 'chat:dashboard' %}" class="chat-button" title="Chat System">
+                <i class="fas fa-comments"></i>
+                <span class="chat-badge" id="chatNotificationBadge" style="display: none;">0</span>
+            </a>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="page-header">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <p class="page-subtitle">{% block page_subtitle %}Welcome back, {{ user.get_full_name|default:user.username }}{% endblock %}</p>
+            </div>
+            
+            {% block content %}
+            <!-- Page content goes here -->
+            {% endblock %}
+        </div>
+    </div>
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Custom JavaScript (extracted) -->
+    <script src="{% static 'js/dashboard-extracted.js' %}" defer></script>
+    <script src="{% static 'js/notifications-extracted.js' %}" defer></script>
+
+    {% if not DEBUG %}
+    <!-- PWA Manager -->
+    <script src="{% static 'js/pwa-manager.js' %}"></script>
+    {% endif %}
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/smart-polling.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/api.js' %}"></script>
+    <script src="{% static 'js/dashboard.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

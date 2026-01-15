@@ -1,0 +1,773 @@
+{% extends 'website/base.html' %}
+{% load core_extras %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'products:list' %}">Products</a></li>
+{% if product.category %}
+<li class="breadcrumb-item"><a href="{% url 'products:category' product.category.slug %}">{{ product.category.name }}</a></li>
+{% endif %}
+<li class="breadcrumb-item active">{{ product.name }}</li>
+{% endblock %}
+
+{% block title %}{{ product.name }} - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Ensure proper spacing from fixed header */
+.section:first-of-type {
+    padding-top: 140px !important;
+}
+
+@media (max-width: 768px) {
+    .section:first-of-type {
+        padding-top: 100px !important;
+    }
+    
+    .section {
+        padding-bottom: 2rem !important;
+    }
+    
+    .main-image {
+        margin-bottom: 1rem !important;
+    }
+    
+    .main-image img {
+        height: 250px !important;
+    }
+    
+    .product-actions {
+        margin-top: 1rem !important;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .card {
+        margin-bottom: 1rem !important;
+    }
+    
+    .tab-content {
+        padding: 1rem !important;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem !important;
+        margin-bottom: 1rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Product Details -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <!-- Product Images -->
+            <div class="col-lg-6 mb-4">
+                <div class="product-gallery">
+                    {% if product.images.all %}
+                    <div class="main-image mb-3">
+                        <img id="mainImage" src="{{ product.images.first.image.url }}" 
+                             class="img-fluid rounded shadow" alt="{{ product.name }}" 
+                             style="width: 100%; height: 400px; object-fit: cover;">
+                    </div>
+                    
+                    {% if product.images.count > 1 %}
+                    <div class="thumbnail-images">
+                        <div class="row">
+                            {% for image in product.images.all %}
+                            <div class="col-3 mb-2">
+                                <img src="{{ image.image.url }}" 
+                                     class="img-fluid rounded thumbnail-img" 
+                                     alt="{{ product.name }}"
+                                     onclick="changeMainImage('{{ image.image.url }}')"
+                                     style="height: 80px; object-fit: cover; cursor: pointer;">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="main-image">
+                        <div class="d-flex align-items-center justify-content-center bg-light rounded" style="height: 400px;">
+                            <i class="fas fa-image text-muted" style="font-size: 4rem;"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Product Info -->
+            <div class="col-lg-6 mb-4">
+                <h1 class="mb-3">{{ product.name }}</h1>
+                
+                {% if product.category %}
+                <div class="mb-3">
+                    <span class="badge bg-primary">{{ product.category.name }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    {% if product.customer_display_price %}
+                        {% if discount_percentage %}
+                            <!-- Holiday Discount Pricing -->
+                            <span class="h5 text-muted text-decoration-line-through">KES {{ product.selling_price|floatformat:0 }}</span><br>
+                            <span class="h3 text-success fw-bold">KES {{ product.selling_price|apply_discount:discount_percentage|floatformat:0 }}</span><br>
+                            <span class="badge bg-success ms-2">{{ discount_percentage }}% OFF</span>
+                            <small class="text-success d-block">
+                                <strong>Save KES {{ product.selling_price|calculate_savings:discount_percentage|floatformat:0 }}</strong>
+                            </small>
+                        {% elif product.is_on_sale %}
+                            <!-- Regular Product Sale -->
+                            <span class="h5 text-muted text-decoration-line-through">KES {{ product.selling_price|floatformat:0 }}</span><br>
+                            <span class="h3 text-primary">KES {{ product.sale_price|floatformat:0 }}</span>
+                            <span class="badge bg-danger ms-2">{{ product.discount_percentage }}% OFF</span>
+                        {% else %}
+                            <!-- Regular Price -->
+                            <span class="h3 text-primary">KES {{ product.selling_price|floatformat:0 }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="h4 text-info">Contact for Price</span>
+                    {% endif %}
+
+                    <div class="mt-2">
+                        <span class="badge {% if product.stock_status_for_customers == 'In Stock' %}bg-success{% elif product.stock_status_for_customers == 'Limited Stock' %}bg-warning{% elif product.stock_status_for_customers == 'Available on Order' %}bg-info{% else %}bg-danger{% endif %} ms-1">
+                            {{ product.stock_status_for_customers }}
+                        </span>
+                        {% if product.brand %}
+                            <span class="badge bg-secondary ms-1">{{ product.brand }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if product.short_description %}
+                <p class="lead">{{ product.short_description }}</p>
+                {% endif %}
+                
+                <!-- Key Specifications -->
+                {% if product.power_rating or product.efficiency or product.warranty_years %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Key Specifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if product.power_rating %}
+                            <div class="col-md-4 mb-2">
+                                <strong>Power Rating:</strong><br>
+                                <span class="text-primary">{{ product.power_rating }}W</span>
+                            </div>
+                            {% endif %}
+                            {% if product.efficiency %}
+                            <div class="col-md-4 mb-2">
+                                <strong>Efficiency:</strong><br>
+                                <span class="text-primary">{{ product.efficiency }}%</span>
+                            </div>
+                            {% endif %}
+                            {% if product.warranty_years %}
+                            <div class="col-md-4 mb-2">
+                                <strong>Warranty:</strong><br>
+                                <span class="text-primary">{{ product.warranty_years }} years</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Actions -->
+                <div class="product-actions">
+                    {% if product.is_in_stock or product.allow_backorders %}
+                        {% if product.track_quantity and product.quantity_in_stock > 0 %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Quantity:</label>
+                                <div class="input-group">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" id="quantity" class="form-control text-center"
+                                           value="1" min="{{ product.minimum_order_quantity|default:1 }}"
+                                           max="{{ product.quantity_in_stock|default:999 }}">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif product.allow_backorders %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Quantity:</label>
+                                <div class="input-group">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" id="quantity" class="form-control text-center"
+                                           value="1" min="{{ product.minimum_order_quantity|default:1 }}">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex">
+                            {% if user.is_authenticated and product.customer_display_price %}
+                                <button class="btn btn-primary btn-lg" onclick="addToCart()">
+                                    <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                                </button>
+                            {% elif not user.is_authenticated and product.customer_display_price %}
+                                <a href="{% url 'accounts:login' %}?next={{ request.get_full_path }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Sign In to Order
+                                </a>
+                            {% else %}
+                                <a href="{% url 'core:contact' %}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-envelope me-2"></i>Request Quote
+                                </a>
+                            {% endif %}
+                            <a href="/quotations/calculator/" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-calculator me-2"></i>Get System Quote
+                            </a>
+                        </div>
+                    {% else %}
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'core:contact' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-envelope me-2"></i>Contact for Availability
+                        </a>
+                        <a href="/quotations/calculator/" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-calculator me-2"></i>Get Quote
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Quick Info -->
+                <div class="mt-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-truck text-success me-2"></i>
+                        <span>Free delivery within Nairobi</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-shield-alt text-success me-2"></i>
+                        <span>Manufacturer warranty included</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-tools text-success me-2"></i>
+                        <span>Professional installation available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Product Details Tabs -->
+<section class="section" style="padding-top: 2rem;">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button">
+                            Description
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="specifications-tab" data-bs-toggle="tab" data-bs-target="#specifications" type="button">
+                            Specifications
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button">
+                            Documents
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button">
+                            Reviews
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="productTabContent">
+                    <!-- Description Tab -->
+                    <div class="tab-pane fade show active" id="description" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                {% if product.description %}
+                                {{ product.description|safe }}
+                                {% else %}
+                                <p>Detailed product description coming soon.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Specifications Tab -->
+                    <div class="tab-pane fade" id="specifications" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        {% if product.brand %}
+                                        <tr>
+                                            <td><strong>Brand</strong></td>
+                                            <td>{{ product.brand }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.model_number %}
+                                        <tr>
+                                            <td><strong>Model</strong></td>
+                                            <td>{{ product.model_number }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.power_rating %}
+                                        <tr>
+                                            <td><strong>Power Rating</strong></td>
+                                            <td>{{ product.power_rating }}W</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.efficiency %}
+                                        <tr>
+                                            <td><strong>Efficiency</strong></td>
+                                            <td>{{ product.efficiency }}%</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.voltage %}
+                                        <tr>
+                                            <td><strong>Voltage</strong></td>
+                                            <td>{{ product.voltage }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.current %}
+                                        <tr>
+                                            <td><strong>Current</strong></td>
+                                            <td>{{ product.current }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.dimensions %}
+                                        <tr>
+                                            <td><strong>Dimensions</strong></td>
+                                            <td>{{ product.dimensions }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.weight %}
+                                        <tr>
+                                            <td><strong>Weight</strong></td>
+                                            <td>{{ product.weight }} kg</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.operating_temperature %}
+                                        <tr>
+                                            <td><strong>Operating Temperature</strong></td>
+                                            <td>{{ product.operating_temperature }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.warranty_years %}
+                                        <tr>
+                                            <td><strong>Warranty</strong></td>
+                                            <td>{{ product.warranty_years }} years</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.certifications %}
+                                        <tr>
+                                            <td><strong>Certifications</strong></td>
+                                            <td>
+                                                {% for cert in product.certifications %}
+                                                    <span class="badge bg-info me-1">{{ cert }}</span>
+                                                {% endfor %}
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.applications %}
+                                        <tr>
+                                            <td><strong>Applications</strong></td>
+                                            <td>{{ product.applications }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if product.features %}
+                                        <tr>
+                                            <td><strong>Features</strong></td>
+                                            <td>
+                                                <ul class="mb-0">
+                                                    {% for feature in product.features %}
+                                                    <li>{{ feature }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Documents Tab -->
+                    <div class="tab-pane fade" id="documents" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="list-group">
+                                    {% if product.datasheet %}
+                                    <a href="{{ product.datasheet.url }}" target="_blank" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1"><i class="fas fa-file-pdf text-danger me-2"></i>Technical Datasheet</h6>
+                                            <small><i class="fas fa-download"></i></small>
+                                        </div>
+                                        <p class="mb-1">Detailed technical specifications and performance data</p>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if product.installation_manual %}
+                                    <a href="{{ product.installation_manual.url }}" target="_blank" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1"><i class="fas fa-file-pdf text-primary me-2"></i>Installation Manual</h6>
+                                            <small><i class="fas fa-download"></i></small>
+                                        </div>
+                                        <p class="mb-1">Step-by-step installation guide and safety instructions</p>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% for document in product.documents.all %}
+                                    <a href="{{ document.file.url }}" target="_blank" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                {% if document.document_type == 'manual' %}
+                                                    <i class="fas fa-book text-primary me-2"></i>
+                                                {% elif document.document_type == 'datasheet' %}
+                                                    <i class="fas fa-file-alt text-danger me-2"></i>
+                                                {% elif document.document_type == 'warranty' %}
+                                                    <i class="fas fa-shield-alt text-success me-2"></i>
+                                                {% elif document.document_type == 'certificate' %}
+                                                    <i class="fas fa-certificate text-warning me-2"></i>
+                                                {% elif document.document_type == 'brochure' %}
+                                                    <i class="fas fa-file-image text-info me-2"></i>
+                                                {% else %}
+                                                    <i class="fas fa-file text-secondary me-2"></i>
+                                                {% endif %}
+                                                {{ document.title }}
+                                            </h6>
+                                            <small><i class="fas fa-download"></i></small>
+                                        </div>
+                                        {% if document.description %}
+                                        <p class="mb-1">{{ document.description }}</p>
+                                        {% endif %}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% if not product.datasheet and not product.installation_manual and not product.documents.all %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Documents Available</h5>
+                                    <p class="text-muted">Product documentation will be available soon.</p>
+                                    <a href="{% url 'core:contact' %}" class="btn btn-outline-primary">Request Documentation</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reviews Tab -->
+                    <div class="tab-pane fade" id="reviews" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <p>Customer reviews feature coming soon.</p>
+                                <a href="{% url 'core:contact' %}" class="btn btn-outline-primary">Share Your Experience</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Related Products -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Related Products</h2>
+            <p class="section-subtitle">You might also be interested in these products</p>
+        </div>
+        
+        <div class="row">
+            {% for related_product in related_products %}
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-img-top" style="height: 200px; overflow: hidden;">
+                        {% if related_product.images.first %}
+                            <img src="{{ related_product.images.first.image.url }}" 
+                                 alt="{{ related_product.name }}" 
+                                 class="img-fluid w-100 h-100" 
+                                 style="object-fit: cover;">
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center bg-light h-100">
+                                <i class="fas fa-solar-panel text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title">{{ related_product.name|truncatechars:30 }}</h6>
+                        {% if related_product.category %}
+                            <small class="text-muted mb-2">{{ related_product.category.name }}</small>
+                        {% endif %}
+                        <p class="card-text text-muted small flex-grow-1">{{ related_product.short_description|default:""|truncatechars:60 }}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            {% if related_product.customer_display_price %}
+                                {% if discount_percentage %}
+                                    <!-- Holiday Discount Pricing -->
+                                    <div>
+                                        <small class="text-muted text-decoration-line-through">KES {{ related_product.selling_price|floatformat:0 }}</small><br>
+                                        <span class="text-success fw-bold">KES {{ related_product.selling_price|apply_discount:discount_percentage|floatformat:0 }}</span><br>
+                                        <small class="text-success">{{ discount_percentage }}% OFF</small>
+                                    </div>
+                                {% elif related_product.is_on_sale %}
+                                    <!-- Regular Product Sale -->
+                                    <div>
+                                        <small class="text-muted text-decoration-line-through">KES {{ related_product.selling_price|floatformat:0 }}</small><br>
+                                        <span class="text-primary fw-bold">KES {{ related_product.sale_price|floatformat:0 }}</span>
+                                    </div>
+                                {% else %}
+                                    <!-- Regular Price -->
+                                    <span class="text-primary fw-bold">KES {{ related_product.selling_price|floatformat:0 }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-info small">Contact for Price</span>
+                            {% endif %}
+                            <a href="{% url 'products:detail' related_product.slug %}" class="btn btn-outline-primary btn-sm">View</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Related Products Available</h5>
+                        <p class="text-muted">Check out our full product catalog</p>
+                        <a href="{% url 'products:list' %}" class="btn btn-primary">View All Products</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+// Product-specific variables for JavaScript
+
+{% block extra_js %}
+<script>
+// Product-specific variables for JavaScript with robust fallbacks
+const PRODUCT_MAX_STOCK = Number({% if product.track_quantity and product.quantity_in_stock > 0 %}'{{ product.quantity_in_stock }}'{% else %}'999'{% endif %}) || 999;
+const PRODUCT_MIN_ORDER = Number('{{ product.minimum_order_quantity|default:1 }}') || 1;
+const ALLOW_BACKORDERS = {% if product.allow_backorders %}true{% else %}false{% endif %};
+
+function changeMainImage(imageUrl) {
+    document.getElementById('mainImage').src = imageUrl;
+}
+
+// Enforce stock quantity cap
+function enforceStockLimit() {
+    const quantityInput = document.getElementById('quantity');
+    const currentValue = parseInt(quantityInput.value) || 1;
+
+    // Ensure value is within bounds
+    if (currentValue < PRODUCT_MIN_ORDER) {
+        quantityInput.value = PRODUCT_MIN_ORDER;
+    } else if (currentValue > PRODUCT_MAX_STOCK && !ALLOW_BACKORDERS) {
+        quantityInput.value = PRODUCT_MAX_STOCK;
+        // Show a brief warning
+        if (window.showToast) {
+            window.showToast(`Maximum quantity is ${PRODUCT_MAX_STOCK} due to available stock.`, 'warning', 2000);
+        }
+    }
+
+    // If backorders are allowed and user tries to go above stock, inform them
+    if (ALLOW_BACKORDERS && currentValue > PRODUCT_MAX_STOCK) {
+        if (window.showToast) {
+            window.showToast(`Only ${PRODUCT_MAX_STOCK} currently available. Backorder available for remaining ${currentValue - PRODUCT_MAX_STOCK} units.`, 'info', 3000);
+        }
+    }
+}
+
+// Add +/- button functionality with stock enforcement
+function changeQuantity(delta) {
+    const quantityInput = document.getElementById('quantity');
+    const currentValue = parseInt(quantityInput.value) || 1;
+    const newValue = currentValue + delta;
+
+    if (newValue >= PRODUCT_MIN_ORDER && (newValue <= PRODUCT_MAX_STOCK || ALLOW_BACKORDERS)) {
+        quantityInput.value = newValue;
+        if (ALLOW_BACKORDERS && newValue > PRODUCT_MAX_STOCK) {
+            if (window.showToast) {
+                window.showToast(`Only ${PRODUCT_MAX_STOCK} currently available. Backorder available for remaining ${newValue - PRODUCT_MAX_STOCK} units.`, 'info', 3000);
+            }
+        }
+    } else if (delta > 0 && !ALLOW_BACKORDERS) {
+        // Trying to increase above stock
+        if (window.showToast) {
+            window.showToast(`Maximum quantity is ${PRODUCT_MAX_STOCK} due to available stock.`, 'warning', 2000);
+        }
+    } else if (delta < 0) {
+        // Trying to decrease below minimum
+        if (window.showToast) {
+            window.showToast(`Minimum quantity is ${PRODUCT_MIN_ORDER}.`, 'warning', 2000);
+        }
+    }
+}
+
+function addToCart() {
+    const quantity = document.getElementById('quantity')?.value || 1;
+    const button = document.querySelector('.btn[onclick="addToCart()"]');
+    const originalText = button?.innerHTML;
+    
+    // Show loading state
+    if (button) {
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding to Cart...';
+        button.disabled = true;
+    }
+    
+    fetch(`/shop/cart/add/{{ product.id }}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            'quantity': parseInt(quantity)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update cart count in navigation
+            if (window.updateGlobalCartCount) {
+                window.updateGlobalCartCount(data.cart_count);
+            }
+            
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alert.style.cssText = 'top: 100px; right: 20px; z-index: 9999; max-width: 350px;';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>Added to cart successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            // Show success on button
+            if (button) {
+                button.innerHTML = '<i class="fas fa-check me-2"></i>Added to Cart!';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-primary');
+            }
+            
+            setTimeout(() => {
+                alert.remove();
+                if (button) {
+                    button.innerHTML = originalText;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-primary');
+                    button.disabled = false;
+                }
+            }, 3000);
+        } else {
+            // Handle error
+            if (button) {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+            // Use the site's toast system if available, otherwise fall back to custom toast
+            if (window.showToast) {
+                window.showToast(data.message || 'Error adding product to cart', 'error');
+            } else {
+                showErrorToast(data.message || 'Error adding product to cart');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (button) {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+        showErrorToast('Error adding product to cart');
+    });
+}
+
+// Helper functions
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 100px; right: 20px; z-index: 9999; max-width: 350px;';
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
+}
+
+// Initialize quantity input restrictions when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+
+    if (quantityInput) {
+        // Enforce limits on input events (typing, pasting)
+        quantityInput.addEventListener('input', enforceStockLimit);
+        quantityInput.addEventListener('change', enforceStockLimit);
+        quantityInput.addEventListener('blur', enforceStockLimit);
+
+        // Prevent wheel scrolling on number inputs from changing values beyond limits
+        quantityInput.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -1 : 1;
+            changeQuantity(delta);
+        });
+
+        // Prevent arrow keys from exceeding limits
+        quantityInput.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                changeQuantity(1);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                changeQuantity(-1);
+            }
+        });
+    }
+});
+
+// Thumbnail image styling
+document.querySelectorAll('.thumbnail-img').forEach(img => {
+    img.addEventListener('click', function() {
+        document.querySelectorAll('.thumbnail-img').forEach(t => t.style.border = 'none');
+        this.style.border = '2px solid var(--primary-color)';
+    });
+});
+</script>
+{% endblock %}

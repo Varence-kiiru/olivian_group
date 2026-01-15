@@ -1,0 +1,358 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}POS Customers - {{ block.super }}{% endblock %}
+
+{% block page_title %}POS Customers{% endblock %}
+{% block page_subtitle %}Manage customers for point of sale transactions{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pos:main' %}">POS System</a></li>
+<li class="breadcrumb-item active">Customers</li>
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/pos.css' %}" rel="stylesheet">
+<link href="{% static 'css/customers.css' %}" rel="stylesheet">
+{% include "components/customer_modal_css.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-users me-2"></i>POS Customers
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="openPOSCustomerModal();">
+            <i class="fas fa-user-plus me-2"></i>Add Customer
+        </button>
+    </div>
+</div>
+
+<!-- Customer Statistics -->
+<div class="stats-row">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_customers|default:0 }}</div>
+                <div class="small text-muted">Total Customers</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ active_customers|default:0 }}</div>
+                <div class="small text-muted">Active Customers</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ vip_customers|default:0 }}</div>
+                <div class="small text-muted">VIP Customers</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ new_today|default:0 }}</div>
+                <div class="small text-muted">New Today</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search"
+                   value="{{ current_search }}" placeholder="Name, phone, email...">
+        </div>
+
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="vip" {% if current_status == 'vip' %}selected{% endif %}>VIP</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label for="location" class="form-label">Location</label>
+            <select class="form-select" id="location" name="location">
+                <option value="">All Locations</option>
+                <option value="nairobi" {% if current_location == 'nairobi' %}selected{% endif %}>Nairobi</option>
+                <option value="mombasa" {% if current_location == 'mombasa' %}selected{% endif %}>Mombasa</option>
+                <option value="kisumu" {% if current_location == 'kisumu' %}selected{% endif %}>Kisumu</option>
+                <option value="nakuru" {% if current_location == 'nakuru' %}selected{% endif %}>Nakuru</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label for="sort" class="form-label">Sort By</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="recent" {% if current_sort == 'recent' %}selected{% endif %}>Most Recent</option>
+                <option value="purchase" {% if current_sort == 'purchase' %}selected{% endif %}>Last Purchase</option>
+                <option value="total" {% if current_sort == 'total' %}selected{% endif %}>Total Spent</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Customers Grid -->
+<div class="row">
+    {% for customer in customers %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="customer-card">
+            <!-- Customer Header -->
+            <div class="d-flex align-items-start mb-3">
+                <div class="customer-avatar me-3">
+                    {{ customer.name|first|upper|default:"?" }}
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">
+                        <a href="#" class="text-decoration-none">
+                            {{ customer.name|default:"Unknown Customer" }}
+                        </a>
+                    </h6>
+                    <div class="customer-meta">
+                        {% if customer.phone %}
+                            <i class="fas fa-phone me-1"></i>{{ customer.phone }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="customer-status status-{{ customer.status|default:'active' }}">
+                        {{ customer.get_status_display|default:'Active' }}
+                    </span>
+                    {% if customer.is_vip %}
+                        <div class="mt-1">
+                            <span class="customer-status status-vip">VIP</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            {% if customer.email %}
+            <div class="mb-2">
+                <div class="customer-meta mb-1">Email</div>
+                <div class="small">{{ customer.email }}</div>
+            </div>
+            {% endif %}
+
+            {% if customer.address %}
+            <div class="mb-3">
+                <div class="customer-meta mb-1">Address</div>
+                <div class="small">{{ customer.address|truncatechars:50 }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Purchase Stats -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="customer-meta mb-1">Total Purchases</div>
+                    <div class="small font-weight-bold">{{ customer.total_purchases|default:0 }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="customer-meta mb-1">Total Spent</div>
+                    <div class="small font-weight-bold">KES {{ customer.total_spent|floatformat:2|default:"0.00" }}</div>
+                </div>
+            </div>
+
+            <!-- Last Purchase -->
+            <div class="mb-3">
+                <div class="customer-meta mb-1">Last Purchase</div>
+                {% if customer.last_purchase_date %}
+                    <div class="small">{{ customer.last_purchase_date|date:"M d, Y" }}</div>
+                    {% if customer.last_purchase_amount %}
+                        <div class="small text-muted">KES {{ customer.last_purchase_amount|floatformat:2 }}</div>
+                    {% endif %}
+                {% else %}
+                    <div class="small text-muted">No purchases yet</div>
+                {% endif %}
+            </div>
+
+            <!-- Loyalty Points -->
+            {% if customer.loyalty_points %}
+            <div class="mb-3 text-center">
+                <span class="loyalty-points">
+                    <i class="fas fa-star me-1"></i>{{ customer.loyalty_points }} points
+                </span>
+                <div class="small text-muted mt-1">{{ customer.loyalty_tier }} Member</div>
+            </div>
+            {% endif %}
+
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="btn btn-outline-primary btn-sm flex-fill" onclick="selectCustomer('{{ customer.id }}', '{{ customer.name }}')">
+                    <i class="fas fa-shopping-cart me-1"></i>Select
+                </button>
+                <button class="btn btn-outline-success btn-sm flex-fill" onclick="viewCustomerHistory('{{ customer.id }}')">
+                    <i class="fas fa-history me-1"></i>History
+                </button>
+                <button class="btn btn-outline-secondary btn-sm flex-fill" onclick="editCustomer('{{ customer.id }}')">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No customers found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_location %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by adding your first customer.
+                {% endif %}
+            </p>
+            <button class="btn btn-primary" onclick="openPOSCustomerModal()">
+            <i class="fas fa-user-plus me-2"></i>Add Customer
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Customers pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Customer Modal -->
+{% include "components/customer_modal.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "components/customer_modal_js.html" %}
+
+<script>
+// Customer management functions
+function selectCustomer(customerId, customerName) {
+    // Check if this is a popup window (opened from POS terminal)
+    if (window.opener && window.opener.selectCustomer) {
+        window.opener.selectCustomer(customerId, customerName);
+        window.close();
+        return;
+    }
+
+    // Get active terminal and redirect
+    getActiveTerminalAndRedirect(customerId, customerName);
+}
+
+function editCustomer(customerId) {
+    // For now, redirect to modal edit or detail page
+    console.log('Edit customer:', customerId);
+    // Implementation will depend on available routes
+}
+
+function viewCustomerHistory(customerId) {
+    // Redirect to customer detail page
+    window.location.href = `/pos/customers/${customerId}/`;
+}
+
+function getActiveTerminalAndRedirect(customerId, customerName) {
+    // Show loading message
+    const loadingToast = showToast('Getting active terminal...', 'info');
+
+    // Get active terminal
+    fetch('{% url "pos:api_get_active_terminal" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Store customer selection
+                sessionStorage.setItem('selectedCustomer', JSON.stringify({
+                    id: customerId,
+                    name: customerName
+                }));
+
+                // Redirect to active terminal
+                window.location.href = `/pos/terminal/${data.terminal_id}/`;
+            } else {
+                showToast('No active session found. Please start a session first.', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting active terminal:', error);
+            showToast('Error getting active terminal.', 'error');
+        });
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast implementation
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    // Could be enhanced with proper toast library
+}
+
+function openPOSCustomerModal() {
+    // Open customer creation modal
+    if (typeof openCustomerModal !== 'undefined') {
+        openCustomerModal({
+            includeBusinessFields: true,
+            includeSolarFields: false,
+            onCustomerCreated: function(customer) {
+                location.reload();
+            }
+        });
+    } else {
+        console.error('Customer modal function not available');
+        alert('Customer management system is loading. Please refresh the page.');
+    }
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('POS Customer List loaded successfully');
+});
+</script>
+{% endblock %}

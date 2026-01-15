@@ -1,0 +1,428 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}Customer Portal - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Account</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .customer-dashboard {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 8rem 0 2rem 0;
+    }
+    
+    .dashboard-header {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+    }
+    
+    .welcome-text {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: rotate(45deg);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        transition: var(--transition);
+    }
+    
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .action-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .action-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .action-desc {
+        color: #666;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .btn-action {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+        display: inline-block;
+    }
+    
+    .btn-action:hover {
+        background: var(--primary-dark);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-action.btn-outline {
+        background: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+    }
+    
+    .btn-action.btn-outline:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .recent-activity {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .activity-item {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .activity-time {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .currency {
+        color: var(--success-color);
+        font-weight: 600;
+    }
+    
+    .solar-calculator-widget {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .calculator-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .calculator-desc {
+        margin-bottom: 1.5rem;
+        opacity: 0.9;
+    }
+    
+    .btn-calculator {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        padding: 0.75rem 2rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+        display: inline-block;
+    }
+    
+    .btn-calculator:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="customer-dashboard">
+    <div class="container">
+        <!-- Welcome Header -->
+        <div class="dashboard-header">
+            <h1 class="welcome-text">Welcome Back, {{ user.get_full_name|default:user.username }}!</h1>
+            <p class="text-muted">Manage your solar energy journey with {{ company.name|default:"Olivian Group" }}</p>
+        </div>
+        
+        <!-- Quick Statistics -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ user_stats.total_orders|default:0 }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">KES {{ user_stats.total_spent|floatformat:0|default:0 }}</div>
+                <div class="stat-label">Total Spent</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user_stats.active_projects|default:0 }}</div>
+                <div class="stat-label">Active Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user_stats.pending_quotations|default:0 }}</div>
+                <div class="stat-label">Pending Quotes</div>
+            </div>
+        </div>
+        
+        <!-- Solar Calculator Widget -->
+        <div class="solar-calculator-widget">
+            <h3 class="calculator-title">Solar Savings Calculator</h3>
+            <p class="calculator-desc">Calculate potential savings with our solar solutions for your home or business</p>
+            <a href="{% url 'quotations_customer:calculator' %}" class="btn-calculator">
+                <i class="fas fa-calculator me-2"></i>Calculate Savings
+            </a>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="action-grid">
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <h4 class="action-title">View Quotations</h4>
+                <p class="action-desc">Check your solar quotations and request new ones</p>
+                <a href="/quotations/customer/" class="btn-action">View Quotations</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <h4 class="action-title">My Orders</h4>
+                <p class="action-desc">Track your orders and delivery status</p>
+                <div class="d-flex gap-2">
+                    <a href="/shop/orders/customer/" class="btn-action flex-fill">View Orders</a>
+                    <a href="{% url 'ecommerce:track_order' %}" class="btn-action btn-outline flex-fill">
+                        <i class="fas fa-search me-1"></i>Track Order
+                    </a>
+                </div>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <h4 class="action-title">My Projects</h4>
+                <p class="action-desc">Monitor your solar installation projects</p>
+                <a href="/projects/customer/" class="btn-action">View Projects</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <h4 class="action-title">Download Receipts</h4>
+                <p class="action-desc">Access and download your payment receipts</p>
+                <a href="/shop/receipts/customer/" class="btn-action">View Receipts</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-user-cog"></i>
+                </div>
+                <h4 class="action-title">Account Settings</h4>
+                <p class="action-desc">Update your profile and preferences</p>
+                <a href="{% url 'accounts:profile' %}" class="btn-action">Manage Account</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <h4 class="action-title">Customer Support</h4>
+                <p class="action-desc">Get help with your solar solutions</p>
+                <a href="{% url 'core:contact' %}" class="btn-action">Contact Support</a>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h3 class="mb-4">
+                <i class="fas fa-history me-2"></i>Recent Activity
+            </h3>
+            
+            {% if recent_activities %}
+                {% for activity in recent_activities %}
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas {{ activity.icon }}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">{{ activity.title }}</div>
+                        <div class="activity-time">{{ activity.created_at|timesince }} ago</div>
+                    </div>
+                    {% if activity.amount %}
+                    <div class="currency">KES {{ activity.amount|floatformat:0 }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No recent activity to display</p>
+                    <a href="/shop/" class="btn-action">Start Shopping</a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Support Section -->
+        <div class="dashboard-card mt-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4><i class="fas fa-phone-alt me-2"></i>Need Help?</h4>
+                    <p class="mb-0">Our solar experts are here to help you with any questions about your solar journey.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="tel:{{ company.phone }}" class="btn-action me-2">
+                        <i class="fas fa-phone me-1"></i>Call Us
+                    </a>
+                    <a href="mailto:{{ company.email }}" class="btn-action">
+                        <i class="fas fa-envelope me-1"></i>Email
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh activity feed every 5 minutes
+    setInterval(function() {
+        // Only refresh if page is visible
+        if (!document.hidden) {
+            location.reload();
+        }
+    }, 300000);
+    
+    // Add loading states to action buttons
+    document.querySelectorAll('.btn-action').forEach(button => {
+        button.addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+        });
+    });
+</script>
+{% endblock %}

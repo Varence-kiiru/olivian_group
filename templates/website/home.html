@@ -1,0 +1,1239 @@
+{% extends 'website/base.html' %}
+{% load static core_extras %}
+
+{% block title %}Olivian Solar Kenya - Premium Solar Panels, Installation & Energy Solutions in Nairobi{% endblock %}
+
+{% block meta_description %}Olivian Solar provides top-quality solar panels, inverters, and professional installation services in Kenya. Get free solar quotes for homes and businesses in Nairobi. Leading solar energy company.{% endblock %}
+
+{% block canonical_url %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'core:home' %}" />
+{% endblock %}
+
+{% block extra_head %}
+<!-- Structured Data (JSON-LD) for SEO -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "{{ company.name }}",
+  "alternateName": "Olivian Solar Kenya",
+  "url": "{{ request.scheme }}://{{ request.get_host }}",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "{% if company.logo %}{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}/static/images/default-logo.png{% endif %}",
+    "width": 400,
+    "height": 400
+  },
+  "description": "Professional solar energy solutions in Kenya including solar panels, inverters, batteries, and installation services for residential and commercial properties.",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Kahawa Sukari Avenue",
+    "addressLocality": "Ruiru",
+    "addressRegion": "Kiambu",
+    "addressCountry": "KE",
+    "postalCode": "00100"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "telephone": "+254-719-728-666",
+    "contactType": "customer service",
+    "availableLanguage": "English",
+    "hoursAvailable": {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "08:00",
+      "closes": "17:00"
+    }
+  },
+  "sameAs": [
+    "https://www.facebook.com/the_olivian_group",
+    "https://www.instagram.com/olivian_group",
+    "https://www.linkedin.com/company/the-olivian-group"
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Solar Energy Products & Services",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Solar Panels",
+          "description": "High-efficiency monocrystalline solar panels from leading manufacturers"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Solar Installation",
+          "description": "Professional solar panel installation by certified technicians"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Solar System Design",
+          "description": "Custom solar system design based on energy needs and budget"
+        }
+      }
+    ]
+  },
+  "areaServed": {
+    "@type": "Place",
+    "name": "Kenya"
+  },
+  "priceRange": "$$",
+  "foundingDate": "2022"
+}
+</script>
+
+<!-- Local Business Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "{{ company.name }}",
+  "image": "{% if company.logo %}{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}/static/images/default-logo.png{% endif %}",
+  "description": "Leading solar energy company in Kenya providing comprehensive solar solutions including panels, inverters, batteries, and professional installation services.",
+  "url": "{{ request.scheme }}://{{ request.get_host }}",
+  "telephone": "+254-719-728-666",
+  "email": "info@olivian.co.ke",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Kahawa Sukari Avenue",
+    "addressLocality": "Ruiru",
+    "addressRegion": "Kiambu",
+    "addressCountry": "KE",
+    "postalCode": "00100"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": -1.1685,
+    "longitude": 36.9639
+  },
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "opens": "08:00",
+    "closes": "17:00"
+  },
+  "sameAs": [
+    "https://www.facebook.com/the_olivian_group",
+    "https://www.instagram.com/olivian_group"
+  ],
+  "priceRange": "$$",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.5",
+    "reviewCount": "25"
+  },
+  "serviceArea": {
+    "@type": "Place",
+    "name": "Kenya"
+  }
+}
+</script>
+
+<!-- Featured Products Structured Data -->
+{% for product in featured_products %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ product.name }}",
+  "description": "{{ product.short_description }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "{{ product.brand }}"
+  },
+  "category": "{{ product.category.name }}",
+  "sku": "{{ product.sku }}",
+  "image": [
+    {% if product.images.all %}
+      {% for image in product.images.all %}
+        "{{ request.scheme }}://{{ request.get_host }}{{ image.image.url }}"{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    {% else %}
+      "{{ request.scheme }}://{{ request.get_host }}/static/images/default-product.jpg"
+    {% endif %}
+  ],
+  {% if product.customer_display_price %}
+  "offers": {
+    "@type": "Offer",
+    "price": "{{ product.customer_display_price|floatformat:2 }}",
+    "priceCurrency": "KES",
+    "availability": "https://schema.org/InStock",
+    "seller": {
+      "@type": "Organization",
+      "name": "{{ company.name }}"
+    }
+    {% if product.is_on_sale %},
+    "priceValidUntil": "{{ product.created_at|date:'Y-m-d' }}"
+    {% endif %}
+  },
+  {% endif %}
+  {% if product.power_rating %}
+  "additionalProperty": {
+    "@type": "PropertyValue",
+    "name": "Power Rating",
+    "value": "{{ product.power_rating }}W"
+  },
+  {% endif %}
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "{{ product.brand }}"
+  }
+}
+</script>
+{% endfor %}
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 hero-content">
+                <h1 class="hero-title slide-in-left">{{ company.hero_title|default:"Save KES 150,000+ on Your First Year - Go Solar Today!" }}</h1>
+                <p class="hero-subtitle slide-in-left">{{ company.hero_subtitle|default:"Join 500+ Kenya families who cut electricity bills by 75% with professional solar installations. Complete system design, financing & installation - starts from KES 250,000." }}</p>
+                <div class="hero-buttons slide-in-left">
+                    <a href="{% url 'quotations:request_form' %}" class="btn btn-primary btn-lg me-3">Get Free Quote</a>
+                    <a href="{% url 'core:about' %}" class="btn btn-outline-light btn-lg">Learn More</a>
+                </div>
+                {% if active_holiday_offer %}
+                <div id="countdown-container" class="holiday-banner bg-dark text-white p-3 rounded mb-3 slide-in-left" data-end-date="{{ active_holiday_offer.holiday.end_date }}T23:59:59+03:00">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8 mb-2 mb-lg-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-calendar-alt me-3 fa-lg"></i>
+                                <div>
+                                    <h5 class="mb-1 fw-bold">
+                                        {% if active_holiday_offer.banner_text %}{{ active_holiday_offer.banner_text }}{% else %}{{ active_holiday_offer.holiday.name }} Special Offer{% endif %}
+                                    </h5>
+                                    {% if active_holiday_offer.discount_description %}
+                                    <div class="mb-2">{{ active_holiday_offer.discount_description }}</div>
+                                    {% endif %}
+                                    {% if active_holiday_offer.special_benefits %}
+                                    <small class="opacity-90">{{ active_holiday_offer.special_benefits }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 text-center text-lg-end">
+                            <div class="mb-1">
+                                <small class="fw-bold text-uppercase">Offer Ends In:</small>
+                            </div>
+                            <div class="countdown-timer d-flex gap-2 justify-content-center justify-content-lg-end">
+                                <div class="countdown-item">
+                                    <div class="countdown-number" id="days">00</div>
+                                    <div class="countdown-label">Days</div>
+                                </div>
+                                <div class="countdown-item">
+                                    <div class="countdown-number" id="hours">00</div>
+                                    <div class="countdown-label">Hours</div>
+                                </div>
+                                <div class="countdown-item">
+                                    <div class="countdown-number" id="minutes">00</div>
+                                    <div class="countdown-label">Min</div>
+                                </div>
+                                <div class="countdown-item">
+                                    <div class="countdown-number" id="seconds">00</div>
+                                    <div class="countdown-label">Sec</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% elif company.urgency_banner_enabled and company.urgency_banner_end_date and company.urgency_banner_end_date >= today %}
+                <div id="countdown-container" class="urgency-banner bg-warning text-dark p-3 rounded mb-3 slide-in-left" data-end-date="{{ company.urgency_banner_end_date|date:'Y-m-d' }}T23:59:59+03:00">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap">
+                        <div class="me-3">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>
+                            {% if company.urgency_banner_text %}
+                                {{ company.urgency_banner_text }}
+                                {% if company.urgency_banner_end_date %}
+                                    - Ends {{ company.urgency_banner_end_date|date:"F jS, Y" }}
+                                {% endif %}
+                            {% else %}
+                                <strong>Limited Time:</strong> Get FREE installation assessment this month!
+                                {% if company.urgency_banner_end_date %}
+                                    Book your consultation before {{ company.urgency_banner_end_date|date:"F jS, Y" }}.
+                                {% endif %}
+                            {% endif %}
+                            </strong>
+                        </div>
+                        <div class="countdown-timer d-flex gap-2">
+                            <div class="countdown-item">
+                                <div class="countdown-number" id="days">00</div>
+                                <div class="countdown-label">Days</div>
+                            </div>
+                            <div class="countdown-item">
+                                <div class="countdown-number" id="hours">00</div>
+                                <div class="countdown-label">Hours</div>
+                            </div>
+                            <div class="countdown-item">
+                                <div class="countdown-number" id="minutes">00</div>
+                                <div class="countdown-label">Min</div>
+                            </div>
+                            <div class="countdown-item">
+                                <div class="countdown-number" id="seconds">00</div>
+                                <div class="countdown-label">Sec</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="disclaimer-text mt-2 slide-in-left">
+                    <small class="text-light opacity-75">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Professional site assessment and 10-year warranty included. Payback period: 3-5 years.
+                    </small>
+                </div>
+                <div class="hero-stats mt-5">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-number">{{ stats.projects_completed|default:0 }}</div>
+                            <div class="stat-label">Projects Completed</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-number">{{ stats.total_capacity_display|default:"0kW" }}</div>
+                            <div class="stat-label">Solar Installed</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-number">{{ stats.co2_saved_tons|default:0 }}T</div>
+                            <div class="stat-label">CO₂ Saved</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                {% if company.hero_image %}
+                <img src="{{ company.hero_image.url }}"
+                     alt="{{ company.hero_title }}" class="img-fluid rounded shadow-lg slide-in-right hero-image">
+                {% else %}
+                <img src="https://images.unsplash.com/photo-1559302504-64aae6ca6498?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                     alt="Solar Installation" class="img-fluid rounded shadow-lg slide-in-right hero-image">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Why Choose {{ company.name }}?</h2>
+            <p class="section-subtitle">{{ company.about_description }}</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="feature-box text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <h4>Premium Quality Products</h4>
+                    <p>We partner with world-class manufacturers to provide tier-1 solar panels, inverters, and batteries with extended warranties.</p>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="feature-box text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h4>Professional Installation</h4>
+                    <p>Our certified technicians ensure safe, efficient installations that meet international standards and local regulations.</p>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="feature-box text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h4>24/7 Support</h4>
+                    <p>Complete after-sales support with remote monitoring, maintenance services, and technical assistance whenever you need it.</p>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="feature-box text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h4>Sustainable Solutions</h4>
+                    <p>Reduce your carbon footprint while saving money with clean, renewable energy that pays for itself over time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Products Section -->
+<section id="featured-products" class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Featured Products</h2>
+            <p class="section-subtitle">Discover our most popular solar energy solutions trusted by customers across Kenya.</p>
+        </div>
+
+        <div class="row">
+            {% for product in featured_products %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card product-card h-100">
+                    <div class="card-body text-center">
+                        {% if product.images.first %}
+                            <img src="{{ product.images.first.image.url }}"
+                                 alt="{{ product.name }}"
+                                 class="img-fluid mb-3 rounded product-card-image"
+                                 loading="lazy">
+                        {% else %}
+                            <div class="feature-icon mb-3 feature-icon-placeholder">
+                                <i class="fas fa-solar-panel fa-4x text-primary"></i>
+                            </div>
+                        {% endif %}
+
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">{{ product.short_description|truncatewords:20 }}</p>
+
+                        {% if product.customer_display_price %}
+                            {% if discount_percentage %}
+                                <!-- Holiday Discount Pricing -->
+                                <div class="mb-2">
+                                    <span class="text-muted"><del>KES {{ product.selling_price|floatformat:0 }}</del></span><br>
+                                    <span class="text-success fw-bold mb-0">KES {{ product.selling_price|apply_discount:discount_percentage|floatformat:0 }}</span><br>
+                                    <span class="badge bg-success">{{ discount_percentage }}% OFF</span>
+                                    <small class="text-success d-block">
+                                        <strong>Save KES {{ product.selling_price|calculate_savings:discount_percentage|floatformat:0 }}</strong>
+                                    </small>
+                                </div>
+                            {% elif product.is_on_sale %}
+                                <!-- Regular Product Sale -->
+                                <div class="mb-2">
+                                    <span class="text-muted"><del>KES {{ product.selling_price|floatformat:0 }}</del></span>
+                                    <span class="text-primary fw-bold ms-2">KES {{ product.sale_price|floatformat:0 }}</span>
+                                    <span class="badge bg-danger ms-1">{{ product.discount_percentage }}% OFF</span>
+                                </div>
+                            {% else %}
+                                <!-- Regular Price -->
+                                <div class="mb-2">
+                                    <span class="fw-bold">KES {{ product.selling_price|floatformat:0 }}</span>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                {% if product.power_rating_w %}
+                                    Power: {{ product.power_rating_w }}W
+                                {% elif product.power_rating %}
+                                    Power: {{ product.power_rating }}W
+                                {% elif product.efficiency %}
+                                    Efficiency: {{ product.efficiency }}%
+                                {% else %}
+                                    Professional Grade
+                                {% endif %}
+                            </small>
+                        </div>
+
+                        <a href="{% url 'products:detail' product.slug %}" class="btn btn-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <!-- Fallback when no featured products are available -->
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Featured products will be displayed here once marked as featured in the system.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'products:list' %}" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-th-list me-2"></i>View All Products
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Our Services</h2>
+            <p class="section-subtitle">End-to-end solar solutions from initial consultation to ongoing maintenance and support.</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="feature-icon text-center mb-3">
+                            <i class="fas fa-drafting-compass"></i>
+                        </div>
+                        <h5 class="card-title text-center">System Design</h5>
+                        <p class="card-text">Custom solar system design based on your energy needs, roof space, and budget requirements.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Site assessment and analysis</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Energy consumption evaluation</li>
+                            <li><i class="fas fa-check text-success me-2"></i>3D modeling and simulations</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Financial analysis and ROI calculations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="feature-icon text-center mb-3">
+                            <i class="fas fa-solar-panel"></i>
+                        </div>
+                        <h5 class="card-title text-center">Solar Installation</h5>
+                        <p class="card-text">Professional solar panel installation by certified technicians ensuring maximum efficiency and long-term reliability.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Certified solar installation team</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Roof assessment and preparation</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Panel mounting and wiring</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Inverter and monitoring setup</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Grid connection and commissioning</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="feature-icon text-center mb-3">
+                            <i class="fas fa-wrench"></i>
+                        </div>
+                        <h5 class="card-title text-center">Maintenance</h5>
+                        <p class="card-text">Comprehensive maintenance packages to ensure your solar system operates at peak efficiency.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Regular system inspections</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Performance monitoring</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Cleaning and maintenance</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Emergency support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="feature-icon text-center mb-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5 class="card-title text-center">Monitoring & Support</h5>
+                        <p class="card-text">Advanced monitoring systems and comprehensive support to maximize your solar investment and performance.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Real-time performance monitoring</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Mobile app access</li>
+                            <li><i class="fas fa-check text-success me-2"></i>24/7 technical support</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Performance analytics and reports</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Warranty management</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Blog Articles Section -->
+{% if featured_blog_posts %}
+<section id="blog" class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Latest Insights</h2>
+            <p class="section-subtitle">Stay informed with the latest trends and developments in solar energy technology and industry news.</p>
+        </div>
+
+        <div class="row">
+            {% for post in featured_blog_posts %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card blog-card h-100">
+                    {% if post.featured_image %}
+                        <img src="{{ post.featured_image.url }}"
+                             class="card-img-top blog-card-image" alt="{{ post.title }}">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1466611653911-95081537e5b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                             class="card-img-top blog-card-image" alt="{{ post.title }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <div class="blog-meta mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>{{ post.created_at|date:"M d, Y" }}
+                                {% if post.category %}
+                                <span class="mx-2">•</span>
+                                <i class="fas fa-tag me-1"></i>{{ post.category.name }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <h5 class="card-title">{{ post.title }}</h5>
+                        <p class="card-text">{{ post.excerpt|truncatewords:20 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if post.author.get_full_name %}
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>by {{ post.author.get_full_name }}
+                                </small>
+                            {% endif %}
+                            <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-primary btn-sm">Read More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'blog:blog' %}" class="btn btn-outline-primary">
+                <i class="fas fa-newspaper me-2"></i>View All Articles
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Projects Showcase -->
+<section id="projects" class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Recent Projects</h2>
+            <p class="section-subtitle">Discover how we've helped customers across Kenya harness the power of solar energy.</p>
+        </div>
+        
+        <div class="row">
+            {% for project in recent_projects %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card">
+                    {% if project.featured_image %}
+                        <img src="{{ project.featured_image.url }}"
+                             class="card-img-top project-card-image" alt="{{ project.title|default:project.name }}">
+                    {% elif project.image %}
+                        <img src="{{ project.image.url }}"
+                             class="card-img-top project-card-image" alt="{{ project.title|default:project.name }}">
+                    {% elif project.documents.first %}
+                        <img src="{% static 'images/solar-project-default.jpg' %}"
+                             class="card-img-top project-card-image" alt="{{ project.title|default:project.name }}">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1624397640148-949b1732bb52?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                             class="card-img-top project-card-image" alt="{{ project.title|default:project.name }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ project.title|default:project.name }}</h5>
+                        <p class="card-text">{{ project.description|truncatewords:15 }}</p>
+                        <div class="d-flex justify-content-between">
+                            <span class="badge bg-primary">
+                                {% if project.system_capacity %}{{ project.system_capacity }}kW{% else %}{{ project.capacity|default:"TBD" }}{% endif %}
+                            </span>
+                            <span class="badge bg-{% if project.project_type == 'residential' %}success{% elif project.project_type == 'commercial' %}info{% elif project.project_type == 'industrial' %}warning{% elif project.project_type == 'government' %}danger{% else %}secondary{% endif %}">
+                                {% if project.get_project_type_display %}{{ project.get_project_type_display }}{% else %}{{ project.project_type|title }}{% endif %}
+                            </span>
+                        </div>
+                        {% if project.location %}
+                        <div class="mt-2">
+                            <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ project.location }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <!-- Fallback content when no projects are available -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card">
+                    <img src="https://images.unsplash.com/photo-1624397640148-949b1732bb52?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                         class="card-img-top project-sample-image" alt="Solar Installation">
+                    <div class="card-body">
+                        <h5 class="card-title">Sample Project</h5>
+                        <p class="card-text">Complete solar projects will appear here once added to the system.</p>
+                        <div class="d-flex justify-content-between">
+                            <span class="badge bg-primary">Coming Soon</span>
+                            <span class="badge bg-info">Sample</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'projects:showcase' %}" class="btn btn-primary btn-lg">View All Projects</a>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="stats-section">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="stat-card">
+                    <span class="stat-number" data-count="{{ stats.projects_completed|default:0 }}">0</span>
+                    <div class="stat-label">Projects Completed</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="stat-card">
+                    <span class="stat-number">{{ stats.total_capacity_display|default:"0kW" }}</span>
+                    <div class="stat-label">Solar Installed</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="stat-card">
+                    <span class="stat-number" data-count="{{ stats.cities_served|default:0 }}">0</span>
+                    <div class="stat-label">Cities Served</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="stat-card">
+                    <span class="stat-number" data-count="{{ stats.co2_saved_tons|default:0 }}">0</span>
+                    <div class="stat-label">Tons CO₂ Saved</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Customer Testimonials -->
+<section id="testimonials" class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">What Our Customers Say</h2>
+            <p class="section-subtitle">Real stories from real customers who chose solar energy with {{ company.name }}</p>
+        </div>
+
+        <div class="testimonial-carousel-container">
+            <button class="carousel-nav carousel-prev" id="testimonial-prev">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="testimonial-carousel" id="testimonial-carousel">
+                {% for testimonial in testimonials %}
+                <div class="testimonial-slide">
+                    <div class="card testimonial-card">
+                        <div class="card-body">
+                            <div class="testimonial-rating mb-3">
+                                {% for i in "x"|ljust:testimonial.rating %}
+                                <i class="fas fa-star text-warning"></i>
+                                {% endfor %}
+                            </div>
+                            <blockquote class="blockquote mb-3">
+                                <p class="mb-0">"{{ testimonial.quote|truncatewords:25 }}"</p>
+                            </blockquote>
+                            <div class="testimonial-author">
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3">
+                                        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center">
+                                            {{ testimonial.author_initials }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ testimonial.author_name }}</h6>
+                                        {% if testimonial.location %}
+                                            <small class="text-muted">{{ testimonial.location }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Customer</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <!-- Static testimonials when no dynamic reviews are available -->
+                <div class="testimonial-slide">
+                    <div class="card testimonial-card">
+                        <div class="card-body">
+                            <div class="testimonial-rating mb-3">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                            <blockquote class="blockquote mb-3">
+                                <p class="mb-0">"The team was professional from start to finish. Our electricity bills dropped by 75% in the first month. Highly recommend!"</p>
+                            </blockquote>
+                            <div class="testimonial-author">
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3">
+                                        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center">M</div>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Mohammed K.</h6>
+                                        <small class="text-muted">Westlands, Nairobi</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-slide">
+                    <div class="card testimonial-card">
+                        <div class="card-body">
+                            <div class="testimonial-rating mb-3">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                            <blockquote class="blockquote mb-3">
+                                <p class="mb-0">"Best investment we've made. Professional installation, excellent support, and the savings are incredible. Our family is very happy."</p>
+                            </blockquote>
+                            <div class="testimonial-author">
+                                <div class="d-flex align-items-center">
+                                    <div class="testimonial-avatar me-3">
+                                        <div class="avatar-circle bg-success text-white d-flex align-items-center justify-content-center">A</div>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Ann W.</h6>
+                                        <small class="text-muted">Karen, Nairobi</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-slide">
+                    <div class="card testimonial-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-center h-100">
+                                <div class="text-center">
+                                    <div class="feature-icon mb-3">
+                                        <i class="fas fa-users fa-3x text-primary opacity-50"></i>
+                                    </div>
+                                    <h5 class="text-muted">500+ Happy Customers</h5>
+                                    <p class="text-muted small">Join the growing community of satisfied solar customers across Kenya.</p>
+                                    <a href="#contact" class="btn btn-primary">Be Our Next Success Story</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button class="carousel-nav carousel-next" id="testimonial-next">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Payment Methods -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Flexible Payment Options</h2>
+            <p class="section-subtitle">We offer multiple payment methods to make your solar investment convenient and accessible.</p>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                {% include 'website/includes/payment_methods.html' %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="section bg-light-custom">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="section-title">Ready to Go Solar?</h2>
+                <p class="section-subtitle mb-4">Get a personalized solar quote and start saving on your electricity bills today. Our experts are ready to help you design the perfect solar solution.</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'quotations:request_form' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-calculator me-2"></i>Get Free Quote
+                    </a>
+                    <a href="tel:{{ company.phone|default:'+254-719-728-666' }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-phone me-2"></i>Call Us Now
+                    </a>
+                    <a href="#contact" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-envelope me-2"></i>Contact Us
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="section bg-light-custom">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Get In Touch</h2>
+            <p class="section-subtitle">Ready to start your solar journey? Contact our experts for a free consultation and personalized quote.</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h5>Call Us</h5>
+                        <p class="text-muted">Speak with our solar experts</p>
+                        <a href="tel:{{ company.phone|default:'+254-719-728-666' }}" class="btn btn-primary">
+                            {{ company.phone|default:"+254-719-728-666" }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <h5>Email Us</h5>
+                        <p class="text-muted">Send us your requirements</p>
+                        <a href="mailto:{{ company.email|default:'info@olivian.co.ke' }}" class="btn btn-primary">
+                            {{ company.email|default:"info@olivian.co.ke" }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <h5>Visit Us</h5>
+                        <p class="text-muted">See our showroom and products</p>
+                        <a href="{{ company.google_maps_url }}" class="btn btn-primary">Get Directions</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Countdown timer functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const countdownContainer = document.getElementById('countdown-container');
+        if (!countdownContainer) return;
+
+        const endDateAttr = countdownContainer.getAttribute('data-end-date');
+        if (!endDateAttr) return;
+
+        const endDate = new Date(endDateAttr);
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = endDate.getTime() - now;
+
+            if (distance < 0) {
+                // Countdown has expired
+                document.getElementById('days').textContent = '00';
+                document.getElementById('hours').textContent = '00';
+                document.getElementById('minutes').textContent = '00';
+                document.getElementById('seconds').textContent = '00';
+
+                // Change appearance when expired
+                countdownContainer.classList.add('countdown-expired');
+                countdownContainer.style.backgroundColor = '#dc3545'; // Red background
+                countdownContainer.querySelector('.countdown-timer').style.display = 'none';
+                countdownContainer.querySelector('strong').textContent = 'Offer Expired!';
+                return;
+            }
+
+            // Calculate time components
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Update the display with leading zeros
+            document.getElementById('days').textContent = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+
+        // Update immediately
+        updateCountdown();
+
+        // Update every second
+        const countdownInterval = setInterval(updateCountdown, 1000);
+    });
+
+    // Counter animation for statistics
+    function animateCounters() {
+        const counters = document.querySelectorAll('.stat-number[data-count]');
+        const options = {
+            threshold: 0.7
+        };
+        
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const counter = entry.target;
+                    const target = parseInt(counter.getAttribute('data-count'));
+                    const current = parseInt(counter.textContent);
+                    
+                    if (current < target) {
+                        const increment = target / 50;
+                        const timer = setInterval(() => {
+                            const value = parseInt(counter.textContent) + Math.ceil(increment);
+                            if (value >= target) {
+                                counter.textContent = target;
+                                clearInterval(timer);
+                            } else {
+                                counter.textContent = value;
+                            }
+                        }, 30);
+                    }
+                    
+                    observer.unobserve(counter);
+                }
+            });
+        }, options);
+        
+        counters.forEach(counter => observer.observe(counter));
+    }
+    
+    // Initialize animations when page loads
+    document.addEventListener('DOMContentLoaded', animateCounters);
+
+    // Testimonial carousel functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const carousel = document.getElementById('testimonial-carousel');
+        const prevBtn = document.getElementById('testimonial-prev');
+        const nextBtn = document.getElementById('testimonial-next');
+        const slides = document.querySelectorAll('.testimonial-slide');
+
+        if (!carousel || !prevBtn || !nextBtn || !slides.length) return;
+
+        // Create clones for infinite scroll effect
+        const slidesArray = Array.from(slides);
+        const totalSlides = slidesArray.length;
+
+        // Clone first and last slides for seamless looping
+        const cloneFirst = slidesArray[0].cloneNode(true);
+        const cloneLast = slidesArray[totalSlides - 1].cloneNode(true);
+
+        // Add clones to carousel
+        carousel.appendChild(cloneFirst);
+        carousel.insertBefore(cloneLast, slidesArray[0]);
+
+        // Update slide references after cloning
+        const allSlides = document.querySelectorAll('.testimonial-slide');
+
+        // Calculate dimensions after cloning
+        const slideWidth = allSlides[1].offsetWidth; // Use second slide (real first) for accurate measurement
+        const gap = parseInt(window.getComputedStyle(carousel).gap) || 24;
+        const scrollAmount = slideWidth + gap;
+
+        // Set initial scroll position to first real slide (past the prepended clone)
+        carousel.scrollLeft = scrollAmount;
+
+        // Previous button functionality
+        prevBtn.addEventListener('click', function() {
+            if (carousel.scrollLeft <= scrollAmount / 2) {
+                // At the beginning, jump to the last real slide
+                carousel.scrollLeft = scrollAmount * totalSlides;
+            } else {
+                carousel.scrollBy({
+                    left: -scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        });
+
+        // Next button functionality
+        nextBtn.addEventListener('click', function() {
+            const maxScroll = scrollAmount * (totalSlides + 1); // Account for the appended clone
+
+            if (carousel.scrollLeft >= maxScroll) {
+                // At the end, jump back to the first real slide
+                carousel.scrollLeft = scrollAmount;
+            } else {
+                carousel.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        });
+
+        // Handle seamless looping with scroll events
+        carousel.addEventListener('scroll', function() {
+            const currentScroll = carousel.scrollLeft;
+
+            // If we're at the cloned slide at the beginning
+            if (currentScroll <= scrollAmount / 2) {
+                carousel.scrollLeft = scrollAmount * totalSlides;
+            }
+
+            // If we're at the cloned slide at the end
+            if (currentScroll >= scrollAmount * (totalSlides + 1)) {
+                carousel.scrollLeft = scrollAmount;
+            }
+        });
+
+        // Touch gesture support for mobile with infinite loop
+        let startX;
+        let scrollLeft;
+        let isScrolling = false;
+
+        carousel.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].pageX - carousel.offsetLeft;
+            scrollLeft = carousel.scrollLeft;
+            isScrolling = true;
+        });
+
+        carousel.addEventListener('touchmove', function(e) {
+            if (!startX || !isScrolling) return;
+
+            const x = e.touches[0].pageX - carousel.offsetLeft;
+            const walk = (startX - x) * 2; // Scroll speed multiplier
+            carousel.scrollLeft = scrollLeft + walk;
+        });
+
+        carousel.addEventListener('touchend', function() {
+            if (!isScrolling) return;
+
+            // Handle infinite loop after touch ends
+            const currentScroll = carousel.scrollLeft;
+
+            setTimeout(function() {
+                // If we're too close to the cloned slides, adjust position
+                if (currentScroll <= scrollAmount / 2) {
+                    carousel.scrollLeft = scrollAmount * totalSlides;
+                } else if (currentScroll >= scrollAmount * (totalSlides + 1)) {
+                    carousel.scrollLeft = scrollAmount;
+                }
+            }, 100);
+
+            startX = null;
+            isScrolling = false;
+        });
+
+        // Disable button styles (they're always active in infinite mode)
+        prevBtn.style.opacity = '1';
+        nextBtn.style.opacity = '1';
+        prevBtn.style.cursor = 'pointer';
+        nextBtn.style.cursor = 'pointer';
+
+        // Auto-scroll functionality with smooth loop animations
+        let autoplayInterval;
+        let isHovered = false;
+        let isDragged = false;
+        const autoplayDelay = 4000; // 4 seconds for faster engagement
+
+        function startAutoplay() {
+            if (isHovered || isDragged) return;
+
+            autoplayInterval = setInterval(function() {
+                const maxScroll = scrollAmount * (totalSlides + 1); // Account for the appended clone
+                const currentScroll = carousel.scrollLeft;
+
+                // Advance to next slide
+                carousel.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+
+                // If we've reached or exceeded the end, wrap back to beginning immediately (without smooth scrolling)
+                setTimeout(function() {
+                    const newScroll = carousel.scrollLeft;
+                    if (newScroll >= maxScroll) {
+                        carousel.scrollLeft = scrollAmount; // Jump back to first real slide
+                    }
+                }, 300); // Wait for smooth scroll to complete before checking
+
+            }, autoplayDelay);
+        }
+
+        function stopAutoplay() {
+            if (autoplayInterval) {
+                clearInterval(autoplayInterval);
+                autoplayInterval = null;
+            }
+        }
+
+        // Start autoplay on page load with a slight delay
+        setTimeout(startAutoplay, 2000);
+
+        // Pause autoplay on hover
+        carousel.addEventListener('mouseenter', function() {
+            isHovered = true;
+            stopAutoplay();
+        });
+
+        carousel.addEventListener('mouseleave', function() {
+            isHovered = false;
+            setTimeout(startAutoplay, 1500); // Resume after user stops hovering
+        });
+
+        // Pause autoplay during touch interactions
+        carousel.addEventListener('touchstart', function() {
+            isDragged = true;
+            stopAutoplay();
+        });
+
+        carousel.addEventListener('touchend', function() {
+            isDragged = false;
+            setTimeout(startAutoplay, 2000); // Resume after touch interaction ends
+        });
+
+        // Stop autoplay when user manually navigates
+        [prevBtn, nextBtn].forEach(btn => {
+            btn.addEventListener('click', function() {
+                stopAutoplay();
+                setTimeout(startAutoplay, 4000); // Restart autoplay after 4 seconds
+            });
+        });
+
+        // Add visual indicator for autoplay (optional pulsing effect)
+        function addAutoplayIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'autoplay-indicator';
+            indicator.innerHTML = '<div class="autoplay-dot"></div>';
+            carousel.parentElement.appendChild(indicator);
+
+            // Add CSS for the indicator
+            const style = document.createElement('style');
+            style.textContent = `
+                .autoplay-indicator {
+                    position: absolute;
+                    bottom: -30px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 10;
+                }
+                .autoplay-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--website-primary-color);
+                    animation: autoplay-pulse 4s infinite linear;
+                }
+                @keyframes autoplay-pulse {
+                    0%, 90% { opacity: 0.3; transform: scale(1); }
+                    95% { opacity: 1; transform: scale(1.2); }
+                    100% { opacity: 0.3; transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Add autoplay indicator for better UX
+        addAutoplayIndicator();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,745 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Manager Dashboard - {{ company.name|default:"Olivian Group" }}{% endblock %}
+{% block page_title %}Manager Dashboard{% endblock %}
+{% block page_subtitle %}Oversee operations, budgets, and team performance{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .manager-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+    }
+
+    .metric-card.revenue::before { background: linear-gradient(90deg, var(--success-color), #20c997); }
+    .metric-card.profit::before { background: linear-gradient(90deg, var(--primary-color), var(--primary-light)); }
+    .metric-card.projects::before { background: linear-gradient(90deg, var(--warning-color), #ffc720); }
+    .metric-card.team::before { background: linear-gradient(90deg, var(--info-color), #20c0f3); }
+    .metric-card.budget::before { background: linear-gradient(90deg, var(--danger-color), #e74a5a); }
+
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .metric-icon.revenue { background: linear-gradient(135deg, var(--success-color), #20c997); }
+    .metric-icon.profit { background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); }
+    .metric-icon.projects { background: linear-gradient(135deg, var(--warning-color), #ffc720); }
+    .metric-icon.team { background: linear-gradient(135deg, var(--info-color), #20c0f3); }
+    .metric-icon.budget { background: linear-gradient(135deg, var(--danger-color), #e74a5a); }
+
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+        color: var(--dark-color);
+    }
+    
+    .metric-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-change {
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+
+    .metric-change.positive {
+        color: var(--success-color);
+    }
+    
+    .metric-change.negative {
+        color: var(--danger-color);
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .overview-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        height: 450px;
+    }
+    
+    .approval-panel {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .approval-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+        transition: var(--transition);
+    }
+    
+    .approval-item:hover {
+        background: var(--light-color);
+    }
+    
+    .approval-info {
+        flex: 1;
+    }
+    
+    .approval-title {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .approval-details {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .approval-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-approve {
+        background: var(--success-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    
+    .btn-approve:hover {
+        background: #218838;
+    }
+    
+    .btn-reject {
+        background: var(--danger-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    
+    .btn-reject:hover {
+        background: #c82333;
+    }
+    
+    .team-performance {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .team-member {
+        display: flex;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .team-member:last-child {
+        border-bottom: none;
+    }
+    
+    .member-avatar {
+        width: 45px;
+        height: 45px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .member-info {
+        flex: 1;
+    }
+    
+    .member-name {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .member-role {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .member-stats {
+        text-align: right;
+    }
+    
+    .member-revenue {
+        font-weight: 600;
+        color: var(--success-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .member-target {
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .budget-overview {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .budget-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .budget-item:last-child {
+        border-bottom: none;
+    }
+    
+    .budget-category {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .budget-amount {
+        text-align: right;
+    }
+    
+    .budget-spent {
+        font-weight: 600;
+        color: var(--danger-color);
+    }
+    
+    .budget-remaining {
+        font-size: 0.85rem;
+        color: var(--success-color);
+    }
+    
+    .alerts-panel {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .alert-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-left: 4px solid;
+        background: var(--light-color);
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        margin-bottom: 1rem;
+    }
+    
+    .alert-item.critical {
+        border-left-color: var(--danger-color);
+        background: rgba(220, 53, 69, 0.1);
+    }
+    
+    .alert-item.warning {
+        border-left-color: var(--warning-color);
+        background: rgba(255, 193, 7, 0.1);
+    }
+    
+    .alert-item.info {
+        border-left-color: var(--info-color);
+        background: rgba(23, 162, 184, 0.1);
+    }
+    
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .alert-icon.critical { background: var(--danger-color); }
+    .alert-icon.warning { background: var(--warning-color); }
+    .alert-icon.info { background: var(--info-color); }
+    
+    .alert-content {
+        flex: 1;
+    }
+    
+    .alert-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .alert-title.critical { color: var(--danger-color); }
+    .alert-title.warning { color: var(--warning-color); }
+    .alert-title.info { color: var(--info-color); }
+    
+    .alert-message {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .resource-allocation {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .resource-item {
+        margin-bottom: 1.5rem;
+    }
+    
+    .resource-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .resource-name {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .resource-utilization {
+        font-size: 0.9rem;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .resource-progress {
+        height: 8px;
+        background: var(--light-color);
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    
+    .resource-progress-bar {
+        height: 100%;
+        border-radius: 20px;
+        transition: var(--transition);
+    }
+    
+    .utilization-low { background: var(--success-color); }
+    .utilization-medium { background: var(--warning-color); }
+    .utilization-high { background: var(--danger-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- System Alerts -->
+{% if system_alerts %}
+<div class="alerts-panel">
+    <h4 class="mb-3">
+        <i class="fas fa-exclamation-triangle me-2"></i>System Alerts
+    </h4>
+    {% for alert in system_alerts %}
+    <div class="alert-item {{ alert.severity }}">
+        <div class="alert-icon {{ alert.severity }}">
+            <i class="fas {{ alert.icon }}"></i>
+        </div>
+        <div class="alert-content">
+            <div class="alert-title {{ alert.severity }}">{{ alert.title }}</div>
+            <div class="alert-message">{{ alert.message }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Manager Metrics -->
+<div class="manager-metrics">
+    <div class="metric-card revenue">
+        <div class="metric-icon revenue">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="metric-value">KES {{ manager_stats.total_revenue|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Total Revenue</div>
+        <div class="metric-change {% if manager_stats.revenue_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if manager_stats.revenue_change >= 0 %}up{% else %}down{% endif %} me-1"></i>
+            {{ manager_stats.revenue_change|default:0 }}% vs last month
+        </div>
+    </div>
+    
+    <div class="metric-card profit">
+        <div class="metric-icon profit">
+            <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="metric-value">KES {{ manager_stats.net_profit|floatformat:0|default:0 }}</div>
+        <div class="metric-label">Net Profit</div>
+        <div class="metric-change {% if manager_stats.profit_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if manager_stats.profit_change >= 0 %}up{% else %}down{% endif %} me-1"></i>
+            {{ manager_stats.profit_change|default:0 }}% vs last month
+        </div>
+    </div>
+    
+    <div class="metric-card projects">
+        <div class="metric-icon projects">
+            <i class="fas fa-project-diagram"></i>
+        </div>
+        <div class="metric-value">{{ manager_stats.active_projects|default:0 }}</div>
+        <div class="metric-label">Active Projects</div>
+        <div class="metric-change {% if manager_stats.projects_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if manager_stats.projects_change >= 0 %}up{% else %}down{% endif %} me-1"></i>
+            {{ manager_stats.projects_change|default:0 }} new this month
+        </div>
+    </div>
+    
+    <div class="metric-card team">
+        <div class="metric-icon team">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="metric-value">{{ manager_stats.team_performance|default:0 }}%</div>
+        <div class="metric-label">Team Performance</div>
+        <div class="metric-change {% if manager_stats.performance_change >= 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{% if manager_stats.performance_change >= 0 %}up{% else %}down{% endif %} me-1"></i>
+            {{ manager_stats.performance_change|default:0 }}% vs target
+        </div>
+    </div>
+    
+    <div class="metric-card budget">
+        <div class="metric-icon budget">
+            <i class="fas fa-calculator"></i>
+        </div>
+        <div class="metric-value">{{ manager_stats.budget_utilization|default:0 }}%</div>
+        <div class="metric-label">Budget Utilized</div>
+        <div class="metric-change {% if manager_stats.budget_remaining > 0 %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-info-circle me-1"></i>
+            KES {{ manager_stats.budget_remaining|floatformat:0|default:0 }} remaining
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="dashboard-grid">
+    <!-- Revenue & Profit Chart -->
+    <div class="chart-section">
+        <h4 class="mb-3">
+            <i class="fas fa-chart-area me-2"></i>Revenue & Profit Trends
+        </h4>
+        <canvas id="revenueChart"></canvas>
+    </div>
+    
+    <!-- Pending Approvals -->
+    <div class="approval-panel">
+        <h4 class="mb-3">
+            <i class="fas fa-clipboard-check me-2"></i>Pending Approvals
+            <span class="badge bg-danger ms-2">{{ pending_approvals.count|default:0 }}</span>
+        </h4>
+        
+        {% if pending_approvals %}
+            {% for approval in pending_approvals %}
+            <div class="approval-item">
+                <div class="approval-info">
+                    <div class="approval-title">{{ approval.title }}</div>
+                    <div class="approval-details">
+                        {{ approval.requester }} • KES {{ approval.amount|floatformat:0 }}
+                    </div>
+                </div>
+                <div class="approval-actions">
+                    <button class="btn-approve" onclick="approveRequest({{ approval.id }})">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn-reject" onclick="rejectRequest({{ approval.id }})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <p class="text-muted">No pending approvals</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Overview Grid -->
+<div class="overview-grid">
+    <!-- Team Performance -->
+    <div class="team-performance">
+        <h4 class="mb-3">
+            <i class="fas fa-users me-2"></i>Team Performance
+            <button class="btn btn-sm btn-primary float-end" onclick="assignTeamMember()">
+                <i class="fas fa-plus me-1"></i>Assign Member
+            </button>
+        </h4>
+        
+        {% if team_members %}
+            {% for member in team_members %}
+            <div class="team-member" data-member-id="{{ member.id }}">
+                <div class="member-avatar">
+                    {{ member.full_name|first|upper }}
+                </div>
+                <div class="member-info">
+                    <div class="member-name">{{ member.full_name }}</div>
+                    <div class="member-role">{{ member.role }}</div>
+                </div>
+                <div class="member-stats">
+                    <div class="member-revenue">{{ member.performance }}%</div>
+                    <div class="member-target">of target</div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No team members assigned</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Budget Overview -->
+    <div class="budget-overview">
+        <h4 class="mb-3">
+            <i class="fas fa-wallet me-2"></i>Budget Overview
+        </h4>
+        
+        {% if budget_categories %}
+            {% for category in budget_categories %}
+            <div class="budget-item">
+                <div class="budget-category">{{ category.name }}</div>
+                <div class="budget-amount">
+                    <div class="budget-spent">KES {{ category.spent|floatformat:0 }}</div>
+                    <div class="budget-remaining">KES {{ category.remaining|floatformat:0 }} left</div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calculator fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No budget categories configured</p>
+                <a href="/budget/categories/" class="btn btn-primary">Set Up Budget</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Resource Allocation -->
+<div class="resource-allocation">
+    <h4 class="mb-3">
+        <i class="fas fa-tasks me-2"></i>Resource Allocation
+    </h4>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-name">Sales Team</span>
+                    <span class="resource-utilization">{{ resource_allocation.sales_utilization|default:0 }}%</span>
+                </div>
+                <div class="resource-progress">
+                    <div class="resource-progress-bar utilization-{% if resource_allocation.sales_utilization < 70 %}low{% elif resource_allocation.sales_utilization < 90 %}medium{% else %}high{% endif %}" 
+                         style="width: {{ resource_allocation.sales_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-name">Project Teams</span>
+                    <span class="resource-utilization">{{ resource_allocation.projects_utilization|default:0 }}%</span>
+                </div>
+                <div class="resource-progress">
+                    <div class="resource-progress-bar utilization-{% if resource_allocation.projects_utilization < 70 %}low{% elif resource_allocation.projects_utilization < 90 %}medium{% else %}high{% endif %}" 
+                         style="width: {{ resource_allocation.projects_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-name">Inventory</span>
+                    <span class="resource-utilization">{{ resource_allocation.inventory_utilization|default:0 }}%</span>
+                </div>
+                <div class="resource-progress">
+                    <div class="resource-progress-bar utilization-{% if resource_allocation.inventory_utilization < 70 %}low{% elif resource_allocation.inventory_utilization < 90 %}medium{% else %}high{% endif %}" 
+                         style="width: {{ resource_allocation.inventory_utilization|default:0 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.assignTeamMember = function() {
+        Swal.fire({
+            title: 'Assign Team Member',
+            html: `
+                <form id="assignTeamForm" class="text-start">
+                    <div class="mb-3">
+                        <label class="form-label">Select Employee</label>
+                        <select class="form-select" id="employeeId" required>
+                            <option value="">Choose...</option>
+                            {% for employee in available_employees %}
+                                {% if employee.is_active_employee and employee.role != 'customer' and employee.role != 'super_admin' %}
+                                    <option value="{{ employee.id }}">
+                                        {{ employee.get_full_name }} - {{ employee.get_role_display }}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" id="role" required>
+                            <option value="">Choose...</option>
+                            <option value="sales_manager">Sales Manager</option>
+                            <option value="sales_person">Sales Person</option>
+                            <option value="project_manager">Project Manager</option>
+                            <option value="inventory_manager">Inventory Manager</option>
+                            <option value="technician">Technician</option>
+                            <option value="cashier">Cashier</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <select class="form-select" id="department" required>
+                            <option value="">Choose...</option>
+                            <option value="sales">Sales</option>
+                            <option value="projects">Projects</option>
+                            <option value="inventory">Inventory</option>
+                            <option value="technical">Technical</option>
+                            <option value="finance">Finance</option>
+                        </select>
+                    </div>
+                </form>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Assign',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                const employeeId = document.getElementById('employeeId').value;
+                const role = document.getElementById('role').value;
+                const department = document.getElementById('department').value;
+                
+                if (!employeeId || !role || !department) {
+                    Swal.showValidationMessage('Please fill all fields');
+                    return false;
+                }
+                
+                return { employeeId, role, department };
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                fetch('/api/team/assign/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(result.value)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Success',
+                            text: 'Team member assigned successfully',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(data.error || 'Failed to assign team member');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: error.message || 'Failed to assign team member',
+                        icon: 'error'
+                    });
+                });
+            }
+        });
+    };
+});
+</script>
+{% endblock %}

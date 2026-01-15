@@ -1,0 +1,969 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Three-Way Matching - Invoice Verification - {{ block.super }}{% endblock %}
+
+{% block page_title %}Three-Way Matching{% endblock %}
+{% block page_subtitle %}Invoice verification against purchase orders and goods receipts{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Three-Way Matching</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matching-dashboard {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .matching-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .matching-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .matching-status {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-matched { 
+        background: #e8f5e8; 
+        color: #2e7d32; 
+        border-left-color: #2e7d32 !important;
+    }
+    .status-pending { 
+        background: #fff3e0; 
+        color: #f57c00; 
+        border-left-color: #f57c00 !important;
+    }
+    .status-exception { 
+        background: #ffebee; 
+        color: #d32f2f; 
+        border-left-color: #d32f2f !important;
+    }
+    .status-processing { 
+        background: #e3f2fd; 
+        color: #1976d2; 
+        border-left-color: #1976d2 !important;
+    }
+    
+    .document-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .document-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .document-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .icon-po { background: #e3f2fd; color: #1976d2; }
+    .icon-gr { background: #e8f5e8; color: #2e7d32; }
+    .icon-invoice { background: #fff3e0; color: #f57c00; }
+    
+    .variance-indicator {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .variance-none { background: #e8f5e8; color: #2e7d32; }
+    .variance-minor { background: #fff3e0; color: #f57c00; }
+    .variance-major { background: #ffebee; color: #d32f2f; }
+    
+    .matching-progress {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .progress-step.completed {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .progress-step.current {
+        background: #e3f2fd;
+        color: #1976d2;
+        font-weight: 600;
+    }
+    
+    .progress-step.pending {
+        background: white;
+        color: #666;
+    }
+    
+    .step-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .exception-alert {
+        background: #ffebee;
+        border: 1px solid #f44336;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .comparison-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-matched { background: #e8f5e8; }
+    .table-variance { background: #fff3e0; }
+    .table-exception { background: #ffebee; }
+    
+    .action-buttons {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0 0 10px 10px;
+        border-top: 1px solid #e0e0e0;
+        text-align: right;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-matched { color: #2e7d32; }
+    .metric-pending { color: #f57c00; }
+    .metric-exceptions { color: #d32f2f; }
+    .metric-accuracy { color: #1976d2; }
+    
+    .filter-bar {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .approval-workflow {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Matching Dashboard Overview -->
+<div class="matching-dashboard">
+    <h5 class="mb-3">
+        <i class="fas fa-check-double me-2"></i>Three-Way Matching Dashboard
+    </h5>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value metric-matched">127</div>
+                <div class="small text-muted">Matched Invoices</div>
+                <div class="small text-success mt-1">
+                    <i class="fas fa-arrow-up me-1"></i>+12 this week
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value metric-pending">8</div>
+                <div class="small text-muted">Pending Review</div>
+                <div class="small text-warning mt-1">
+                    <i class="fas fa-clock me-1"></i>3 urgent
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value metric-exceptions">3</div>
+                <div class="small text-muted">Exceptions</div>
+                <div class="small text-danger mt-1">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Requires action
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value metric-accuracy">94.3%</div>
+                <div class="small text-muted">Match Accuracy</div>
+                <div class="small text-success mt-1">
+                    <i class="fas fa-arrow-up me-1"></i>+2.1% this month
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="row align-items-center">
+        <div class="col-md-2">
+            <label class="form-label small">Status</label>
+            <select class="form-select form-select-sm" id="statusFilter">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending Review</option>
+                <option value="matched">Matched</option>
+                <option value="exception">Exceptions</option>
+                <option value="approved">Approved</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Vendor</label>
+            <select class="form-select form-select-sm" id="vendorFilter">
+                <option value="">All Vendors</option>
+                <option value="solar-africa">Solar Africa Ltd</option>
+                <option value="techelectro">TechElectro Systems</option>
+                <option value="kenya-cables">Kenya Cables Ltd</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Amount Range</label>
+            <select class="form-select form-select-sm" id="amountFilter">
+                <option value="">Any Amount</option>
+                <option value="0-10000">Under KES 10K</option>
+                <option value="10000-100000">KES 10K - 100K</option>
+                <option value="100000+">Over KES 100K</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Date Range</label>
+            <select class="form-select form-select-sm" id="dateFilter">
+                <option value="today">Today</option>
+                <option value="week" selected>This Week</option>
+                <option value="month">This Month</option>
+                <option value="quarter">This Quarter</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">&nbsp;</label>
+            <div>
+                <button class="btn btn-primary btn-sm me-2" onclick="applyFilters()">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                    Clear
+                </button>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">&nbsp;</label>
+            <div>
+                <button class="btn btn-success btn-sm" onclick="bulkApprove()">
+                    <i class="fas fa-check me-1"></i>Bulk Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Exception Items (High Priority) -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Exception Items - Immediate Attention Required
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Exception Item 1 -->
+                <div class="matching-card status-exception">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">Solar Panel Invoice - Quantity Variance</h6>
+                            <small class="text-muted">
+                                Invoice #: SA-INV-2024-015 | PO #: PO-2024-0023 | 
+                                Vendor: Solar Africa Ltd
+                            </small>
+                        </div>
+                        <span class="matching-status status-exception">Exception</span>
+                    </div>
+                    
+                    <div class="exception-alert">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                            <strong class="text-danger">Major Quantity Variance Detected</strong>
+                        </div>
+                        <p class="mb-2 small">
+                            Invoice quantity (120 units) exceeds goods receipt quantity (100 units). 
+                            Variance: 20 units (16.7% over-invoicing).
+                        </p>
+                        <div class="small text-muted">
+                            <strong>Possible causes:</strong> Partial delivery not updated, invoicing error, or unauthorized delivery
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="document-section">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="document-icon icon-po">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Purchase Order</strong>
+                                        <div class="small text-muted">PO-2024-0023</div>
+                                    </div>
+                                </div>
+                                <div class="small">
+                                    <div>Quantity: <strong>120 units</strong></div>
+                                    <div>Unit Price: <strong>KES 25,000</strong></div>
+                                    <div>Total: <strong>KES 3,000,000</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="document-section">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="document-icon icon-gr">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Goods Receipt</strong>
+                                        <div class="small text-muted">GR-2024-0087</div>
+                                    </div>
+                                </div>
+                                <div class="small">
+                                    <div>Quantity: <strong class="text-warning">100 units</strong></div>
+                                    <div>Received Date: <strong>Feb 15, 2024</strong></div>
+                                    <div>Condition: <strong>Good</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="document-section">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="document-icon icon-invoice">
+                                        <i class="fas fa-receipt"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Invoice</strong>
+                                        <div class="small text-muted">SA-INV-2024-015</div>
+                                    </div>
+                                </div>
+                                <div class="small">
+                                    <div>Quantity: <strong class="text-danger">120 units</strong>
+                                        <span class="variance-indicator variance-major">+20</span>
+                                    </div>
+                                    <div>Unit Price: <strong>KES 25,000</strong></div>
+                                    <div>Total: <strong>KES 3,000,000</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="viewDetails('SA-INV-2024-015')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm me-2" onclick="requestClarification('SA-INV-2024-015')">
+                            <i class="fas fa-question-circle me-1"></i>Request Clarification
+                        </button>
+                        <button class="btn btn-danger btn-sm me-2" onclick="rejectInvoice('SA-INV-2024-015')">
+                            <i class="fas fa-times me-1"></i>Reject
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="approveWithVariance('SA-INV-2024-015')">
+                            <i class="fas fa-check me-1"></i>Approve with Variance
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Review Items -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Pending Review Items
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Pending Item 1 -->
+                <div class="matching-card status-pending">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">Electronics Components Invoice</h6>
+                            <small class="text-muted">
+                                Invoice #: TE-INV-2024-028 | PO #: PO-2024-0019 | 
+                                Vendor: TechElectro Systems
+                            </small>
+                        </div>
+                        <span class="matching-status status-pending">Pending</span>
+                    </div>
+                    
+                    <div class="matching-progress">
+                        <div class="progress-step completed">
+                            <div class="step-icon" style="background: #e8f5e8; color: #2e7d32;">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <span>Purchase Order Verified</span>
+                        </div>
+                        <div class="progress-step completed">
+                            <div class="step-icon" style="background: #e8f5e8; color: #2e7d32;">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <span>Goods Receipt Matched</span>
+                        </div>
+                        <div class="progress-step current">
+                            <div class="step-icon" style="background: #e3f2fd; color: #1976d2;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <span>Awaiting Financial Approval</span>
+                        </div>
+                    </div>
+                    
+                    <div class="comparison-table">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Document</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-matched">
+                                    <td><strong>Purchase Order</strong><br><small class="text-muted">PO-2024-0019</small></td>
+                                    <td class="text-end">50</td>
+                                    <td class="text-end">KES 8,500</td>
+                                    <td class="text-end"><strong>KES 425,000</strong></td>
+                                    <td class="text-center">
+                                        <span class="variance-indicator variance-none">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-matched">
+                                    <td><strong>Goods Receipt</strong><br><small class="text-muted">GR-2024-0094</small></td>
+                                    <td class="text-end">50</td>
+                                    <td class="text-end">-</td>
+                                    <td class="text-end">-</td>
+                                    <td class="text-center">
+                                        <span class="variance-indicator variance-none">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-matched">
+                                    <td><strong>Invoice</strong><br><small class="text-muted">TE-INV-2024-028</small></td>
+                                    <td class="text-end">50</td>
+                                    <td class="text-end">KES 8,500</td>
+                                    <td class="text-end"><strong>KES 425,000</strong></td>
+                                    <td class="text-center">
+                                        <span class="variance-indicator variance-none">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="approval-workflow">
+                        <div class="small mb-2">
+                            <strong>Approval Required:</strong> Amount exceeds department limit (KES 400,000)
+                        </div>
+                        <div class="small text-muted">
+                            Escalated to Finance Manager for approval. 
+                            Expected approval time: 24-48 hours.
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="viewDetails('TE-INV-2024-028')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-outline-info btn-sm me-2" onclick="expediteApproval('TE-INV-2024-028')">
+                            <i class="fas fa-fast-forward me-1"></i>Expedite
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="approveInvoice('TE-INV-2024-028')">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pending Item 2 -->
+                <div class="matching-card status-pending">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">Cable Installation Services</h6>
+                            <small class="text-muted">
+                                Invoice #: KC-INV-2024-012 | PO #: PO-2024-0025 | 
+                                Vendor: Kenya Cables Ltd
+                            </small>
+                        </div>
+                        <span class="matching-status status-pending">Pending</span>
+                    </div>
+                    
+                    <div class="comparison-table">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item Description</th>
+                                    <th class="text-end">PO Qty</th>
+                                    <th class="text-end">GR Qty</th>
+                                    <th class="text-end">Invoice Qty</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Match</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-variance">
+                                    <td>4mm Solar Cable - Red</td>
+                                    <td class="text-end">1000m</td>
+                                    <td class="text-end">950m</td>
+                                    <td class="text-end">950m</td>
+                                    <td class="text-end">KES 190,000</td>
+                                    <td class="text-center">
+                                        <span class="variance-indicator variance-minor">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-matched">
+                                    <td>4mm Solar Cable - Black</td>
+                                    <td class="text-end">1000m</td>
+                                    <td class="text-end">1000m</td>
+                                    <td class="text-end">1000m</td>
+                                    <td class="text-end">KES 200,000</td>
+                                    <td class="text-center">
+                                        <span class="variance-indicator variance-none">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="4">Total Invoice Amount:</th>
+                                    <th class="text-end">KES 390,000</th>
+                                    <th class="text-center">
+                                        <span class="variance-indicator variance-minor">Minor</span>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Minor variance: 50m short delivery documented in goods receipt. 
+                            Invoice adjusted accordingly. Acceptable variance within tolerance (5%).
+                        </small>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="viewDetails('KC-INV-2024-012')">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="approveInvoice('KC-INV-2024-012')">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Matched Items -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Recently Matched & Approved
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Vendor</th>
+                                <th>PO #</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-center">Match Status</th>
+                                <th>Approved By</th>
+                                <th>Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>SA-INV-2024-014</strong>
+                                    <br><small class="text-muted">Solar Panels</small>
+                                </td>
+                                <td>Solar Africa Ltd</td>
+                                <td>PO-2024-0022</td>
+                                <td class="text-end">
+                                    <strong>KES 2,500,000</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="matching-status status-matched">Matched</span>
+                                </td>
+                                <td>John Kamau</td>
+                                <td>Feb 18, 2024</td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="viewDetails('SA-INV-2024-014')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>TE-INV-2024-027</strong>
+                                    <br><small class="text-muted">Inverters</small>
+                                </td>
+                                <td>TechElectro Systems</td>
+                                <td>PO-2024-0018</td>
+                                <td class="text-end">
+                                    <strong>KES 1,800,000</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="matching-status status-matched">Matched</span>
+                                </td>
+                                <td>Mary Wanjiku</td>
+                                <td>Feb 17, 2024</td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="viewDetails('TE-INV-2024-027')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>IS-INV-2024-008</strong>
+                                    <br><small class="text-muted">Installation Services</small>
+                                </td>
+                                <td>Installation Services Co</td>
+                                <td>PO-2024-0020</td>
+                                <td class="text-end">
+                                    <strong>KES 650,000</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="matching-status status-matched">Matched</span>
+                                </td>
+                                <td>Peter Njoroge</td>
+                                <td>Feb 16, 2024</td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="viewDetails('IS-INV-2024-008')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="uploadInvoice()">
+                        <i class="fas fa-upload me-2"></i>Upload Invoice
+                    </button>
+                    <button class="btn btn-success" onclick="bulkApprove()">
+                        <i class="fas fa-check-double me-2"></i>Bulk Approve
+                    </button>
+                    <button class="btn btn-info" onclick="matchingReport()">
+                        <i class="fas fa-chart-bar me-2"></i>Matching Report
+                    </button>
+                    <button class="btn btn-warning" onclick="exceptionReport()">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Exception Report
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="toleranceSettings()">
+                        <i class="fas fa-cog me-2"></i>Tolerance Settings
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="auditTrail()">
+                        <i class="fas fa-history me-2"></i>Audit Trail
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matching Rules -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-rules me-2"></i>Matching Rules
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Quantity Tolerance:</strong>
+                        <span class="float-end">± 5%</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Price Tolerance:</strong>
+                        <span class="float-end">± 2%</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Auto-approve Limit:</strong>
+                        <span class="float-end">KES 50,000</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Manager Approval:</strong>
+                        <span class="float-end">KES 500,000</span>
+                    </div>
+                    <div>
+                        <strong>Director Approval:</strong>
+                        <span class="float-end">KES 2,000,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Summary -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Today's Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="metric-card">
+                            <div class="metric-value text-success">12</div>
+                            <small class="text-muted">Processed</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card">
+                            <div class="metric-value text-warning">8</div>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card">
+                            <div class="metric-value text-danger">3</div>
+                            <small class="text-muted">Exceptions</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card">
+                            <div class="metric-value text-primary">95%</div>
+                            <small class="text-muted">Accuracy</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong class="text-success">Invoice Approved</strong><br>
+                            TE-INV-2024-027 - KES 1.8M
+                        </div>
+                        <small class="text-muted">15 min ago</small>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong class="text-danger">Exception Raised</strong><br>
+                            SA-INV-2024-015 - Quantity variance
+                        </div>
+                        <small class="text-muted">1 hour ago</small>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="small">
+                            <strong class="text-info">Clarification Requested</strong><br>
+                            KC-INV-2024-011 - Price discrepancy
+                        </div>
+                        <small class="text-muted">2 hours ago</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyFilters() {
+    const status = document.getElementById('statusFilter').value;
+    const vendor = document.getElementById('vendorFilter').value;
+    const amount = document.getElementById('amountFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    
+    console.log('Applying filters:', { status, vendor, amount, date });
+    // Filter implementation would go here
+}
+
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('vendorFilter').value = '';
+    document.getElementById('amountFilter').value = '';
+    document.getElementById('dateFilter').value = 'week';
+    applyFilters();
+}
+
+function viewDetails(invoiceId) {
+    window.location.href = `/procurement/three-way-matching/${invoiceId}/`;
+}
+
+function approveInvoice(invoiceId) {
+    if (confirm('Approve this invoice for payment?')) {
+        // AJAX call to approve invoice
+        alert(`Invoice ${invoiceId} approved successfully!`);
+        // Refresh the page or update UI
+    }
+}
+
+function rejectInvoice(invoiceId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason && reason.trim()) {
+        // AJAX call to reject invoice
+        alert(`Invoice ${invoiceId} rejected. Reason: ${reason}`);
+    }
+}
+
+function requestClarification(invoiceId) {
+    const message = prompt('What clarification do you need from the vendor?');
+    if (message && message.trim()) {
+        // Send clarification request
+        alert('Clarification request sent to vendor');
+    }
+}
+
+function approveWithVariance(invoiceId) {
+    if (confirm('Approve this invoice despite the variance? This will be logged for audit purposes.')) {
+        const justification = prompt('Please provide justification for approving with variance:');
+        if (justification && justification.trim()) {
+            alert(`Invoice ${invoiceId} approved with variance. Justification recorded.`);
+        }
+    }
+}
+
+function expediteApproval(invoiceId) {
+    if (confirm('Expedite approval for this invoice? This will notify the approver immediately.')) {
+        alert('Expedite request sent to approver');
+    }
+}
+
+function bulkApprove() {
+    // Get selected invoices
+    const selectedInvoices = []; // This would come from checkboxes
+    if (selectedInvoices.length === 0) {
+        alert('Please select invoices to approve');
+        return;
+    }
+    
+    if (confirm(`Approve ${selectedInvoices.length} selected invoices?`)) {
+        alert('Bulk approval completed');
+    }
+}
+
+function uploadInvoice() {
+    window.location.href = '/procurement/invoices/upload/';
+}
+
+function matchingReport() {
+    window.location.href = '/procurement/reports/three-way-matching/';
+}
+
+function exceptionReport() {
+    window.location.href = '/procurement/reports/matching-exceptions/';
+}
+
+function toleranceSettings() {
+    window.location.href = '/procurement/settings/matching-tolerance/';
+}
+
+function auditTrail() {
+    window.location.href = '/procurement/audit/three-way-matching/';
+}
+
+// Auto-refresh pending items every 5 minutes
+setInterval(function() {
+    // In real implementation, this would refresh the pending items
+    console.log('Auto-refreshing pending items...');
+}, 300000);
+</script>
+{% endblock %}

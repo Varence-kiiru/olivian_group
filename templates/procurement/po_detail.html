@@ -1,0 +1,562 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ purchase_order.po_number }} - Purchase Order Details - {{ block.super }}{% endblock %}
+
+{% block page_title %}Purchase Order {{ purchase_order.po_number }}{% endblock %}
+{% block page_subtitle %}{{ purchase_order.vendor.company_name }} - {{ purchase_order.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:po_list' %}">Purchase Orders</a></li>
+<li class="breadcrumb-item active">{{ purchase_order.po_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .po-status {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-draft { background: #f8f9fa; color: #6c757d; }
+    .status-sent { background: #e3f2fd; color: #1976d2; }
+    .status-confirmed { background: #e8f5e8; color: #2e7d32; }
+    .status-partial { background: #fff3e0; color: #f57c00; }
+    .status-received { background: #f3e5f5; color: #7b1fa2; }
+    .status-invoiced { background: #e1f5fe; color: #0277bd; }
+    .status-paid { background: #e8f5e8; color: #388e3c; }
+    .status-cancelled { background: #ffebee; color: #d32f2f; }
+    
+    .priority-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .priority-low { background: #e8f5e8; color: #2e7d32; }
+    .priority-medium { background: #fff3e0; color: #f57c00; }
+    .priority-high { background: #ffebee; color: #d32f2f; }
+    .priority-urgent { background: #fce4ec; color: #ad1457; }
+    
+    .po-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.25rem -1.25rem 1.5rem -1.25rem;
+    }
+    
+    .po-summary {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-row {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        width: 140px;
+        display: inline-block;
+    }
+    
+    .info-icon {
+        width: 16px;
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e0e0e0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 5px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e0e0e0;
+    }
+    
+    .timeline-item.completed::before {
+        background: #4caf50;
+    }
+    
+    .timeline-item.current::before {
+        background: #ff9800;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 2px #e0e0e0, 0 0 0 4px rgba(255, 152, 0, 0); }
+        50% { box-shadow: 0 0 0 2px #e0e0e0, 0 0 0 4px rgba(255, 152, 0, 0.3); }
+        100% { box-shadow: 0 0 0 2px #e0e0e0, 0 0 0 4px rgba(255, 152, 0, 0); }
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: calc(var(--topbar-height) + 1rem);
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .amount-summary {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- PO Header Card -->
+        <div class="card">
+            <div class="po-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="mb-2">{{ purchase_order.po_number }}</h3>
+                        <p class="mb-1 opacity-75">{{ purchase_order.title }}</p>
+                        <div class="d-flex align-items-center">
+                            <span class="po-status status-{{ purchase_order.status }} me-3">
+                                {{ purchase_order.get_status_display }}
+                            </span>
+                            <span class="priority-badge priority-{{ purchase_order.priority }}">
+                                {{ purchase_order.get_priority_display }} Priority
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="amount-summary">
+                            <div class="h4 mb-1">{{ purchase_order.currency }} {{ purchase_order.total_amount|floatformat:2 }}</div>
+                            <small class="opacity-75">Total Amount</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">
+                            <i class="fas fa-truck me-2"></i>Vendor Information
+                        </h6>
+                        <div class="info-row">
+                            <i class="fas fa-building info-icon"></i>
+                            <span class="info-label">Company:</span>
+                            <a href="{% url 'procurement:vendor_detail' purchase_order.vendor.pk %}" class="text-decoration-none">
+                                {{ purchase_order.vendor.company_name }}
+                            </a>
+                        </div>
+                        <div class="info-row">
+                            <i class="fas fa-user info-icon"></i>
+                            <span class="info-label">Contact:</span>
+                            {{ purchase_order.vendor.contact_person }}
+                        </div>
+                        <div class="info-row">
+                            <i class="fas fa-envelope info-icon"></i>
+                            <span class="info-label">Email:</span>
+                            <a href="mailto:{{ purchase_order.vendor.email }}">{{ purchase_order.vendor.email }}</a>
+                        </div>
+                        <div class="info-row">
+                            <i class="fas fa-phone info-icon"></i>
+                            <span class="info-label">Phone:</span>
+                            <a href="tel:{{ purchase_order.vendor.phone }}">{{ purchase_order.vendor.phone }}</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Order Details
+                        </h6>
+                        <div class="info-row">
+                            <i class="fas fa-calendar info-icon"></i>
+                            <span class="info-label">Order Date:</span>
+                            {{ purchase_order.order_date }}
+                        </div>
+                        <div class="info-row">
+                            <i class="fas fa-calendar-check info-icon"></i>
+                            <span class="info-label">Required Date:</span>
+                            {{ purchase_order.required_date }}
+                        </div>
+                        {% if purchase_order.promised_date %}
+                        <div class="info-row">
+                            <i class="fas fa-handshake info-icon"></i>
+                            <span class="info-label">Promised Date:</span>
+                            {{ purchase_order.promised_date }}
+                        </div>
+                        {% endif %}
+                        <div class="info-row">
+                            <i class="fas fa-user-tie info-icon"></i>
+                            <span class="info-label">Created By:</span>
+                            {{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username }}
+                        </div>
+                        {% if purchase_order.approved_by %}
+                        <div class="info-row">
+                            <i class="fas fa-check-circle info-icon"></i>
+                            <span class="info-label">Approved By:</span>
+                            {{ purchase_order.approved_by.get_full_name|default:purchase_order.approved_by.username }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if purchase_order.description %}
+                <div class="mt-3">
+                    <h6 class="mb-2">
+                        <i class="fas fa-file-alt me-2"></i>Description
+                    </h6>
+                    <p class="text-muted">{{ purchase_order.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Order Items
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.item_name }}</strong>
+                                    {% if item.product %}
+                                    <br><small class="text-muted">Product: {{ item.product.name }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.description|truncatechars:50 }}</td>
+                                <td class="text-end">{{ item.quantity|floatformat:2 }}</td>
+                                <td class="text-end">{{ purchase_order.currency }} {{ item.unit_price|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <strong>{{ purchase_order.currency }} {{ item.total_price|floatformat:2 }}</strong>
+                                </td>
+                                <td class="text-center">
+                                    {% if item.quantity_received == item.quantity %}
+                                    <span class="badge bg-success">Received</span>
+                                    {% elif item.quantity_received > 0 %}
+                                    <span class="badge bg-warning">Partial</span>
+                                    <br><small class="text-muted">{{ item.quantity_received }}/{{ item.quantity }}</small>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4" class="text-end">Subtotal:</th>
+                                <th class="text-end">{{ purchase_order.currency }} {{ purchase_order.subtotal|floatformat:2 }}</th>
+                                <th></th>
+                            </tr>
+                            {% if purchase_order.tax_amount > 0 %}
+                            <tr>
+                                <th colspan="4" class="text-end">VAT (16%):</th>
+                                <th class="text-end">{{ purchase_order.currency }} {{ purchase_order.tax_amount|floatformat:2 }}</th>
+                                <th></th>
+                            </tr>
+                            {% endif %}
+                            <tr class="table-primary">
+                                <th colspan="4" class="text-end">Total Amount:</th>
+                                <th class="text-end">{{ purchase_order.currency }} {{ purchase_order.total_amount|floatformat:2 }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No items found for this purchase order</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Terms and Conditions -->
+        {% if purchase_order.payment_terms or purchase_order.delivery_terms %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-contract me-2"></i>Terms & Conditions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if purchase_order.payment_terms %}
+                    <div class="col-md-6">
+                        <h6>Payment Terms</h6>
+                        <p class="text-muted">{{ purchase_order.payment_terms }}</p>
+                    </div>
+                    {% endif %}
+                    {% if purchase_order.delivery_terms %}
+                    <div class="col-md-6">
+                        <h6>Delivery Terms</h6>
+                        <p class="text-muted">{{ purchase_order.delivery_terms }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="action-buttons">
+            <h6 class="mb-3">Quick Actions</h6>
+            <div class="d-grid gap-2">
+                {% if purchase_order.status == 'draft' %}
+                <button class="btn btn-primary" onclick="sendToVendor()">
+                    <i class="fas fa-paper-plane me-2"></i>Send to Vendor
+                </button>
+                <a href="#" class="btn btn-outline-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Order
+                </a>
+                {% elif purchase_order.status == 'sent' %}
+                <button class="btn btn-success" onclick="confirmOrder()">
+                    <i class="fas fa-check me-2"></i>Confirm Order
+                </button>
+                {% elif purchase_order.status == 'confirmed' %}
+                <button class="btn btn-info" onclick="receiveGoods()">
+                    <i class="fas fa-truck me-2"></i>Receive Goods
+                </button>
+                {% endif %}
+                
+                <button class="btn btn-outline-success" onclick="downloadPDF()">
+                    <i class="fas fa-download me-2"></i>Download PDF
+                </button>
+                <button class="btn btn-outline-info" onclick="printPO()">
+                    <i class="fas fa-print me-2"></i>Print Order
+                </button>
+                <button class="btn btn-outline-warning" onclick="emailVendor()">
+                    <i class="fas fa-envelope me-2"></i>Email Vendor
+                </button>
+                
+                {% if purchase_order.status == 'draft' %}
+                <button class="btn btn-outline-danger" onclick="cancelOrder()">
+                    <i class="fas fa-times me-2"></i>Cancel Order
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Order Progress -->
+            <div class="mt-4">
+                <h6 class="mb-3">Order Progress</h6>
+                <div class="timeline">
+                    <div class="timeline-item {% if purchase_order.status != 'draft' %}completed{% else %}current{% endif %}">
+                        <div class="fw-bold">Order Created</div>
+                        <small class="text-muted">{{ purchase_order.created_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    
+                    <div class="timeline-item {% if purchase_order.status in 'sent,confirmed,partial,received,invoiced,paid' %}completed{% elif purchase_order.status == 'draft' %}{% else %}current{% endif %}">
+                        <div class="fw-bold">Sent to Vendor</div>
+                        <small class="text-muted">
+                            {% if purchase_order.status != 'draft' %}
+                                Order sent to vendor
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="timeline-item {% if purchase_order.status in 'confirmed,partial,received,invoiced,paid' %}completed{% elif purchase_order.status == 'sent' %}current{% endif %}">
+                        <div class="fw-bold">Order Confirmed</div>
+                        <small class="text-muted">
+                            {% if purchase_order.status in 'confirmed,partial,received,invoiced,paid' %}
+                                Confirmed by vendor
+                            {% else %}
+                                Waiting for confirmation
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="timeline-item {% if purchase_order.status in 'received,invoiced,paid' %}completed{% elif purchase_order.status in 'partial' %}current{% endif %}">
+                        <div class="fw-bold">Goods Received</div>
+                        <small class="text-muted">
+                            {% if purchase_order.status in 'received,invoiced,paid' %}
+                                All items received
+                            {% elif purchase_order.status == 'partial' %}
+                                Partially received
+                            {% else %}
+                                Awaiting delivery
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="timeline-item {% if purchase_order.status in 'invoiced,paid' %}completed{% elif purchase_order.status == 'received' %}current{% endif %}">
+                        <div class="fw-bold">Invoice Received</div>
+                        <small class="text-muted">
+                            {% if purchase_order.status in 'invoiced,paid' %}
+                                Invoice processed
+                            {% else %}
+                                Awaiting invoice
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="timeline-item {% if purchase_order.status == 'paid' %}completed{% elif purchase_order.status == 'invoiced' %}current{% endif %}">
+                        <div class="fw-bold">Payment Complete</div>
+                        <small class="text-muted">
+                            {% if purchase_order.status == 'paid' %}
+                                Payment processed
+                            {% else %}
+                                Payment pending
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Documents -->
+            <div class="mt-4">
+                <h6 class="mb-3">Related Documents</h6>
+                <div class="list-group list-group-flush">
+                    {% if purchase_order.requisition %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <i class="fas fa-clipboard-list me-2 text-primary"></i>
+                            <span>{{ purchase_order.requisition.requisition_number }}</span>
+                        </div>
+                        <a href="#" class="btn btn-outline-primary btn-sm">View</a>
+                    </div>
+                    {% endif %}
+                    {% if purchase_order.rfq %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <i class="fas fa-question-circle me-2 text-info"></i>
+                            <span>{{ purchase_order.rfq.rfq_number }}</span>
+                        </div>
+                        <a href="{% url 'procurement:rfq_detail' purchase_order.rfq.pk %}" class="btn btn-outline-primary btn-sm">View</a>
+                    </div>
+                    {% endif %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <i class="fas fa-file-invoice me-2 text-success"></i>
+                            <span>Goods Receipt</span>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="createGoodsReceipt()">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sendToVendor() {
+    if (confirm('Send this purchase order to the vendor?')) {
+        // AJAX call to update status
+        fetch(`/procurement/purchase-orders/{{ purchase_order.pk }}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error sending order to vendor');
+            }
+        });
+    }
+}
+
+function confirmOrder() {
+    if (confirm('Confirm that the vendor has accepted this order?')) {
+        // AJAX call to update status
+        alert('Order confirmation feature coming soon!');
+    }
+}
+
+function receiveGoods() {
+    // Redirect to goods receipt page
+    window.location.href = `/procurement/purchase-orders/{{ purchase_order.pk }}/receive/`;
+}
+
+function downloadPDF() {
+    window.open(`/procurement/purchase-orders/{{ purchase_order.pk }}/pdf/`, '_blank');
+}
+
+function printPO() {
+    window.print();
+}
+
+function emailVendor() {
+    const subject = encodeURIComponent('Purchase Order {{ purchase_order.po_number }}');
+    const body = encodeURIComponent('Dear {{ purchase_order.vendor.contact_person }},\n\nPlease find attached Purchase Order {{ purchase_order.po_number }}.\n\nBest regards,\n{{ user.get_full_name }}');
+    window.location.href = `mailto:{{ purchase_order.vendor.email }}?subject=${subject}&body=${body}`;
+}
+
+function cancelOrder() {
+    if (confirm('Are you sure you want to cancel this purchase order? This action cannot be undone.')) {
+        // AJAX call to cancel order
+        alert('Order cancellation feature coming soon!');
+    }
+}
+
+function createGoodsReceipt() {
+    window.location.href = `/procurement/purchase-orders/{{ purchase_order.pk }}/receive/`;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white;">
+        <div style="background-color: {{ primary_color|default:'#38b6ff' }}; padding: 20px; text-align: center; color: white;">
+            {% if logo_url %}
+                <div style="margin-bottom: 10px;">
+                    <img src="{{ logo_url }}" alt="{{ company_name }}" style="max-height: 50px; max-width: 150px; height: auto;">
+                </div>
+            {% endif %}
+            <h1 style="margin: 0; font-size: 24px;">{{ company_name }}</h1>
+        </div>
+
+        <div style="padding: 20px; line-height: 1.6;">
+            {{ content|linebreaks }}
+
+            {% if sender %}
+            <div style="background-color: #f8f9fa; padding: 20px; margin-top: 20px; border-left: 4px solid {{ primary_color|default:'#38b6ff' }};">
+                <p><strong>Best regards,</strong></p>
+                <p>{{ sender.get_full_name }}</p>
+                <p>{{ sender.get_role_display }}</p>
+                <p>{{ company_name }}</p>
+                <p>Phone: {{ company_phone }}</p>
+                <p>Email: {{ sender.email }}</p>
+                <p>Website: {{ company_website }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="background-color: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
+            <p>This email was sent from {{ company_name }} CRM System.</p>
+            <p>&copy; 2025 {{ company_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

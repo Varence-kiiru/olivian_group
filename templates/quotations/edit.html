@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Quotation {{ object.quotation_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-edit me-2"></i>Edit Quotation {{ object.quotation_number }}
+        </h1>
+        <div>
+            <a href="{% url 'quotations:detail' object.quotation_number %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Details
+            </a>
+        </div>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Basic Information -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Basic Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.quotation_type.id_for_label }}" class="form-label">Quotation Type</label>
+                                <select name="{{ form.quotation_type.name }}" id="{{ form.quotation_type.id_for_label }}" class="form-select">
+                                    {% for value, text in form.quotation_type.field.choices %}
+                                        <option value="{{ value }}" {% if form.quotation_type.value == value %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.quotation_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.quotation_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.system_type.id_for_label }}" class="form-label">System Type</label>
+                                <select name="{{ form.system_type.name }}" id="{{ form.system_type.id_for_label }}" class="form-select">
+                                    {% for value, text in form.system_type.field.choices %}
+                                        <option value="{{ value }}" {% if form.system_type.value == value %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.system_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.system_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.system_capacity.id_for_label }}" class="form-label">System Capacity (kW)</label>
+                                <input type="number" name="{{ form.system_capacity.name }}" id="{{ form.system_capacity.id_for_label }}" class="form-control" value="{{ form.system_capacity.value|default:'' }}" step="0.01">
+                                {% if form.system_capacity.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.system_capacity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.estimated_generation.id_for_label }}" class="form-label">Estimated Monthly Generation (kWh)</label>
+                                <input type="number" name="{{ form.estimated_generation.name }}" id="{{ form.estimated_generation.id_for_label }}" class="form-control" value="{{ form.estimated_generation.value|default:'' }}" step="0.01">
+                                {% if form.estimated_generation.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.estimated_generation.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.installation_complexity.id_for_label }}" class="form-label">Installation Complexity</label>
+                            <select name="{{ form.installation_complexity.name }}" id="{{ form.installation_complexity.id_for_label }}" class="form-select">
+                                {% for value, text in form.installation_complexity.field.choices %}
+                                    <option value="{{ value }}" {% if form.installation_complexity.value == value %}selected{% endif %}>{{ text }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.installation_complexity.errors %}
+                                <div class="invalid-feedback d-block">{{ form.installation_complexity.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Information -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Financial Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.subtotal.id_for_label }}" class="form-label">Subtotal (KES)</label>
+                                <input type="number" name="{{ form.subtotal.name }}" id="{{ form.subtotal.id_for_label }}" class="form-control" value="{{ form.subtotal.value|default:'' }}" step="0.01">
+                                {% if form.subtotal.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.subtotal.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tax_amount.id_for_label }}" class="form-label">VAT Amount (KES)</label>
+                                <input type="number" name="{{ form.tax_amount.name }}" id="{{ form.tax_amount.id_for_label }}" class="form-control" value="{{ form.tax_amount.value|default:'' }}" step="0.01">
+                                {% if form.tax_amount.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.tax_amount.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.discount_amount.id_for_label }}" class="form-label">Discount Amount (KES)</label>
+                                <input type="number" name="{{ form.discount_amount.name }}" id="{{ form.discount_amount.id_for_label }}" class="form-control" value="{{ form.discount_amount.value|default:'' }}" step="0.01">
+                                {% if form.discount_amount.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.discount_amount.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.discount_percentage.id_for_label }}" class="form-label">Discount Percentage (%)</label>
+                                <input type="number" name="{{ form.discount_percentage.name }}" id="{{ form.discount_percentage.id_for_label }}" class="form-control" value="{{ form.discount_percentage.value|default:'' }}" step="0.01" min="0" max="100">
+                                {% if form.discount_percentage.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.discount_percentage.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.total_amount.id_for_label }}" class="form-label">Total Amount (KES)</label>
+                            <input type="number" name="{{ form.total_amount.name }}" id="{{ form.total_amount.id_for_label }}" class="form-control" value="{{ form.total_amount.value|default:'' }}" step="0.01">
+                            {% if form.total_amount.errors %}
+                                <div class="invalid-feedback d-block">{{ form.total_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savings Information -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Savings & ROI</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.estimated_monthly_savings.id_for_label }}" class="form-label">Monthly Savings (KES)</label>
+                                <input type="number" name="{{ form.estimated_monthly_savings.name }}" id="{{ form.estimated_monthly_savings.id_for_label }}" class="form-control" value="{{ form.estimated_monthly_savings.value|default:'' }}" step="0.01">
+                                {% if form.estimated_monthly_savings.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.estimated_monthly_savings.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.estimated_annual_savings.id_for_label }}" class="form-label">Annual Savings (KES)</label>
+                                <input type="number" name="{{ form.estimated_annual_savings.name }}" id="{{ form.estimated_annual_savings.id_for_label }}" class="form-control" value="{{ form.estimated_annual_savings.value|default:'' }}" step="0.01">
+                                {% if form.estimated_annual_savings.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.estimated_annual_savings.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.payback_period_months.id_for_label }}" class="form-label">Payback Period (Months)</label>
+                                <input type="number" name="{{ form.payback_period_months.name }}" id="{{ form.payback_period_months.id_for_label }}" class="form-control" value="{{ form.payback_period_months.value|default:'' }}" step="1" min="0">
+                                {% if form.payback_period_months.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.payback_period_months.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.roi_percentage.id_for_label }}" class="form-label">ROI Percentage (%)</label>
+                                <input type="number" name="{{ form.roi_percentage.name }}" id="{{ form.roi_percentage.id_for_label }}" class="form-control" value="{{ form.roi_percentage.value|default:'' }}" step="0.01">
+                                {% if form.roi_percentage.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.roi_percentage.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Terms & Conditions -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Terms & Conditions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.payment_terms.id_for_label }}" class="form-label">Payment Terms</label>
+                            <textarea name="{{ form.payment_terms.name }}" id="{{ form.payment_terms.id_for_label }}" class="form-control" rows="3">{{ form.payment_terms.value|default:'' }}</textarea>
+                            {% if form.payment_terms.errors %}
+                                <div class="invalid-feedback d-block">{{ form.payment_terms.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.delivery_time.id_for_label }}" class="form-label">Delivery Time</label>
+                            <input type="text" name="{{ form.delivery_time.name }}" id="{{ form.delivery_time.id_for_label }}" class="form-control" value="{{ form.delivery_time.value|default:'' }}">
+                            {% if form.delivery_time.errors %}
+                                <div class="invalid-feedback d-block">{{ form.delivery_time.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.warranty_terms.id_for_label }}" class="form-label">Warranty Terms</label>
+                            <textarea name="{{ form.warranty_terms.name }}" id="{{ form.warranty_terms.id_for_label }}" class="form-control" rows="3">{{ form.warranty_terms.value|default:'' }}</textarea>
+                            {% if form.warranty_terms.errors %}
+                                <div class="invalid-feedback d-block">{{ form.warranty_terms.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" name="{{ form.financing_available.name }}" id="{{ form.financing_available.id_for_label }}" class="form-check-input" {% if form.financing_available.value %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ form.financing_available.id_for_label }}">
+                                Financing Available
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Notes</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Internal Notes</label>
+                            <textarea name="{{ form.notes.name }}" id="{{ form.notes.id_for_label }}" class="form-control" rows="4">{{ form.notes.value|default:'' }}</textarea>
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'quotations:detail' object.quotation_number %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-calculate total amount
+document.addEventListener('DOMContentLoaded', function() {
+    const subtotalField = document.getElementById('{{ form.subtotal.id_for_label }}');
+    const taxField = document.getElementById('{{ form.tax_amount.id_for_label }}');
+    const discountField = document.getElementById('{{ form.discount_amount.id_for_label }}');
+    const totalField = document.getElementById('{{ form.total_amount.id_for_label }}');
+
+    function calculateTotal() {
+        const subtotal = parseFloat(subtotalField.value) || 0;
+        const tax = parseFloat(taxField.value) || 0;
+        const discount = parseFloat(discountField.value) || 0;
+        const total = subtotal + tax - discount;
+        totalField.value = total.toFixed(2);
+    }
+
+    subtotalField.addEventListener('input', calculateTotal);
+    taxField.addEventListener('input', calculateTotal);
+    discountField.addEventListener('input', calculateTotal);
+});
+</script>
+{% endblock %}

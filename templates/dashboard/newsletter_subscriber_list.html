@@ -1,0 +1,331 @@
+{% extends "dashboard/base.html" %}
+
+{% block page_title %}Newsletter Subscribers{% endblock %}
+{% block page_subtitle %}Manage your email subscriber list{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:newsletter_dashboard' %}">Newsletter</a></li>
+<li class="breadcrumb-item active">Subscribers</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">Newsletter Subscribers</h4>
+                <p class="text-muted mb-0">Manage your email subscriber database</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'core:newsletter_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ total_subscribers }}</div>
+            <div class="stats-label">Total Subscribers</div>
+            <i class="fas fa-users stats-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ active_subscribers }}</div>
+            <div class="stats-label">Active Subscribers</div>
+            <i class="fas fa-user-check stats-icon"></i>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-value">{{ inactive_subscribers }}</div>
+            <div class="stats-label">Inactive Subscribers</div>
+            <i class="fas fa-user-times stats-icon"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Subscribers</option>
+                            <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active Only</option>
+                            <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="q" class="form-label">Search</label>
+                        <input type="text" name="q" id="q" class="form-control" placeholder="Search by name or email..."
+                               value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search me-1"></i>Filter
+                            </button>
+                            <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subscribers Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Subscribers ({{ subscribers|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if subscribers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Subscriber</th>
+                                    <th>Status</th>
+                                    <th>Source</th>
+                                    <th>Subscribed</th>
+                                    <th>Last Activity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subscriber in subscribers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3" style="width: 40px; height: 40px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
+                                                {% if subscriber.first_name %}{{ subscriber.first_name.0|upper }}{% else %}{{ subscriber.email.0|upper }}{% endif %}
+                                            </div>
+                                            <div>
+                                                <strong>{{ subscriber.get_full_name|default:subscriber.email }}</strong>
+                                                <br><small class="text-muted">{{ subscriber.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if subscriber.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-pause me-1"></i>Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ subscriber.subscription_source|title }}</small>
+                                    </td>
+                                    <td>{{ subscriber.subscribed_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% with latest_log=subscriber.send_logs.first %}
+                                        {% if latest_log %}
+                                            {% if latest_log.opened_at %}
+                                                <small class="text-success">
+                                                    <i class="fas fa-envelope-open me-1"></i>Opened {{ latest_log.opened_at|date:"M d" }}
+                                                </small>
+                                            {% elif latest_log.clicked_at %}
+                                                <small class="text-warning">
+                                                    <i class="fas fa-mouse-pointer me-1"></i>Clicked {{ latest_log.clicked_at|date:"M d" }}
+                                                </small>
+                                            {% else %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-paper-plane me-1"></i>Sent {{ latest_log.sent_at|date:"M d" }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'core:newsletter_subscriber_detail' subscriber.pk %}"
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if subscriber.is_active %}
+                                            <form method="post" action="{% url 'core:newsletter_subscriber_toggle' subscriber.pk %}"
+                                                  class="d-inline" onsubmit="return deactivateSubscriberConfirm(event)">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-warning" title="Deactivate">
+                                                    <i class="fas fa-pause"></i>
+                                                </button>
+                                            </form>
+                                            {% else %}
+                                            <form method="post" action="{% url 'core:newsletter_subscriber_toggle' subscriber.pk %}"
+                                                  class="d-inline" onsubmit="return reactivateSubscriberConfirm(event)">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success" title="Reactivate">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <nav aria-label="Subscriber pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted">No subscribers found</h4>
+                        <p class="text-muted mb-4">
+                            {% if request.GET %}
+                                No subscribers match your current filters.
+                            {% else %}
+                                You don't have any newsletter subscribers yet.
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-center gap-2">
+                            {% if request.GET %}
+                            <a href="{% url 'core:newsletter_subscriber_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear Filters
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions (if needed in future) -->
+{% comment %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Bulk Actions</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" id="bulkActionsForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <select name="bulk_action" class="form-select" id="bulkAction">
+                                <option value="">Select Action</option>
+                                <option value="activate">Activate Selected</option>
+                                <option value="deactivate">Deactivate Selected</option>
+                                <option value="export">Export Selected</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <button type="submit" class="btn btn-outline-primary" id="bulkActionBtn" disabled>
+                                <i class="fas fa-cogs me-1"></i>Apply Action
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endcomment %}
+
+<script>
+function deactivateSubscriberConfirm(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    Swal.fire({
+        title: 'Deactivate Subscriber?',
+        text: 'Are you sure you want to deactivate this subscriber?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, deactivate',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+
+    return false;
+}
+
+function reactivateSubscriberConfirm(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    Swal.fire({
+        title: 'Reactivate Subscriber?',
+        text: 'Are you sure you want to reactivate this subscriber?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, reactivate',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+
+    return false;
+}
+</script>
+{% endblock %}

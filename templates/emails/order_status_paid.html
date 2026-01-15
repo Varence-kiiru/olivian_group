@@ -1,0 +1,55 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Payment Confirmed #{{ order_number }}{% endblock %}
+
+{% block content %}
+<h2>[CONFIRMED] Payment Confirmed - Thank You!</h2>
+
+<p>Dear {{ customer_name }},</p>
+
+<p>Excellent! We've confirmed your payment. Your order is now fully approved and will be processed immediately.</p>
+
+<div class="highlight-box">
+    <h3>Payment Details:</h3>
+    <p><strong>Order Number:</strong> {{ order_number }}</p>
+    <p><strong>Payment Status:</strong> [CONFIRMED]</p>
+    <p><strong>Amount Paid:</strong> KES {{ total_amount|floatformat:2|add:","|cut:" " }}</p>
+    <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+    {% if order.mpesa_transaction_id %}
+    <p><strong>M-Pesa Transaction ID:</strong> {{ order.mpesa_transaction_id }}</p>
+    {% endif %}
+</div>
+
+<div class="status-box" style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <h4 style="color: #155724; margin: 0 0 10px 0;">[READY] Ready for Processing</h4>
+    <p style="margin: 0; color: #155724;">
+        Your order will now move to our processing team and be prepared for dispatch within 1-2 business days.
+    </p>
+</div>
+
+<h3>Updated Timeline:</h3>
+<ul>
+    {% for status_code, status_date in status_history.items %}
+        {% if status_code == 'received' %}
+            <li>[COMPLETE] <strong>Order Received</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% else %}
+            <li>[COMPLETE] <strong>{{ status_code|title }}</strong> - {{ status_date|date:"M d, Y at H:i" }}</li>
+        {% endif %}
+    {% endfor %}
+    <li>[COMPLETE] <strong>Payment Confirmed</strong> (Current Stage)</li>
+    <li>[PENDING] <strong>Processing</strong> (Next - 1-2 business days)</li>
+    <li>[PENDING] <strong>Shipped</strong></li>
+    <li>[PENDING] <strong>Delivered</strong></li>
+    {% if installation_required %}
+    <li>[PENDING] <strong>Installation Scheduled</strong></li>
+    {% endif %}
+</ul>
+
+<div class="cta-box">
+    <p><strong>Track Your Order:</strong></p>
+    <a href="{{ order_tracking_url }}" class="btn-primary">Track Order #{{ order_number }}</a>
+</div>
+
+<p>Thank you for your payment and for choosing Olivian Group. We're excited to deliver your solar solution!</p>
+
+{% endblock %}

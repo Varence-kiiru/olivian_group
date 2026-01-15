@@ -1,0 +1,110 @@
+<!-- Newsletter Signup Widget -->
+<div id="newsletter" class="newsletter-signup">
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <h5 class="mb-2">📧 Stay Updated with Solar Tips</h5>
+            <p class="mb-0 text-muted">Get the latest solar energy insights, tips, and exclusive offers delivered to your inbox.</p>
+        </div>
+        <div class="col-md-6">
+            <form id="newsletterForm" action="{% url 'core:newsletter_subscribe' %}" method="post" class="d-flex">
+                {% csrf_token %}
+                <input type="email" name="email" class="form-control me-2" placeholder="Enter your email address" required>
+                <button type="submit" class="btn btn-primary">Subscribe</button>
+            </form>
+            <div id="newsletterMessage" class="mt-2"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('newsletterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    const messageDiv = document.getElementById('newsletterMessage');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subscribing...';
+    submitBtn.disabled = true;
+    
+    // Send AJAX request
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = `<div class="alert alert-success alert-sm"><i class="fas fa-check-circle me-2"></i>${data.message}</div>`;
+            form.reset();
+        } else {
+            messageDiv.innerHTML = `<div class="alert alert-danger alert-sm"><i class="fas fa-exclamation-triangle me-2"></i>${data.message}</div>`;
+        }
+    })
+    .catch(error => {
+        messageDiv.innerHTML = '<div class="alert alert-danger alert-sm"><i class="fas fa-exclamation-triangle me-2"></i>Subscription failed. Please try again.</div>';
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        // Clear message after 5 seconds
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 5000);
+    });
+});
+</script>
+
+<style>
+.newsletter-signup {
+    background: linear-gradient(135deg, #38b6ff 0%, #2c8fd1 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin: 30px 0;
+}
+
+.newsletter-signup h5 {
+    color: white;
+    font-weight: 600;
+}
+
+.newsletter-signup .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.newsletter-signup .form-control {
+    border: none;
+    padding: 12px 15px;
+    border-radius: 6px;
+}
+
+.newsletter-signup .btn-primary {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.newsletter-signup .btn-primary:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.alert-sm {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+</style>

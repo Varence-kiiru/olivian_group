@@ -1,0 +1,784 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Budget vs Actual Analysis - Financial Management{% endblock %}
+
+{% block page_title %}Budget vs Actual Analysis{% endblock %}
+{% block page_subtitle %}Compare actual spending against budgeted amounts with variance analysis{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financial:dashboard' %}">Financial</a></li>
+<li class="breadcrumb-item active">Budget Analysis</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .budget-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .variance-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        border-left: 4px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .variance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .variance-positive { border-left-color: #28a745; }
+    .variance-negative { border-left-color: #dc3545; }
+    .variance-neutral { border-left-color: #6c757d; }
+    
+    .budget-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-bar-budget {
+        background: var(--primary-color);
+        border-radius: 8px;
+        height: 8px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-bar-actual {
+        background: #28a745;
+        border-radius: 8px;
+        height: 8px;
+        margin-top: 0.25rem;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-bar-over {
+        background: #dc3545;
+    }
+    
+    .category-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: var(--shadow);
+        transition: all 0.2s ease;
+    }
+    
+    .category-item:hover {
+        transform: translateX(5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .variance-indicator {
+        font-size: 1.2rem;
+        font-weight: 700;
+    }
+    
+    .variance-positive-text { color: #28a745; }
+    .variance-negative-text { color: #dc3545; }
+    .variance-neutral-text { color: #6c757d; }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .filters-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .period-selector {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .alert-variance {
+        border-left: 4px solid #ffc107;
+        background: #fff3cd;
+        border-color: #ffeaa7;
+    }
+    
+    .department-header {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Budget Analysis Header -->
+<div class="budget-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-chart-line fa-3x me-3"></i>
+                <div>
+                    <h1 class="mb-1">Budget vs Actual Analysis</h1>
+                    <p class="mb-0 opacity-75">Track spending against budget targets and identify variances</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="btn-group">
+                <button class="btn btn-light" onclick="exportBudgetReport()">
+                    <i class="fas fa-download me-2"></i>Export Report
+                </button>
+                <button class="btn btn-light" onclick="scheduleBudgetAlert()">
+                    <i class="fas fa-bell me-2"></i>Set Alerts
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Period and Filters -->
+<div class="filters-panel">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="budgetPeriod" class="form-label">Budget Period</label>
+            <select class="form-select" id="budgetPeriod" onchange="loadBudgetPeriod()">
+                <option value="2024-01">January 2024</option>
+                <option value="2024-02">February 2024</option>
+                <option value="2024-03">March 2024</option>
+                <option value="2024-q1">Q1 2024</option>
+                <option value="2024" selected>Year 2024</option>
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <label for="departmentFilter" class="form-label">Department</label>
+            <select class="form-select" id="departmentFilter" onchange="filterByDepartment()">
+                <option value="">All Departments</option>
+                <option value="sales">Sales & Marketing</option>
+                <option value="operations">Operations</option>
+                <option value="admin">Administration</option>
+                <option value="finance">Finance</option>
+                <option value="procurement">Procurement</option>
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <label for="varianceFilter" class="form-label">Variance Filter</label>
+            <select class="form-select" id="varianceFilter" onchange="filterByVariance()">
+                <option value="">All Variances</option>
+                <option value="over">Over Budget (>10%)</option>
+                <option value="under">Under Budget (>10%)</option>
+                <option value="ontrack">On Track (±10%)</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Overall Budget Summary -->
+<div class="row">
+    <div class="col-lg-3 col-md-6">
+        <div class="variance-card variance-neutral">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1">KES 2.5M</div>
+                    <div class="text-muted">Total Budget</div>
+                </div>
+                <div class="text-primary">
+                    <i class="fas fa-clipboard-list fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="variance-card variance-positive">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-success">KES 2.2M</div>
+                    <div class="text-muted">Actual Spending</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-money-bill-wave fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="variance-card variance-positive">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 text-success">KES 300K</div>
+                    <div class="text-muted">Remaining Budget</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-piggy-bank fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="variance-card variance-positive">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="h4 mb-1 variance-positive-text">-12%</div>
+                    <div class="text-muted">Overall Variance</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-percentage fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget vs Actual Charts -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Budget vs Actual by Category
+                </h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="chartView" id="barChart" checked>
+                    <label class="btn btn-outline-primary" for="barChart">Bar Chart</label>
+                    
+                    <input type="radio" class="btn-check" name="chartView" id="lineChart">
+                    <label class="btn btn-outline-primary" for="lineChart">Trend</label>
+                    
+                    <input type="radio" class="btn-check" name="chartView" id="pieChart">
+                    <label class="btn btn-outline-primary" for="pieChart">Pie Chart</label>
+                </div>
+            </div>
+            <canvas id="budgetChart" height="120"></canvas>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>Variance Alerts
+            </h5>
+            
+            <div class="alert alert-variance">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>Marketing</strong><br>
+                        <small>Over budget by 25%</small>
+                    </div>
+                    <span class="badge bg-warning">High</span>
+                </div>
+            </div>
+            
+            <div class="alert alert-success">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>Operations</strong><br>
+                        <small>Under budget by 15%</small>
+                    </div>
+                    <span class="badge bg-success">Good</span>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>Administration</strong><br>
+                        <small>On track within 5%</small>
+                    </div>
+                    <span class="badge bg-info">On Track</span>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="viewAllAlerts()">
+                    View All Alerts
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Category Analysis -->
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-ul me-2"></i>Category-wise Budget Analysis
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleCategoryDetails()">
+                    <i class="fas fa-expand-alt me-1"></i>Expand All
+                </button>
+            </div>
+            
+            <!-- Marketing Department -->
+            <div class="department-header">
+                <h6 class="mb-2">
+                    <i class="fas fa-bullhorn me-2"></i>Marketing & Sales
+                    <span class="variance-indicator variance-negative-text ms-2">+25% over budget</span>
+                </h6>
+                <div class="budget-progress">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small>Budget: KES 500,000</small>
+                        <small>Actual: KES 625,000</small>
+                    </div>
+                    <div class="progress-bar-budget" style="width: 100%"></div>
+                    <div class="progress-bar-actual progress-bar-over" style="width: 125%"></div>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">Digital Advertising</div>
+                        <div class="small text-muted">Online campaigns and social media</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold">KES 150K</div>
+                            <div class="small text-muted">Budget</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold text-danger">KES 200K</div>
+                            <div class="small text-muted">Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="variance-indicator variance-negative-text">+33%</div>
+                            <div class="small text-muted">Variance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="budget-progress">
+                            <div class="progress-bar-budget" style="width: 100%"></div>
+                            <div class="progress-bar-actual progress-bar-over" style="width: 133%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">Trade Shows & Events</div>
+                        <div class="small text-muted">Exhibition participation and events</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold">KES 200K</div>
+                            <div class="small text-muted">Budget</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">KES 175K</div>
+                            <div class="small text-muted">Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="variance-indicator variance-positive-text">-13%</div>
+                            <div class="small text-muted">Variance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="budget-progress">
+                            <div class="progress-bar-budget" style="width: 100%"></div>
+                            <div class="progress-bar-actual" style="width: 87%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Operations Department -->
+            <div class="department-header mt-4">
+                <h6 class="mb-2">
+                    <i class="fas fa-cogs me-2"></i>Operations
+                    <span class="variance-indicator variance-positive-text ms-2">-15% under budget</span>
+                </h6>
+                <div class="budget-progress">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small>Budget: KES 800,000</small>
+                        <small>Actual: KES 680,000</small>
+                    </div>
+                    <div class="progress-bar-budget" style="width: 100%"></div>
+                    <div class="progress-bar-actual" style="width: 85%"></div>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">Equipment Maintenance</div>
+                        <div class="small text-muted">Solar panel and system maintenance</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold">KES 300K</div>
+                            <div class="small text-muted">Budget</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">KES 250K</div>
+                            <div class="small text-muted">Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="variance-indicator variance-positive-text">-17%</div>
+                            <div class="small text-muted">Variance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="budget-progress">
+                            <div class="progress-bar-budget" style="width: 100%"></div>
+                            <div class="progress-bar-actual" style="width: 83%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">Vehicle Fleet</div>
+                        <div class="small text-muted">Fuel, maintenance, and insurance</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold">KES 150K</div>
+                            <div class="small text-muted">Budget</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">KES 130K</div>
+                            <div class="small text-muted">Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="variance-indicator variance-positive-text">-13%</div>
+                            <div class="small text-muted">Variance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="budget-progress">
+                            <div class="progress-bar-budget" style="width: 100%"></div>
+                            <div class="progress-bar-actual" style="width: 87%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Administration Department -->
+            <div class="department-header mt-4">
+                <h6 class="mb-2">
+                    <i class="fas fa-building me-2"></i>Administration
+                    <span class="variance-indicator variance-neutral-text ms-2">+3% near budget</span>
+                </h6>
+                <div class="budget-progress">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small>Budget: KES 400,000</small>
+                        <small>Actual: KES 412,000</small>
+                    </div>
+                    <div class="progress-bar-budget" style="width: 100%"></div>
+                    <div class="progress-bar-actual" style="width: 103%"></div>
+                </div>
+            </div>
+            
+            <div class="category-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold">Office Rent & Utilities</div>
+                        <div class="small text-muted">Monthly office expenses</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold">KES 200K</div>
+                            <div class="small text-muted">Budget</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="fw-bold text-warning">KES 205K</div>
+                            <div class="small text-muted">Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="variance-indicator variance-neutral-text">+3%</div>
+                            <div class="small text-muted">Variance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="budget-progress">
+                            <div class="progress-bar-budget" style="width: 100%"></div>
+                            <div class="progress-bar-actual" style="width: 103%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Items and Recommendations -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-tasks me-2"></i>Action Items
+            </h5>
+            
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">Review Marketing Spend</h6>
+                        <p class="mb-1 small">Digital advertising is 33% over budget. Review ROI and optimize campaigns.</p>
+                        <small class="text-danger">High Priority</small>
+                    </div>
+                    <span class="badge bg-danger rounded-pill">!</span>
+                </div>
+                
+                <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">Reallocate Operations Savings</h6>
+                        <p class="mb-1 small">Operations is 15% under budget. Consider reinvestment or reallocation.</p>
+                        <small class="text-success">Medium Priority</small>
+                    </div>
+                    <span class="badge bg-success rounded-pill">+</span>
+                </div>
+                
+                <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">Update Q2 Forecast</h6>
+                        <p class="mb-1 small">Update next quarter's budget based on current performance trends.</p>
+                        <small class="text-info">Low Priority</small>
+                    </div>
+                    <span class="badge bg-info rounded-pill">i</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-lightbulb me-2"></i>Budget Recommendations
+            </h5>
+            
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-chart-line text-success me-2"></i>
+                        <strong>Cost Optimization</strong>
+                    </div>
+                    <p class="small mb-0">Operations maintenance costs are lower than expected. Consider negotiating better rates for next period.</p>
+                </div>
+                
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-target text-warning me-2"></i>
+                        <strong>Marketing ROI Review</strong>
+                    </div>
+                    <p class="small mb-0">Digital advertising overspend needs ROI analysis. Focus on highest-performing channels.</p>
+                </div>
+                
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-balance-scale text-info me-2"></i>
+                        <strong>Budget Reallocation</strong>
+                    </div>
+                    <p class="small mb-0">Consider moving unused operations budget to marketing for Q2 expansion plans.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeBudgetChart();
+    
+    // Chart view toggle
+    document.querySelectorAll('input[name="chartView"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            updateChartView(this.id);
+        });
+    });
+});
+
+function initializeBudgetChart() {
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    
+    const data = {
+        labels: ['Marketing', 'Operations', 'Administration', 'Finance', 'Procurement'],
+        datasets: [{
+            label: 'Budget',
+            data: [500000, 800000, 400000, 300000, 500000],
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '80',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color'),
+            borderWidth: 2
+        }, {
+            label: 'Actual',
+            data: [625000, 680000, 412000, 285000, 520000],
+            backgroundColor: '#28a74580',
+            borderColor: '#28a745',
+            borderWidth: 2
+        }]
+    };
+    
+    window.budgetChart = new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            const currency = 'KES ' + value.toLocaleString();
+                            return context.dataset.label + ': ' + currency;
+                        },
+                        afterLabel: function(context) {
+                            if (context.datasetIndex === 1) {
+                                const budget = context.chart.data.datasets[0].data[context.dataIndex];
+                                const actual = context.parsed.y;
+                                const variance = ((actual - budget) / budget * 100).toFixed(1);
+                                return 'Variance: ' + (variance > 0 ? '+' : '') + variance + '%';
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + (value / 1000) + 'K';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+}
+
+function updateChartView(viewType) {
+    const chart = window.budgetChart;
+    
+    switch(viewType) {
+        case 'barChart':
+            chart.config.type = 'bar';
+            break;
+        case 'lineChart':
+            chart.config.type = 'line';
+            break;
+        case 'pieChart':
+            chart.config.type = 'doughnut';
+            // Show only actual values for pie chart
+            chart.data.datasets = [{
+                label: 'Actual Spending',
+                data: chart.data.datasets[1].data,
+                backgroundColor: [
+                    '#dc3545', '#28a745', '#ffc107', '#17a2b8', '#6f42c1'
+                ]
+            }];
+            break;
+    }
+    
+    chart.update();
+}
+
+function loadBudgetPeriod() {
+    const period = document.getElementById('budgetPeriod').value;
+    // TODO: Load budget data for selected period
+    console.log('Loading budget for period:', period);
+}
+
+function filterByDepartment() {
+    const department = document.getElementById('departmentFilter').value;
+    // TODO: Filter budget data by department
+    console.log('Filtering by department:', department);
+}
+
+function filterByVariance() {
+    const variance = document.getElementById('varianceFilter').value;
+    // TODO: Filter budget data by variance
+    console.log('Filtering by variance:', variance);
+}
+
+function exportBudgetReport() {
+    const period = document.getElementById('budgetPeriod').value;
+    const department = document.getElementById('departmentFilter').value;
+    
+    const params = new URLSearchParams({
+        period: period,
+        department: department,
+        format: 'pdf'
+    });
+    
+    window.open(`/financial/budget-analysis/export/?${params.toString()}`, '_blank');
+}
+
+function scheduleBudgetAlert() {
+    // TODO: Implement budget alert scheduling
+    alert('Budget alert scheduling functionality coming soon!');
+}
+
+function viewAllAlerts() {
+    // TODO: Navigate to all alerts view
+    window.location.href = '/financial/budget-alerts/';
+}
+
+function toggleCategoryDetails() {
+    // TODO: Implement expand/collapse all functionality
+    alert('Category details toggle coming soon!');
+}
+
+// Auto-refresh budget data every 5 minutes
+setInterval(function() {
+    loadBudgetPeriod();
+}, 300000);
+</script>
+{% endblock %}

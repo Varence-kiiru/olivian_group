@@ -1,0 +1,325 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Warehouses - {{ block.super }}{% endblock %}
+
+{% block page_title %}Warehouse Management{% endblock %}
+{% block page_subtitle %}Manage storage locations and capacity{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item active">Warehouses</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .warehouse-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+    
+    .warehouse-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .warehouse-card.active { border-left-color: var(--success-color); }
+    .warehouse-card.inactive { border-left-color: var(--danger-color); }
+    
+    .capacity-bar {
+        background: #e9ecef;
+        border-radius: 4px;
+        height: 8px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .capacity-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .capacity-good { background: var(--success-color); }
+    .capacity-warning { background: var(--warning-color); }
+    .capacity-danger { background: var(--danger-color); }
+    
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .metric-label {
+        font-size: 0.8rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search Warehouses</label>
+                <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" 
+                       placeholder="Search by name, code, address...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Capacity Usage</label>
+                <select class="form-select" name="capacity">
+                    <option value="">All Levels</option>
+                    <option value="low" {% if request.GET.capacity == 'low' %}selected{% endif %}>Under 50%</option>
+                    <option value="medium" {% if request.GET.capacity == 'medium' %}selected{% endif %}>50% - 80%</option>
+                    <option value="high" {% if request.GET.capacity == 'high' %}selected{% endif %}>Over 80%</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Warehouses ({{ warehouses|length }})</h5>
+    <div class="btn-group">
+        <a href="{% url 'inventory:warehouse_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Warehouse
+        </a>
+        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-chart-bar"></i> Reports
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#"><i class="fas fa-chart-pie"></i> Capacity Report</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stock Report</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-download"></i> Export Data</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Warehouse Cards -->
+<div class="row">
+    {% for warehouse in warehouses %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="warehouse-card {% if warehouse.is_active %}active{% else %}inactive{% endif %}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="mb-1">
+                        <a href="{% url 'inventory:warehouse_detail' warehouse.pk %}" class="text-decoration-none">
+                            {{ warehouse.name }}
+                        </a>
+                    </h5>
+                    <div class="text-muted small">
+                        <i class="fas fa-barcode"></i> {{ warehouse.code }}
+                    </div>
+                </div>
+                <div>
+                    {% if warehouse.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="text-muted small mb-1">
+                    <i class="fas fa-map-marker-alt"></i> {{ warehouse.address|truncatechars:50 }}
+                </div>
+                {% if warehouse.manager %}
+                <div class="text-muted small">
+                    <i class="fas fa-user"></i> Manager: {{ warehouse.manager.get_full_name }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Capacity Information -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Capacity Utilization</span>
+                    <span>{{ warehouse.capacity_utilization|floatformat:1 }}%</span>
+                </div>
+                <div class="capacity-bar">
+                    {% if warehouse.capacity_utilization <= 50 %}
+                        <div class="capacity-fill capacity-good" style="width: {{ warehouse.capacity_utilization }}%"></div>
+                    {% elif warehouse.capacity_utilization <= 80 %}
+                        <div class="capacity-fill capacity-warning" style="width: {{ warehouse.capacity_utilization }}%"></div>
+                    {% else %}
+                        <div class="capacity-fill capacity-danger" style="width: {{ warehouse.capacity_utilization }}%"></div>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between small text-muted mt-1">
+                    <span>{{ warehouse.used_capacity }} m²</span>
+                    <span>{{ warehouse.total_capacity }} m²</span>
+                </div>
+            </div>
+            
+            <!-- Metrics -->
+            <div class="metric-grid">
+                <div class="metric-item">
+                    <div class="metric-value">{{ warehouse.inventory_items.count }}</div>
+                    <div class="metric-label">Products</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">
+                        {% with total_stock=warehouse.inventory_items.aggregate.quantity_on_hand__sum %}
+                        {{ total_stock|default:0|floatformat:0 }}
+                        {% endwith %}
+                    </div>
+                    <div class="metric-label">Total Units</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">
+                        {% with low_stock=warehouse.inventory_items.filter.quantity_on_hand__lte_reorder_point.count %}
+                        {{ low_stock|default:0 }}
+                        {% endwith %}
+                    </div>
+                    <div class="metric-label">Low Stock</div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="btn-group mt-3 w-100">
+                <a href="{% url 'inventory:warehouse_detail' warehouse.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                <a href="{% url 'inventory:warehouse_edit' warehouse.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'inventory:item_list' %}?warehouse={{ warehouse.pk }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-boxes"></i> Stock
+                </a>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'inventory:transfer_create' %}?from_warehouse={{ warehouse.pk }}">
+                            <i class="fas fa-truck"></i> Transfer From
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:transfer_create' %}?to_warehouse={{ warehouse.pk }}">
+                            <i class="fas fa-truck"></i> Transfer To
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:valuation_create' %}?warehouse={{ warehouse.pk }}">
+                            <i class="fas fa-calculator"></i> Valuation
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'inventory:warehouse_delete' warehouse.pk %}">
+                            <i class="fas fa-trash"></i> Delete
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-warehouse fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No warehouses found</h5>
+            <p class="text-muted">Add your first warehouse to start managing inventory locations.</p>
+            <a href="{% url 'inventory:warehouse_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Warehouse
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Warehouse pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form on filter change
+    const filterSelects = document.querySelectorAll('select[name="status"], select[name="capacity"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Capacity monitoring alerts
+    const capacityBars = document.querySelectorAll('.capacity-fill');
+    capacityBars.forEach(bar => {
+        const width = parseFloat(bar.style.width);
+        if (width > 90) {
+            // Add warning for high capacity
+            const card = bar.closest('.warehouse-card');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-warning ms-2';
+            badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> High Capacity';
+            card.querySelector('h5').appendChild(badge);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Purchase Orders - {{ block.super }}{% endblock %}
+
+{% block page_title %}Purchase Order Management{% endblock %}
+{% block page_subtitle %}Manage purchase orders and track procurement activities{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'procurement:dashboard' %}">Procurement</a></li>
+<li class="breadcrumb-item active">Purchase Orders</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .po-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .po-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .po-card.draft { border-left-color: #6c757d; }
+    .po-card.pending { border-left-color: #ffc107; }
+    .po-card.approved { border-left-color: #28a745; }
+    .po-card.completed { border-left-color: #17a2b8; }
+    .po-card.cancelled { border-left-color: #dc3545; }
+    .po-card.default { border-left-color: #38b6ff; }
+    
+    .po-amount {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #38b6ff;
+    }
+    
+    .po-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-completed { background: #d1ecf1; color: #0c5460; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .po-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .priority-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .priority-high { background: #f8d7da; color: #721c24; }
+    .priority-medium { background: #fff3cd; color: #856404; }
+    .priority-low { background: #d4edda; color: #155724; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with Add Button -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-0">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Purchase Orders
+        </h4>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'procurement:po_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Purchase Order
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="PO number, vendor, description...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if current_status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="priority" class="form-label">Priority</label>
+            <select class="form-select" id="priority" name="priority">
+                <option value="">All Priorities</option>
+                <option value="high" {% if current_priority == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if current_priority == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if current_priority == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="vendor" class="form-label">Vendor</label>
+            <select class="form-select" id="vendor" name="vendor">
+                <option value="">All Vendors</option>
+                {% for vendor in vendors %}
+                <option value="{{ vendor.id }}" {% if current_vendor == vendor.id|stringformat:"s" %}selected{% endif %}>
+                    {{ vendor.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="date_from" class="form-label">Date From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ current_date_from }}">
+        </div>
+        
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Purchase Orders Grid -->
+<div class="row">
+    {% for po in purchase_orders %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="po-card {{ po.status }}">
+            <!-- PO Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'procurement:po_detail' po.pk %}" class="text-decoration-none">
+                            {{ po.po_number }}
+                        </a>
+                    </h6>
+                    <div class="po-meta">
+                        {{ po.vendor.name }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="po-status status-{{ po.status }}">{{ po.get_status_display }}</span>
+                    {% if po.priority %}
+                        <div class="mt-1">
+                            <span class="priority-badge priority-{{ po.priority }}">{{ po.get_priority_display }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Total Amount -->
+            <div class="mb-3">
+                <div class="po-meta mb-1">Total Amount</div>
+                <div class="po-amount">
+                    KES {{ po.total_amount|floatformat:2 }}
+                </div>
+            </div>
+            
+            <!-- PO Details -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="po-meta mb-1">PO Date</div>
+                    <div class="small">{{ po.po_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="po-meta mb-1">Expected Delivery</div>
+                    {% if po.expected_delivery_date %}
+                        <div class="small">{{ po.expected_delivery_date|date:"M d, Y" }}</div>
+                    {% else %}
+                        <div class="small text-muted">Not set</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Description -->
+            {% if po.description %}
+            <div class="mb-3">
+                <div class="po-meta mb-1">Description</div>
+                <div class="small">{{ po.description|truncatechars:100 }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Creation Info -->
+            <div class="mb-3">
+                <div class="po-meta mb-1">Created</div>
+                <div class="small">{{ po.created_at|date:"M d, Y H:i" }}</div>
+                {% if po.created_by %}
+                    <div class="small text-muted">by {{ po.created_by.get_full_name|default:po.created_by.username }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="{% url 'procurement:po_detail' po.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                {% if po.status == 'draft' %}
+                <a href="{% url 'procurement:po_edit' po.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                {% endif %}
+                <button class="btn btn-outline-info btn-sm" onclick="alert('Print feature coming soon!')">
+                    <i class="fas fa-print me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No purchase orders found</h5>
+            <p class="text-muted">
+                {% if current_search or current_status or current_priority or current_vendor %}
+                    Try adjusting your search criteria.
+                {% else %}
+                    Start by creating your first purchase order.
+                {% endif %}
+            </p>
+            <a href="{% url 'procurement:po_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Purchase Order
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Purchase Orders pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_vendor %}&vendor={{ current_vendor }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_vendor %}&vendor={{ current_vendor }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_vendor %}&vendor={{ current_vendor }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if current_vendor %}&vendor={{ current_vendor }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends 'website/base.html' %}
+{% load static %}
+{% load phone_filters %}
+
+{% block title %}Quotation Request Submitted - Olivian Group{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-container {
+        text-align: center;
+        max-width: 800px;
+        margin: 4rem auto;
+        padding: 0 2rem;
+    }
+
+    .success-icon {
+        font-size: 5rem;
+        color: #28a745;
+        margin-bottom: 2rem;
+        animation: checkmark 2s ease-in-out;
+    }
+
+    @keyframes checkmark {
+        0% {
+            opacity: 0;
+            transform: scale(0.3);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        70% {
+            transform: scale(0.9);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .success-title {
+        font-size: 2.5rem;
+        color: var(--primary-color, #38b6ff);
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+
+    .success-message {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .next-steps {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        text-align: left;
+        border-left: 4px solid var(--primary-color, #38b6ff);
+    }
+
+    .next-steps h3 {
+        color: var(--primary-color, #38b6ff);
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+    }
+
+    .steps-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .steps-list li {
+        position: relative;
+        padding: 0.75rem 0;
+        padding-left: 2.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .steps-list li:last-child {
+        border-bottom: none;
+    }
+
+    .steps-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        background: var(--primary-color, #38b6ff);
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px rgba(56, 182, 255, 0.2);
+    }
+
+    .step-number {
+        display: inline-block;
+        background: var(--primary-color, #38b6ff);
+        color: white;
+        font-weight: bold;
+        padding: 0.25rem 0.5rem;
+        border-radius: 50%;
+        margin-right: 0.75rem;
+        min-width: 1.5rem;
+        text-align: center;
+    }
+
+    .contact-info {
+        background: linear-gradient(135deg, #e8f5e8, #d4edda);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        border: 1px solid #c3e6cb;
+    }
+
+    .contact-info h3 {
+        color: #155724;
+        margin-bottom: 1.5rem;
+    }
+
+    .contact-methods {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        justify-content: center;
+    }
+
+    .contact-method {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        min-width: 200px;
+        transition: transform 0.3s ease;
+    }
+
+    .contact-method:hover, .contact-method-link:focus .contact-method {
+        transform: translateY(-2px);
+    }
+
+    .contact-method-link {
+        color: inherit;
+        text-decoration: none;
+        display: block;
+    }
+
+    .contact-method-link:hover, .contact-method-link:focus {
+        text-decoration: none;
+    }
+
+    .contact-icon {
+        font-size: 2rem;
+        color: var(--primary-color, #38b6ff);
+        margin-bottom: 0.5rem;
+    }
+
+    .contact-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .contact-value {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .back-btn {
+        background: linear-gradient(135deg, var(--primary-color, #38b6ff), #0066cc);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 2rem;
+        transition: transform 0.2s ease;
+    }
+
+    .back-btn:hover {
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .additional-info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: left;
+    }
+
+    .additional-info h4 {
+        color: #856404;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .success-container {
+            margin: 2rem 1rem;
+            padding: 0 1rem;
+        }
+
+        .success-title {
+            font-size: 2rem;
+        }
+
+        .contact-methods {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .next-steps {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="success-container">
+    <!-- Success Animation -->
+    <div class="success-icon">
+        <i class="fas fa-check-circle"></i>
+    </div>
+
+    <!-- Success Message -->
+    <h1 class="success-title">Thank You!</h1>
+    <p class="success-message">
+        Your quotation request has been successfully submitted. We've received all your details and our team will be reviewing your requirements shortly.
+    </p>
+
+    <!-- Additional Info -->
+    <div class="additional-info">
+        <h4><i class="fas fa-info-circle me-2"></i>Request Summary</h4>
+        <p>We've received your request for a solar system quotation with the following details:</p>
+        <ul class="mb-0">
+            <li><strong>System Type:</strong> Solar panel installation</li>
+            <li><strong>Location:</strong> As specified in your form</li>
+            <li><strong>Urgency:</strong> Normal priority (3-5 business days)</li>
+        </ul>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="next-steps">
+        <h3><i class="fas fa-list-check me-2"></i>What Happens Next?</h3>
+        <ol class="steps-list">
+            <li>
+                <strong>Processing:</strong> Our quotation team reviews your specific requirements
+            </li>
+            <li>
+                <strong>Contact:</strong> We'll contact you within 24 hours for any clarifications needed
+            </li>
+            <li>
+                <strong>Site Assessment:</strong> May schedule a site visit to assess your installation location
+            </li>
+            <li>
+                <strong>Customized Quote:</strong> Receive a detailed, personalized quotation
+            </li>
+            <li>
+                <strong>Next Steps:</strong> Discuss financing options, installation timeline, and any questions
+            </li>
+        </ol>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="contact-info">
+        <h3><i class="fas fa-headset me-2"></i>Don't Wait - Contact Us!</h3>
+        <p class="mb-4">If you need immediate assistance or have questions about your request, feel free to reach out to our team using any of the methods below:</p>
+
+        <div class="contact-methods">
+            <a href="tel:{{ company.phone|clean_phone_number }}" class="contact-method-link">
+                <div class="contact-method">
+                    <div class="contact-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="contact-label">Phone</div>
+                    <div class="contact-value">Call Now</div>
+                </div>
+            </a>
+
+            <a href="{% if company.whatsapp_number %}https://api.whatsapp.com/send?phone={{ company.whatsapp_number|clean_phone_number }}{% else %}https://api.whatsapp.com/send?phone={{ company.phone|clean_phone_number }}{% endif %}" class="contact-method-link" target="_blank">
+                <div class="contact-method">
+                    <div class="contact-icon">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div class="contact-label">WhatsApp</div>
+                    <div class="contact-value">Chat Now</div>
+                    <div style="font-size: 0.9rem; color: #888;">Fastest response</div>
+                </div>
+            </a>
+
+            <a href="mailto:{{ company.email }}" class="contact-method-link">
+                <div class="contact-method">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="contact-label">Email</div>
+                    <div class="contact-value">Send Email</div>
+                    <div style="font-size: 0.9rem; color: #888;">Official correspondence</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <a href="{% url 'core:home' %}" class="back-btn">
+        <i class="fas fa-home me-2"></i>Return to Home
+    </a>
+
+    <div class="mt-3" style="color: #666; font-size: 0.9rem;">
+        <p>Need help with anything else? <a href="{% url 'core:contact' %}" style="color: var(--primary-color, #38b6ff);">Contact our support team</a></p>
+    </div>
+</div>
+{% endblock %}

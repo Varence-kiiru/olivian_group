@@ -1,0 +1,359 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Stock Transfer{% else %}Create Stock Transfer{% endif %} - Inventory Management
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header {
+        border-bottom: 2px solid #38b6ff;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .warehouse-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 2px solid #e9ecef;
+    }
+    
+    .warehouse-card.selected {
+        border-color: #38b6ff;
+        background-color: rgba(56, 182, 255, 0.1);
+    }
+    
+    .transfer-direction {
+        text-align: center;
+        padding: 1rem 0;
+    }
+    
+    .transfer-arrow {
+        font-size: 2rem;
+        color: #38b6ff;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                {% if object %}
+                    <i class="fas fa-edit text-primary"></i>
+                    Edit Stock Transfer
+                {% else %}
+                    <i class="fas fa-truck text-primary"></i>
+                    Create Stock Transfer
+                {% endif %}
+            </h1>
+            <nav aria-label="breadcrumb" class="mt-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:transfer_list' %}">Stock Transfers</a></li>
+                    <li class="breadcrumb-item active">
+                        {% if object %}Edit Transfer{% else %}Create Transfer{% endif %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'inventory:transfer_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>
+                        {% if object %}
+                            Stock Transfer Details
+                        {% else %}
+                            New Stock Transfer
+                        {% endif %}
+                    </h2>
+                    <p class="mb-0 text-muted">
+                        {% if object %}
+                            Update the stock transfer information below.
+                        {% else %}
+                            Create a new transfer to move inventory between warehouses.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post" id="transferForm">
+                    {% csrf_token %}
+                    
+                    <!-- Warehouse Selection -->
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="{{ form.from_warehouse.id_for_label }}" class="form-label">
+                                    From Warehouse <span class="required">*</span>
+                                </label>
+                                <select name="{{ form.from_warehouse.name }}" id="{{ form.from_warehouse.id_for_label }}" class="form-select" required>
+                                    <option value="">Select source warehouse...</option>
+                                    {% for value, text in form.from_warehouse.field.choices %}
+                                        {% if value %}
+                                        <option value="{{ value }}" {% if form.from_warehouse.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% if form.from_warehouse.errors %}
+                                    <div class="text-danger small">{{ form.from_warehouse.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <div class="transfer-direction">
+                                <div class="transfer-arrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <small class="text-muted">Transfer</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="{{ form.to_warehouse.id_for_label }}" class="form-label">
+                                    To Warehouse <span class="required">*</span>
+                                </label>
+                                <select name="{{ form.to_warehouse.name }}" id="{{ form.to_warehouse.id_for_label }}" class="form-select" required>
+                                    <option value="">Select destination warehouse...</option>
+                                    {% for value, text in form.to_warehouse.field.choices %}
+                                        {% if value %}
+                                        <option value="{{ value }}" {% if form.to_warehouse.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% if form.to_warehouse.errors %}
+                                    <div class="text-danger small">{{ form.to_warehouse.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Expected Arrival -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.expected_arrival.id_for_label }}" class="form-label">
+                                    Expected Arrival Date <span class="required">*</span>
+                                </label>
+                                <input type="date" name="{{ form.expected_arrival.name }}" id="{{ form.expected_arrival.id_for_label }}" 
+                                       class="form-control" value="{{ form.expected_arrival.value|default:'' }}" required>
+                                <div class="help-text">
+                                    When do you expect this transfer to arrive at the destination?
+                                </div>
+                                {% if form.expected_arrival.errors %}
+                                    <div class="text-danger small">{{ form.expected_arrival.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if object %}
+                        <!-- Actual Arrival (for existing transfers) -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.actual_arrival.id_for_label }}" class="form-label">
+                                    Actual Arrival Date
+                                </label>
+                                <input type="date" name="{{ form.actual_arrival.name }}" id="{{ form.actual_arrival.id_for_label }}" 
+                                       class="form-control" value="{{ form.actual_arrival.value|default:'' }}">
+                                <div class="help-text">
+                                    Set this date when the transfer is received.
+                                </div>
+                                {% if form.actual_arrival.errors %}
+                                    <div class="text-danger small">{{ form.actual_arrival.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Reason -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.reason.id_for_label }}" class="form-label">
+                                    Reason for Transfer <span class="required">*</span>
+                                </label>
+                                <textarea name="{{ form.reason.name }}" id="{{ form.reason.id_for_label }}" 
+                                         class="form-control" rows="3" required>{{ form.reason.value|default:'' }}</textarea>
+                                <div class="help-text">
+                                    Explain why this transfer is necessary.
+                                </div>
+                                {% if form.reason.errors %}
+                                    <div class="text-danger small">{{ form.reason.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                    Additional Notes
+                                </label>
+                                <textarea name="{{ form.notes.name }}" id="{{ form.notes.id_for_label }}" 
+                                         class="form-control" rows="3">{{ form.notes.value|default:'' }}</textarea>
+                                <div class="help-text">
+                                    Any additional information or special instructions.
+                                </div>
+                                {% if form.notes.errors %}
+                                    <div class="text-danger small">{{ form.notes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if object %}
+                        <!-- Status (for existing transfers) -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    Transfer Status
+                                </label>
+                                <select name="{{ form.status.name }}" id="{{ form.status.id_for_label }}" class="form-select">
+                                    {% for value, text in form.status.field.choices %}
+                                        <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="help-text">
+                                    Update the status as the transfer progresses.
+                                </div>
+                                {% if form.status.errors %}
+                                    <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="text-center mt-4 pt-3" style="border-top: 1px solid #e9ecef;">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-save"></i>
+                            {% if object %}Update Transfer{% else %}Create Transfer{% endif %}
+                        </button>
+                        <a href="{% url 'inventory:transfer_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date for expected arrival to today
+    const expectedArrivalInput = document.querySelector('#{{ form.expected_arrival.id_for_label }}');
+    if (expectedArrivalInput && !expectedArrivalInput.value) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        expectedArrivalInput.value = tomorrow.toISOString().split('T')[0];
+        expectedArrivalInput.min = tomorrow.toISOString().split('T')[0];
+    }
+    
+    // Warehouse validation
+    const fromWarehouse = document.querySelector('#{{ form.from_warehouse.id_for_label }}');
+    const toWarehouse = document.querySelector('#{{ form.to_warehouse.id_for_label }}');
+    
+    function validateWarehouses() {
+        if (fromWarehouse.value && toWarehouse.value && fromWarehouse.value === toWarehouse.value) {
+            toWarehouse.setCustomValidity('Destination warehouse must be different from source warehouse.');
+        } else {
+            toWarehouse.setCustomValidity('');
+        }
+    }
+    
+    if (fromWarehouse && toWarehouse) {
+        fromWarehouse.addEventListener('change', validateWarehouses);
+        toWarehouse.addEventListener('change', validateWarehouses);
+    }
+    
+    // Form validation
+    const form = document.getElementById('transferForm');
+    form.addEventListener('submit', function(e) {
+        validateWarehouses();
+        
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

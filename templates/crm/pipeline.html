@@ -1,0 +1,726 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sales Pipeline - {{ block.super }}{% endblock %}
+
+{% block page_title %}Sales Pipeline{% endblock %}
+{% block page_subtitle %}Visual sales pipeline and opportunity management{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">CRM</a></li>
+<li class="breadcrumb-item active">Pipeline</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pipeline-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 1rem 0;
+        min-height: 80vh;
+    }
+
+    .pipeline-stage {
+        flex: 0 0 280px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stage-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px 10px 0 0;
+        text-align: center;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .stage-stats {
+        background: rgba(255, 255, 255, 0.2);
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    
+    .stage-content {
+        flex: 1;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+    }
+    
+    .opportunity-card {
+        background: white;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 1rem;
+        cursor: grab;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .opportunity-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        border-color: var(--primary-color);
+    }
+    
+    .opportunity-card.dragging {
+        opacity: 0.6;
+        transform: rotate(5deg);
+        z-index: 1000;
+    }
+    
+    .opportunity-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    
+    .opportunity-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+        flex: 1;
+    }
+    
+    .opportunity-value {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .opportunity-contact {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .opportunity-company {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .opportunity-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.75rem;
+        border-top: 1px solid #f1f3f4;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .probability-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .probability-high { background: #d4edda; color: #155724; }
+    .probability-medium { background: #fff3cd; color: #856404; }
+    .probability-low { background: #f8d7da; color: #721c24; }
+    
+    .drop-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        color: #6c757d;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .drop-zone.drag-over {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.1);
+        color: var(--primary-color);
+    }
+    
+    .stage-totals {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: auto;
+        border: 1px solid #e9ecef;
+        text-align: center;
+    }
+    
+    .total-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .total-count {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .pipeline-summary {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .summary-stat {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .summary-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .pipeline-actions {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .stage-filters {
+        background: white;
+        border-radius: 8px;
+        padding: 0.5rem;
+        border: 1px solid #e9ecef;
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .stage-filter {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+    
+    .stage-filter.active {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .opportunity-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .opportunity-card:hover .opportunity-actions {
+        opacity: 1;
+    }
+    
+    .action-btn {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e9ecef;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: #6c757d;
+        margin-left: 0.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .weighted-value {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #f1f3f4;
+        font-size: 0.8rem;
+    }
+    
+    .weighted-amount {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .days-in-stage {
+        background: #fff3cd;
+        color: #856404;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .overdue {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .stage-actions {
+        padding: 0.5rem 1rem;
+        border-top: 1px solid #e9ecef;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 0 0 10px 10px;
+    }
+    
+    .add-opportunity-btn {
+        width: 100%;
+        border: 2px dashed #dee2e6;
+        background: transparent;
+        color: #6c757d;
+        padding: 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .add-opportunity-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.05);
+    }
+    
+    .pipeline-header {
+        background: linear-gradient(135deg, var(--primary-color), #4dabf7);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Pipeline Header -->
+<div class="pipeline-header">
+    <h2 class="mb-3">Sales Pipeline Overview</h2>
+    <p class="mb-0 opacity-75">Drag and drop opportunities between stages to update their status</p>
+</div>
+
+<!-- Pipeline Summary -->
+<div class="pipeline-summary">
+    <div class="summary-stats">
+        <div class="summary-stat">
+            <div class="summary-number">{{ total_opportunities|default:"0" }}</div>
+            <div class="summary-label">Total Opportunities</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-number">KES {{ total_pipeline_value|floatformat:0|default:"0" }}</div>
+            <div class="summary-label">Pipeline Value</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-number">KES {{ weighted_pipeline_value|floatformat:0|default:"0" }}</div>
+            <div class="summary-label">Weighted Value</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-number">{{ average_deal_size|floatformat:0|default:"0" }}</div>
+            <div class="summary-label">Avg Deal Size</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-number">{{ conversion_rate|floatformat:1|default:"0" }}%</div>
+            <div class="summary-label">Conversion Rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Pipeline Actions -->
+<div class="pipeline-actions">
+    <div class="filter-controls">
+        <div class="stage-filters">
+            <button class="stage-filter active" onclick="filterStage('all')">All Stages</button>
+            {% for stage_code, stage_data in pipeline_stages.items %}
+                <button class="stage-filter" onclick="filterStage('{{ stage_code }}')">
+                    {{ stage_data.name }} ({{ stage_data.count }})
+                </button>
+            {% endfor %}
+        </div>
+        
+        <select class="form-select" style="width: auto;" onchange="filterByUser(this.value)">
+            <option value="">All Team Members</option>
+            {% for user in team_members %}
+                <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select class="form-select" style="width: auto;" onchange="filterByTimePeriod(this.value)">
+            <option value="">All Time</option>
+            <option value="this_week">This Week</option>
+            <option value="this_month">This Month</option>
+            <option value="this_quarter">This Quarter</option>
+        </select>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <a href="{% url 'crm:opportunity_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Opportunity
+        </a>
+        <button class="btn btn-outline-primary" onclick="refreshPipeline()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+        </button>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-2"></i>Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportPipeline('csv')">
+                    <i class="fas fa-file-csv me-2"></i>Export CSV
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportPipeline('pdf')">
+                    <i class="fas fa-file-pdf me-2"></i>Export PDF
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Pipeline Stages -->
+<div class="pipeline-container" id="pipelineContainer">
+    {% for stage_code, stage_data in pipeline_stages.items %}
+    <div class="pipeline-stage" data-stage="{{ stage_code }}" id="stage-{{ stage_code }}">
+        <div class="stage-header">
+            <h6 class="mb-0">{{ stage_data.name }}</h6>
+            <div class="stage-stats">
+                <span>{{ stage_data.count }} deals</span>
+                <span>KES {{ stage_data.total_value|floatformat:0 }}</span>
+            </div>
+        </div>
+        
+        <div class="stage-content" 
+             ondrop="drop(event)" 
+             ondragover="allowDrop(event)"
+             ondragleave="dragLeave(event)"
+             data-stage="{{ stage_code }}">
+             
+            {% for opportunity in stage_data.opportunities %}
+            <div class="opportunity-card" 
+                 draggable="true" 
+                 ondragstart="drag(event)" 
+                 data-opportunity-id="{{ opportunity.id }}"
+                 onclick="viewOpportunity({{ opportunity.id }})">
+                 
+                <div class="opportunity-actions">
+                    <a href="{% url 'crm:opportunity_detail' opportunity.id %}" 
+                       class="action-btn" 
+                       title="View Details"
+                       onclick="event.stopPropagation();">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'crm:opportunity_update' opportunity.id %}" 
+                       class="action-btn" 
+                       title="Edit"
+                       onclick="event.stopPropagation();">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+                
+                <div class="opportunity-header">
+                    <div class="opportunity-title">{{ opportunity.name|truncatechars:40 }}</div>
+                </div>
+                
+                <div class="opportunity-value">
+                    KES {{ opportunity.value|floatformat:0 }}
+                </div>
+                
+                <div class="opportunity-contact">
+                    <i class="fas fa-user"></i>
+                    {{ opportunity.contact.get_full_name|truncatechars:25 }}
+                </div>
+                
+                {% if opportunity.company %}
+                <div class="opportunity-company">
+                    <i class="fas fa-building"></i>
+                    {{ opportunity.company.name|truncatechars:25 }}
+                </div>
+                {% endif %}
+                
+                <div class="opportunity-meta">
+                    <span class="probability-badge probability-{% if opportunity.probability >= 75 %}high{% elif opportunity.probability >= 50 %}medium{% else %}low{% endif %}">
+                        {{ opportunity.probability }}%
+                    </span>
+                    <span class="days-in-stage {% if opportunity.is_overdue %}overdue{% endif %}">
+                        {% if opportunity.is_overdue %}
+                            Overdue
+                        {% else %}
+                            {{ opportunity.expected_close_date|date:"M d" }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="weighted-value">
+                    <span>Weighted Value:</span>
+                    <span class="weighted-amount">KES {{ opportunity.weighted_value|floatformat:0 }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="drop-zone">
+                <i class="fas fa-inbox me-2"></i>
+                No opportunities in this stage
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="stage-actions">
+            <button class="add-opportunity-btn" onclick="createOpportunity('{{ stage_code }}')">
+                <i class="fas fa-plus me-2"></i>Add Opportunity
+            </button>
+        </div>
+        
+        <div class="stage-totals">
+            <div class="total-value">KES {{ stage_data.total_value|floatformat:0 }}</div>
+            <div class="total-count">{{ stage_data.count }} opportunities</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 8px; text-align: center;">
+        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+        <h5>Updating Pipeline...</h5>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let draggedElement = null;
+
+function allowDrop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.add('drag-over');
+}
+
+function dragLeave(ev) {
+    ev.currentTarget.classList.remove('drag-over');
+}
+
+function drag(ev) {
+    draggedElement = ev.target;
+    ev.target.classList.add('dragging');
+    ev.dataTransfer.setData("text", ev.target.dataset.opportunityId);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('drag-over');
+    
+    if (draggedElement) {
+        draggedElement.classList.remove('dragging');
+    }
+    
+    const opportunityId = ev.dataTransfer.getData("text");
+    const newStage = ev.currentTarget.dataset.stage;
+    const opportunityElement = document.querySelector(`[data-opportunity-id="${opportunityId}"]`);
+    
+    if (opportunityElement && newStage) {
+        // Show loading
+        document.getElementById('loadingOverlay').style.display = 'block';
+        
+        // Move opportunity to new stage
+        moveOpportunity(opportunityId, newStage);
+    }
+}
+
+function moveOpportunity(opportunityId, newStage) {
+    fetch(`/crm/opportunities/${opportunityId}/move/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({
+            stage: newStage
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the pipeline to show updated data
+            refreshPipeline();
+            
+            // Show success message
+            showNotification('Opportunity moved successfully!', 'success');
+        } else {
+            showNotification('Error moving opportunity: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error moving opportunity. Please try again.', 'error');
+    })
+    .finally(() => {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    });
+}
+
+function viewOpportunity(opportunityId) {
+    window.location.href = `/crm/opportunities/${opportunityId}/`;
+}
+
+function createOpportunity(stage) {
+    window.location.href = `{% url 'crm:opportunity_create' %}?stage=${stage}`;
+}
+
+function filterStage(stage) {
+    // Update active filter button
+    document.querySelectorAll('.stage-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Show/hide stages
+    const stages = document.querySelectorAll('.pipeline-stage');
+    stages.forEach(stageEl => {
+        if (stage === 'all' || stageEl.dataset.stage === stage) {
+            stageEl.style.display = 'flex';
+        } else {
+            stageEl.style.display = 'none';
+        }
+    });
+}
+
+function filterByUser(userId) {
+    // Implement user filtering
+    console.log('Filter by user:', userId);
+    // You would need to implement AJAX filtering here
+}
+
+function filterByTimePeriod(period) {
+    // Implement time period filtering
+    console.log('Filter by period:', period);
+    // You would need to implement AJAX filtering here
+}
+
+function refreshPipeline() {
+    location.reload();
+}
+
+function exportPipeline(format) {
+    const url = `{% url 'crm:pipeline' %}export/?format=${format}`;
+    window.open(url, '_blank');
+}
+
+function showNotification(message, type) {
+    // Create and show notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '10000';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Auto-refresh every 2 minutes
+setInterval(function() {
+    console.log('Auto-refreshing pipeline data...');
+    // You could implement AJAX refresh here instead of full page reload
+}, 120000);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'r') {
+        e.preventDefault();
+        refreshPipeline();
+    }
+    if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        window.location.href = '{% url "crm:opportunity_create" %}';
+    }
+});
+
+// Initialize tooltips for action buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any initialization code here
+    console.log('Pipeline loaded successfully');
+});
+</script>
+{% endblock %}

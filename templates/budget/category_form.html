@@ -1,0 +1,401 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Category{% else %}Create Category{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Budget Category{% else %}Create Budget Category{% endif %}
+{% endblock %}
+{% block page_subtitle %}
+    {% if object %}Update category details and allocation{% else %}Add a new budget category{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:list' %}">Budget Management</a></li>
+{% if object.budget %}
+<li class="breadcrumb-item"><a href="{% url 'budget:detail' object.budget.pk %}">{{ object.budget.name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'budget:category_list' budget_id=object.budget.pk %}">Categories</a></li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'budget:category_list' %}">Categories</a></li>
+{% endif %}
+<li class="breadcrumb-item active">
+    {% if object %}Edit Category{% else %}Create Category{% endif %}
+</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .form-section {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .required-field::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .preview-section {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .category-type-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .category-type-option {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+    }
+    
+    .category-type-option:hover {
+        border-color: var(--primary-color);
+        background: rgba(56, 182, 255, 0.1);
+    }
+    
+    .category-type-option.selected {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .calculation-display {
+        background: #e3f2fd;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="form-card">
+            <form method="post" id="categoryForm">
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <h5 class="mb-3">Basic Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_budget" class="form-label required-field">Budget</label>
+                            {{ form.budget }}
+                            {% if form.budget.errors %}
+                                <div class="text-danger small">{{ form.budget.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Select the budget this category belongs to</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_name" class="form-label required-field">Category Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Enter a descriptive name for this category</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label required-field">Category Type</label>
+                        <div class="category-type-grid">
+                            <div class="category-type-option" data-value="materials">
+                                <i class="fas fa-boxes fa-2x mb-2 text-primary"></i>
+                                <div class="fw-semibold">Materials</div>
+                                <small class="text-muted">Raw materials and supplies</small>
+                            </div>
+                            <div class="category-type-option" data-value="labor">
+                                <i class="fas fa-users fa-2x mb-2 text-success"></i>
+                                <div class="fw-semibold">Labor</div>
+                                <small class="text-muted">Personnel and wages</small>
+                            </div>
+                            <div class="category-type-option" data-value="equipment">
+                                <i class="fas fa-tools fa-2x mb-2 text-warning"></i>
+                                <div class="fw-semibold">Equipment</div>
+                                <small class="text-muted">Machinery and tools</small>
+                            </div>
+                            <div class="category-type-option" data-value="transportation">
+                                <i class="fas fa-truck fa-2x mb-2 text-info"></i>
+                                <div class="fw-semibold">Transportation</div>
+                                <small class="text-muted">Logistics and shipping</small>
+                            </div>
+                            <div class="category-type-option" data-value="overhead">
+                                <i class="fas fa-chart-pie fa-2x mb-2 text-secondary"></i>
+                                <div class="fw-semibold">Overhead</div>
+                                <small class="text-muted">Administrative costs</small>
+                            </div>
+                            <div class="category-type-option" data-value="other">
+                                <i class="fas fa-ellipsis-h fa-2x mb-2 text-muted"></i>
+                                <div class="fw-semibold">Other</div>
+                                <small class="text-muted">Miscellaneous expenses</small>
+                            </div>
+                        </div>
+                        {{ form.category_type }}
+                        {% if form.category_type.errors %}
+                            <div class="text-danger small mt-2">{{ form.category_type.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="id_description" class="form-label">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                        <div class="help-text">Provide additional details about this category</div>
+                    </div>
+                </div>
+                
+                <!-- Financial Information Section -->
+                <div class="form-section">
+                    <h5 class="mb-3">Financial Information</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_allocated_amount" class="form-label required-field">Allocated Amount (KES)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">KES</span>
+                                {{ form.allocated_amount }}
+                            </div>
+                            {% if form.allocated_amount.errors %}
+                                <div class="text-danger small">{{ form.allocated_amount.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Budget allocation for this category</div>
+                        </div>
+                        
+                        {% if object %}
+                        <div class="col-md-6">
+                            <div class="calculation-display">
+                                <div class="small text-muted mb-1">Current Status</div>
+                                <div class="row g-2 small">
+                                    <div class="col-6">
+                                        <strong>Spent:</strong> KES {{ object.spent_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Available:</strong> KES {{ object.available_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Committed:</strong> KES {{ object.committed_amount|floatformat:0 }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Utilization:</strong> {{ object.utilization_percentage|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Approval Settings Section -->
+                <div class="form-section">
+                    <h5 class="mb-3">Approval Settings</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                {{ form.requires_approval }}
+                                <label class="form-check-label" for="id_requires_approval">
+                                    Requires Approval
+                                </label>
+                            </div>
+                            <div class="help-text">Check if expenses in this category need approval</div>
+                        </div>
+                        
+                        <div class="col-md-6" id="approval-threshold-section" style="display: none;">
+                            <label for="id_approval_threshold" class="form-label">Approval Threshold (KES)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">KES</span>
+                                {{ form.approval_threshold }}
+                            </div>
+                            {% if form.approval_threshold.errors %}
+                                <div class="text-danger small">{{ form.approval_threshold.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Amount above which approval is required</div>
+                        </div>
+                    </div>
+                    
+                    {% if object %}
+                    <div class="mt-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="id_is_active">
+                                Category Active
+                            </label>
+                        </div>
+                        <div class="help-text">Uncheck to deactivate this category</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Preview Section -->
+                <div class="preview-section">
+                    <h6 class="mb-3">Preview</h6>
+                    <div id="category-preview">
+                        <div class="small text-muted">Category preview will appear here as you fill out the form</div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between pt-3 mt-3 border-top">
+                    <a href="{% if object.budget %}{% url 'budget:category_list' budget_id=object.budget.pk %}{% else %}{% url 'budget:category_list' %}{% endif %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 
+                        {% if object %}Update Category{% else %}Create Category{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('categoryForm');
+    const categoryTypeInput = document.getElementById('id_category_type');
+    const requiresApprovalCheckbox = document.getElementById('id_requires_approval');
+    const approvalThresholdSection = document.getElementById('approval-threshold-section');
+    
+    // Initialize form state
+    updateApprovalThresholdVisibility();
+    updateCategoryTypeSelection();
+    updatePreview();
+    
+    // Category type selection
+    document.querySelectorAll('.category-type-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const value = this.getAttribute('data-value');
+            categoryTypeInput.value = value;
+            updateCategoryTypeSelection();
+            updatePreview();
+        });
+    });
+    
+    // Approval threshold visibility
+    requiresApprovalCheckbox.addEventListener('change', updateApprovalThresholdVisibility);
+    
+    // Form field changes
+    form.addEventListener('input', updatePreview);
+    
+    function updateCategoryTypeSelection() {
+        const selectedValue = categoryTypeInput.value;
+        document.querySelectorAll('.category-type-option').forEach(option => {
+            option.classList.toggle('selected', option.getAttribute('data-value') === selectedValue);
+        });
+    }
+    
+    function updateApprovalThresholdVisibility() {
+        if (requiresApprovalCheckbox.checked) {
+            approvalThresholdSection.style.display = 'block';
+        } else {
+            approvalThresholdSection.style.display = 'none';
+        }
+    }
+    
+    function updatePreview() {
+        const name = document.getElementById('id_name').value;
+        const allocatedAmount = document.getElementById('id_allocated_amount').value;
+        const categoryType = categoryTypeInput.value;
+        const requiresApproval = requiresApprovalCheckbox.checked;
+        const approvalThreshold = document.getElementById('id_approval_threshold').value;
+        
+        if (name || allocatedAmount || categoryType) {
+            const preview = document.getElementById('category-preview');
+            preview.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>${name || 'Category Name'}</h6>
+                        <small class="text-muted">${getCategoryTypeDisplay(categoryType)}</small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="fw-semibold">KES ${formatNumber(allocatedAmount) || '0'}</div>
+                        ${requiresApproval ? `<small class="text-warning"><i class="fas fa-shield-alt"></i> Requires approval${approvalThreshold ? ` over KES ${formatNumber(approvalThreshold)}` : ''}</small>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    function getCategoryTypeDisplay(type) {
+        const types = {
+            'materials': 'Materials',
+            'labor': 'Labor',
+            'equipment': 'Equipment',
+            'transportation': 'Transportation',
+            'overhead': 'Overhead',
+            'marketing': 'Marketing',
+            'administrative': 'Administrative',
+            'utilities': 'Utilities',
+            'insurance': 'Insurance',
+            'permits': 'Permits & Licenses',
+            'professional_services': 'Professional Services',
+            'training': 'Training',
+            'maintenance': 'Maintenance',
+            'other': 'Other'
+        };
+        return types[type] || 'Select Category Type';
+    }
+    
+    function formatNumber(num) {
+        if (!num) return '';
+        return parseFloat(num).toLocaleString();
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        const requiredFields = ['id_budget', 'id_name', 'id_category_type', 'id_allocated_amount'];
+        
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+        }
+    });
+});
+</script>
+{% endblock %}

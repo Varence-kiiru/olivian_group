@@ -1,0 +1,395 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Create Inventory Valuation - Inventory Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header {
+        border-bottom: 2px solid #38b6ff;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #38b6ff;
+        box-shadow: 0 0 0 0.2rem rgba(56, 182, 255, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #38b6ff 0%, #2c9ce6 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .method-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .method-card:hover {
+        border-color: #38b6ff;
+        background-color: #f8f9fa;
+    }
+    
+    .method-card.selected {
+        border-color: #38b6ff;
+        background-color: rgba(56, 182, 255, 0.1);
+    }
+    
+    .method-icon {
+        font-size: 2.5rem;
+        color: #38b6ff;
+        margin-bottom: 1rem;
+    }
+    
+    .method-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .method-description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .info-card {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-calculator text-primary"></i>
+                Create Inventory Valuation
+            </h1>
+            <nav aria-label="breadcrumb" class="mt-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:valuation_list' %}">Valuations</a></li>
+                    <li class="breadcrumb-item active">Create Valuation</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'inventory:valuation_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>New Inventory Valuation</h2>
+                    <p class="mb-0 text-muted">
+                        Create a comprehensive valuation of your inventory to track asset values and financial reporting.
+                    </p>
+                </div>
+
+                <!-- Info Card -->
+                <div class="info-card">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle fa-2x text-primary me-3"></i>
+                        <div>
+                            <h6 class="mb-1">About Inventory Valuations</h6>
+                            <p class="mb-0 small">
+                                Inventory valuations calculate the monetary value of your stock based on quantities and costs. 
+                                This is essential for financial reporting, insurance, and business decision-making.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post" id="valuationForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Warehouse -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                                    Warehouse <span class="required">*</span>
+                                </label>
+                                <select name="{{ form.warehouse.name }}" id="{{ form.warehouse.id_for_label }}" class="form-select" required>
+                                    <option value="">Select warehouse...</option>
+                                    {% for value, text in form.warehouse.field.choices %}
+                                        {% if value %}
+                                        <option value="{{ value }}" {% if form.warehouse.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="help-text">
+                                    Select the warehouse to valuate.
+                                </div>
+                                {% if form.warehouse.errors %}
+                                    <div class="text-danger small">{{ form.warehouse.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Valuation Date -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.valuation_date.id_for_label }}" class="form-label">
+                                    Valuation Date <span class="required">*</span>
+                                </label>
+                                <input type="date" name="{{ form.valuation_date.name }}" id="{{ form.valuation_date.id_for_label }}" 
+                                       class="form-control" value="{{ form.valuation_date.value|default:'' }}" required>
+                                <div class="help-text">
+                                    The effective date for this valuation.
+                                </div>
+                                {% if form.valuation_date.errors %}
+                                    <div class="text-danger small">{{ form.valuation_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Valuation Method -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="form-label">Valuation Method <span class="required">*</span></label>
+                                <div class="row">
+                                    {% for value, label in form.valuation_method.field.choices %}
+                                        <div class="col-md-6">
+                                            <div class="method-card" data-method="{{ value }}">
+                                                <div class="text-center">
+                                                    <div class="method-icon">
+                                                        {% if value == 'fifo' %}
+                                                            <i class="fas fa-arrow-right"></i>
+                                                        {% elif value == 'lifo' %}
+                                                            <i class="fas fa-arrow-left"></i>
+                                                        {% elif value == 'weighted_average' %}
+                                                            <i class="fas fa-balance-scale"></i>
+                                                        {% elif value == 'standard_cost' %}
+                                                            <i class="fas fa-chart-line"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="method-title">{{ label }}</div>
+                                                    <div class="method-description">
+                                                        {% if value == 'fifo' %}
+                                                            Values inventory using the cost of items received first (oldest costs first).
+                                                        {% elif value == 'lifo' %}
+                                                            Values inventory using the cost of items received last (newest costs first).
+                                                        {% elif value == 'weighted_average' %}
+                                                            Uses the average cost of all items, weighted by quantity.
+                                                        {% elif value == 'standard_cost' %}
+                                                            Uses predetermined standard costs for valuation.
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <input type="radio" name="{{ form.valuation_method.name }}" 
+                                                       value="{{ value }}" class="d-none method-radio"
+                                                       {% if form.valuation_method.value == value %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.valuation_method.errors %}
+                                    <div class="text-danger small">{{ form.valuation_method.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Section -->
+                    <div id="previewSection" style="display: none;">
+                        <div class="info-card">
+                            <h6><i class="fas fa-eye text-primary"></i> Valuation Preview</h6>
+                            <div id="previewContent">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Total Items</small>
+                                        <div class="h5" id="previewItems">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Total Quantity</small>
+                                        <div class="h5" id="previewQuantity">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Estimated Value</small>
+                                        <div class="h5" id="previewValue">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="text-center mt-4 pt-3" style="border-top: 1px solid #e9ecef;">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-calculator"></i>
+                            Create Valuation
+                        </button>
+                        <a href="{% url 'inventory:valuation_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Method selection
+    const methodCards = document.querySelectorAll('.method-card');
+    const methodRadios = document.querySelectorAll('.method-radio');
+    
+    methodCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const method = this.dataset.method;
+            const radio = this.querySelector('.method-radio');
+            
+            // Remove selected class from all cards
+            methodCards.forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            // Check the radio button
+            radio.checked = true;
+            
+            // Update preview
+            updatePreview();
+        });
+    });
+    
+    // Set initial selection
+    methodRadios.forEach(radio => {
+        if (radio.checked) {
+            radio.closest('.method-card').classList.add('selected');
+        }
+    });
+    
+    // Date setup
+    const dateInput = document.querySelector('#{{ form.valuation_date.id_for_label }}');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    // Warehouse change handler
+    const warehouseSelect = document.querySelector('#{{ form.warehouse.id_for_label }}');
+    if (warehouseSelect) {
+        warehouseSelect.addEventListener('change', updatePreview);
+    }
+    
+    function updatePreview() {
+        const warehouse = warehouseSelect?.value;
+        const method = document.querySelector('.method-radio:checked')?.value;
+        
+        if (warehouse && method) {
+            // Show preview section
+            document.getElementById('previewSection').style.display = 'block';
+            
+            // In a real implementation, this would make an AJAX call to get preview data
+            // For now, we'll show placeholder text
+            document.getElementById('previewItems').textContent = 'Loading...';
+            document.getElementById('previewQuantity').textContent = 'Loading...';
+            document.getElementById('previewValue').textContent = 'Loading...';
+            
+            // Simulate preview data (in real app, this would come from the server)
+            setTimeout(() => {
+                document.getElementById('previewItems').textContent = '156';
+                document.getElementById('previewQuantity').textContent = '2,847.50';
+                document.getElementById('previewValue').textContent = 'KES 1,234,567.89';
+            }, 1000);
+        } else {
+            document.getElementById('previewSection').style.display = 'none';
+        }
+    }
+    
+    // Form validation
+    const form = document.getElementById('valuationForm');
+    form.addEventListener('submit', function(e) {
+        const selectedMethod = document.querySelector('.method-radio:checked');
+        if (!selectedMethod) {
+            e.preventDefault();
+            alert('Please select a valuation method.');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Valuation...';
+        submitBtn.disabled = true;
+        
+        // Note: In case of validation errors, restore the button
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 10000);
+    });
+});
+</script>
+{% endblock %}

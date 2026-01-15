@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Reset - {{ company.name|default:"Olivian Group" }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #{{ company.primary_color|default:"38b6ff" }};
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .status-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #155724;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #{{ company.primary_color|default:"38b6ff" }};
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .info-notice {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            {% if company.logo %}
+                <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="logo">
+            {% else %}
+                <h1 style="color: #{{ company.primary_color|default:'38b6ff' }};">{{ company.name|default:"Olivian Group" }}</h1>
+            {% endif %}
+            <h2>Account Reset Notification</h2>
+        </div>
+        
+        <div class="content">
+            <p>Hello {{ user_name }},</p>
+            
+            <p>Your staff account has been reset by {{ reset_by }} (System Administrator). This action has restored your account to full functionality.</p>
+            
+            <div class="status-box">
+                <h3 style="margin-top: 0;">✅ Account Status: ACTIVE</h3>
+                <p style="margin-bottom: 0;"><strong>Role:</strong> {{ role }}</p>
+                <p style="margin-bottom: 0;"><strong>Username:</strong> {{ username }}</p>
+            </div>
+            
+            <div class="info-notice">
+                <strong>What was reset:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Account status set to active</li>
+                    <li>Employee status activated</li>
+                    <li>Email verification confirmed</li>
+                    <li>Any account restrictions cleared</li>
+                </ul>
+            </div>
+            
+            <p>You can now access the staff portal using your existing credentials. If you've forgotten your password, please use the "Forgot Password" link on the login page or contact IT for assistance.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ login_url }}" class="btn">Access Staff Portal</a>
+            </div>
+            
+            <p>If you experience any issues accessing your account or have questions about this reset, please contact the IT department immediately.</p>
+            
+            <p>Best regards,<br>
+            <strong>{{ company.name|default:"Olivian Group" }} Administration</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This account reset was performed by: <strong>{{ reset_by }}</strong></p>
+            <p>Reset Date: <strong>{{ "now"|date:"F d, Y \a\t g:i A" }}</strong></p>
+            <p>© {{ "now"|date:"Y" }} {{ company.name|default:"The Olivian Group Limited" }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

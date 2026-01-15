@@ -1,0 +1,288 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Delete Warehouse - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_list' %}">Warehouses</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_detail' object.pk %}">{{ object.name }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block page_name %}Delete Warehouse{% endblock %}
+{% block page_title %}Delete Warehouse{% endblock %}
+{% block page_subtitle %}Confirm warehouse deletion{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-warning {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .warehouse-info {
+        background: #f8f9fa;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .warning-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+    
+    .cancel-btn {
+        min-width: 120px;
+    }
+    
+    .delete-btn {
+        min-width: 120px;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .delete-btn:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+    
+    .inventory-stats {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Warning Header -->
+        <div class="delete-warning">
+            <i class="fas fa-exclamation-triangle warning-icon"></i>
+            <h3>Warning: Delete Warehouse</h3>
+            <p class="mb-0">This action cannot be undone. Please confirm that you want to delete this warehouse.</p>
+        </div>
+
+        <!-- Warehouse Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-warehouse me-2"></i>Warehouse Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="warehouse-info">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Warehouse Name</label>
+                                <div class="fw-bold">{{ object.name }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Code</label>
+                                <div><code>{{ object.code }}</code></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Address</label>
+                                <div>{{ object.address }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Manager</label>
+                                <div>
+                                    {% if object.manager %}
+                                        {{ object.manager.get_full_name }}
+                                        <br><small class="text-muted">{{ object.manager.email }}</small>
+                                    {% else %}
+                                        <span class="text-muted">No manager assigned</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Capacity</label>
+                                <div>{{ object.total_capacity }} m² <small class="text-muted">({{ object.used_capacity }} m² used)</small></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Status</label>
+                                <div>
+                                    <span class="badge {% if object.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if object.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Inventory Check -->
+                {% if object.inventory_items.exists %}
+                <div class="inventory-stats">
+                    <h6 class="text-warning">
+                        <i class="fas fa-boxes me-2"></i>Current Inventory
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ object.inventory_items.count }}</div>
+                                <small>Total Items</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-success">{{ total_stock_quantity|default:0 }}</div>
+                                <small>Total Quantity</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-info">{{ company.default_currency|default:"KES" }} {{ total_stock_value|default:0|floatformat:0 }}</div>
+                                <small>Total Value</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Deletion Consequences -->
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>What happens when you delete this warehouse?
+                    </h6>
+                    <ul class="mb-0">
+                        <li>The warehouse record will be permanently removed</li>
+                        <li>All location and capacity data will be lost</li>
+                        <li>Historical transactions will remain but show as "Deleted Warehouse"</li>
+                        <li>This action cannot be undone</li>
+                    </ul>
+                </div>
+
+                <!-- Check for Inventory Items -->
+                {% if object.inventory_items.exists %}
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Cannot Delete Warehouse
+                    </h6>
+                    <p class="mb-2">This warehouse cannot be deleted because it contains inventory items:</p>
+                    <ul class="mb-2">
+                        <li><strong>{{ object.inventory_items.count }}</strong> inventory item(s)</li>
+                        <li>Total stock quantity: <strong>{{ total_stock_quantity|default:0 }}</strong></li>
+                        <li>Total stock value: <strong>{{ company.default_currency|default:"KES" }} {{ total_stock_value|default:0|floatformat:2 }}</strong></li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Required actions before deletion:</strong>
+                    </p>
+                    <ol class="mb-0">
+                        <li>Transfer all inventory items to other warehouses, or</li>
+                        <li>Perform stock adjustments to zero all quantities, or</li>
+                        <li>Deactivate the warehouse instead of deleting it</li>
+                    </ol>
+                </div>
+                
+                <!-- Available Actions for Non-Empty Warehouse -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <i class="fas fa-exchange-alt fa-2x text-info mb-2"></i>
+                                <h6>Transfer Inventory</h6>
+                                <p class="small text-muted">Move all items to another warehouse</p>
+                                <a href="{% url 'inventory:transfer_create' %}?from_warehouse={{ object.pk }}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-arrow-right me-1"></i>Start Transfer
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <i class="fas fa-edit fa-2x text-warning mb-2"></i>
+                                <h6>Stock Adjustment</h6>
+                                <p class="small text-muted">Adjust all quantities to zero</p>
+                                <a href="{% url 'inventory:adjustment_create' %}?warehouse={{ object.pk }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-minus me-1"></i>Zero Stock
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Confirmation Form (only if no inventory) -->
+                {% if not object.inventory_items.exists %}
+                <form method="post" id="deleteForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                        <label class="form-check-label" for="confirmDelete">
+                            I understand that this action is permanent and cannot be undone
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'inventory:warehouse_detail' object.pk %}" class="btn btn-secondary cancel-btn">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        
+                        <button type="submit" class="btn btn-danger delete-btn" id="deleteButton" disabled>
+                            <i class="fas fa-trash me-2"></i>Delete Warehouse
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'inventory:warehouse_detail' object.pk %}" class="btn btn-secondary cancel-btn">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </a>
+                    
+                    <a href="{% url 'inventory:warehouse_update' object.pk %}" class="btn btn-warning">
+                        <i class="fas fa-toggle-off me-2"></i>Deactivate Instead
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    if (confirmCheckbox && deleteButton) {
+        confirmCheckbox.addEventListener('change', function() {
+            deleteButton.disabled = !this.checked;
+        });
+    }
+    
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            if (!confirm('Are you absolutely sure you want to delete this warehouse? This action cannot be undone.')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+            deleteButton.disabled = true;
+        });
+    }
+});
+</script>
+{% endblock %}

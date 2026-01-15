@@ -1,0 +1,95 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<div style="padding: 30px 0;">
+    <h2 style="color: #333; margin-bottom: 20px;">Thank You for Contacting Us!</h2>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 20px;">
+        Dear {{ customer_name }},
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-bottom: 20px;">
+        Thank you for reaching out to {{ company_name }}! We have received your {{ inquiry_type|lower }} inquiry and will respond within 24 hours.
+    </p>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">Your Inquiry Details:</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555; width: 30%;">Inquiry Type:</td>
+                <td style="padding: 8px 0; color: #333;">{{ inquiry_type }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Email:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.email }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Phone:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.phone }}</td>
+            </tr>
+            {% if contact.location %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Location:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.location }}</td>
+            </tr>
+            {% endif %}
+            {% if contact.property_type %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Property Type:</td>
+                <td style="padding: 8px 0; color: #333;">{{ contact.get_property_type_display }}</td>
+            </tr>
+            {% endif %}
+            {% if contact.monthly_bill %}
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #555;">Monthly Bill:</td>
+                <td style="padding: 8px 0; color: #333;">KES {{ contact.monthly_bill|floatformat:0 }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    
+    <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38b6ff;">
+        <h3 style="color: #333; margin-bottom: 15px;">Your Message:</h3>
+        <p style="font-size: 14px; line-height: 1.6; color: #555; margin: 0; white-space: pre-wrap;">{{ contact.message }}</p>
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">What Happens Next?</h3>
+        <ul style="padding-left: 20px; color: #666; line-height: 1.8;">
+            <li>Our solar energy experts will review your inquiry</li>
+            <li>We'll contact you within 24 hours to discuss your needs</li>
+            {% if contact.inquiry_type == 'quotation' %}
+            <li>If requesting a quote, we'll schedule a site visit for accurate assessment</li>
+            <li>You'll receive a detailed proposal with system specifications and pricing</li>
+            {% endif %}
+            <li>We'll answer any questions and guide you through the next steps</li>
+        </ul>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #333; margin-bottom: 15px;">Need Immediate Assistance?</h3>
+        <p style="color: #666; margin-bottom: 10px;">
+            <strong>Call us:</strong> {{ company_phone }}<br>
+            <strong>Email:</strong> {{ company_email }}<br>
+            <strong>WhatsApp:</strong> Available for quick questions
+        </p>
+    </div>
+    
+    {% if contact.subscribe_newsletter %}
+    <div style="background-color: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <p style="color: #155724; margin: 0; font-size: 14px;">
+            <strong>✓ Newsletter Subscription:</strong> You've been added to our newsletter for solar tips, industry updates, and special offers.
+        </p>
+    </div>
+    {% endif %}
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666; margin-top: 30px;">
+        Thank you for choosing {{ company_name }} for your solar energy needs. We look forward to helping you harness the power of the sun!
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #666;">
+        Best regards,<br>
+        <strong>The {{ company_name }} Team</strong>
+    </p>
+</div>
+{% endblock %}

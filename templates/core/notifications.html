@@ -1,0 +1,179 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Notifications - {{ company.name|default:"Olivian Group" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Notifications</li>
+{% endblock %}
+
+{% block page_name %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block page_subtitle %}Your system notifications and alerts{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bell me-2"></i>All Notifications
+                </h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="markAllAsRead()">
+                    <i class="fas fa-check-double me-1"></i>Mark All Read
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {% for notification in notifications %}
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" data-id="{{ notification.id }}">
+                    <div class="d-flex justify-content-between align-items-start p-3">
+                        <div class="flex-grow-1">
+                            <h6 class="notification-title mb-1">
+                                {% if notification.notification_type == 'error' %}
+                                    <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                                {% elif notification.notification_type == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                {% elif notification.notification_type == 'success' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                {% endif %}
+                                {{ notification.title }}
+                            </h6>
+                            <p class="notification-message mb-2">{{ notification.message }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>{{ notification.created_at|timesince }} ago
+                                    • Category: {{ notification.get_category_display }}
+                                </small>
+                                {% if notification.link_url %}
+                                <a href="{{ notification.link_url }}" class="btn btn-sm btn-outline-primary">
+                                    {{ notification.link_text|default:"View" }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            {% if not notification.is_read %}
+                            <button class="btn btn-sm btn-outline-success" onclick="markAsRead({{ notification.id }})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Notifications</h5>
+                    <p class="text-muted">You're all caught up! No notifications to display.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Notifications pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-item {
+        border-bottom: 1px solid #f1f1f1;
+        transition: all 0.2s;
+    }
+    
+    .notification-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .notification-item.unread {
+        background-color: #e3f2fd;
+        border-left: 4px solid #38b6ff;
+    }
+    
+    .notification-title {
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .notification-message {
+        color: #666;
+        line-height: 1.5;
+    }
+    
+    .notification-actions {
+        min-width: 50px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function markAsRead(notificationId) {
+    try {
+        const response = await fetch(`/api/notifications/${notificationId}/read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+async function markAllAsRead() {
+    try {
+        const response = await fetch('/api/notifications/mark-all-read/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+    }
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+</script>
+{% endblock %}

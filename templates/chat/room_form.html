@@ -1,0 +1,59 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Room name will be converted to lowercase and hyphens (e.g., "Sales Team" becomes "sales-team")</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.room_type.id_for_label }}" class="form-label">{{ form.room_type.label }}</label>
+                            {{ form.room_type }}
+                            {% if form.room_type.errors %}
+                                <div class="text-danger small">{{ form.room_type.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                <strong>General:</strong> Company-wide discussions<br>
+                                <strong>Department:</strong> Restricted to department groups<br>
+                                <strong>Project:</strong> Project-specific communication<br>
+                                <strong>Private:</strong> Invite-only private rooms
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'chat:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Room</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

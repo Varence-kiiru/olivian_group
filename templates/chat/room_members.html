@@ -1,0 +1,254 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ room.name }} - Members{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Member Management (for private/project rooms) -->
+            {% if can_manage and invitation_form %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-plus"></i> Manage Members
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'chat:room_members' room.name %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="invite">
+                        <div class="mb-3">
+                            <label for="{{ invitation_form.usernames.id_for_label }}" class="form-label">
+                                Invite New Members
+                            </label>
+                            {{ invitation_form.usernames }}
+                            {% if invitation_form.usernames.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ invitation_form.usernames.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Enter usernames or email addresses, one per line. New members will be added to this {{ room.room_type }} room.
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Invite Members
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">
+                            {% if room.room_type == 'department' %}🏢 {% elif room.room_type == 'project' %}📋 {% elif room.room_type == 'private' %}🔒 {% else %}💬 {% endif %}
+                            {{ room.name|title }} Members
+                        </h4>
+                        <p class="text-muted mb-0">{{ room.get_room_type_display }} Room</p>
+                        {% if room.room_type == 'department' %}
+                        <p class="text-muted mb-0">
+                            <small>Access granted via department groups</small>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'chat:room' room.name %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> Back to Chat
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if room.description %}
+                    <div class="alert alert-info">
+                        <strong>Room Description:</strong> {{ room.description }}
+                    </div>
+                    {% endif %}
+
+                    {% if room.room_type == 'department' and not user.is_staff %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Department room membership is managed automatically based on your department assignment and group memberships. Contact your administrator if you need access adjustments.
+                    </div>
+                    {% endif %}
+
+                    {% if members %}
+                        <div class="member-grid">
+                            {% for member in members %}
+                            <div class="member-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="member-avatar">
+                                        <div class="avatar-placeholder">
+                                            {{ member.get_full_name|default:member.username|first|upper }}
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <strong>{{ member.get_full_name|default:member.username }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            @{{ member.username }}
+                                            {% if member.role != 'customer' %}
+                                            • {{ member.get_role_display }}
+                                            {% endif %}
+                                            {% if member.department %}
+                                            • {{ member.department }}
+                                            {% endif %}
+                                        </small>
+                                        {% if room.room_type == 'department' and member.chat_groups %}
+                                        <br>
+                                        <small class="text-primary">
+                                            <i class="fas fa-users"></i>
+                                            Groups: {{ member.chat_groups|join:", " }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        {% if member == room.created_by %}
+                                        <span class="badge bg-warning text-dark me-2" title="Room Creator">
+                                            <i class="fas fa-crown"></i> Creator
+                                        </span>
+                                        {% endif %}
+
+                                        {% if can_manage and room.room_type in 'private project' and member != user %}
+                                        <form method="post" action="{% url 'chat:room_members' room.name %}" class="d-inline ms-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="remove">
+                                            <input type="hidden" name="user_id" value="{{ member.id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Are you sure you want to remove {{ member.get_display_name }} from this room?')"
+                                                    title="Remove member">
+                                                <i class="fas fa-user-minus"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3 text-muted">
+                            <small><em>Total members: {{ members|length }}</em></small>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5>No members found</h5>
+                            <p class="text-muted">
+                                {% if room.room_type == 'department' %}
+                                    No users currently have access to this department room. Users gain access through department groups (e.g., 'sales', 'technical', 'management').
+                                {% elif room.room_type == 'private' %}
+                                    This private room has no members. Use the invite form above to add members.
+                                {% elif room.room_type == 'project' %}
+                                    No project participants found. Project members are added automatically when the project is created.
+                                {% else %}
+                                    This room doesn't have any members or access permissions need to be checked.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Room Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Room Information</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-6">Type:</dt>
+                        <dd class="col-sm-6">{{ room.get_room_type_display }}</dd>
+
+                        <dt class="col-sm-6">Created:</dt>
+                        <dd class="col-sm-6">{{ room.created_at|date:"M j, Y" }}</dd>
+
+                        {% if room.created_by %}
+                        <dt class="col-sm-6">Creator:</dt>
+                        <dd class="col-sm-6">{{ room.created_by.get_full_name|default:room.created_by.username }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'chat:room' room.name %}" class="btn btn-primary">
+                            <i class="fas fa-comments"></i> Go to Chat
+                        </a>
+                        <a href="{% url 'chat:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> All Rooms
+                        </a>
+                        {% if room.created_by == user or user.is_staff %}
+                        <a href="{% url 'chat:edit_room' room.name %}" class="btn btn-outline-warning">
+                            <i class="fas fa-cog"></i> Edit Room
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.member-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.member-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    padding: 1rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.member-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+}
+
+.member-avatar {
+    margin-right: 1rem;
+}
+
+.avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.member-card .avatar-placeholder {
+    margin-right: 1rem;
+}
+
+@media (max-width: 768px) {
+    .member-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
